@@ -55,18 +55,23 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .seg{display:flex;background:#E7E5F3;border-radius:14px;padding:3px;margin:4px 0 12px}
 .seg button{flex:1;height:42px;border:0;border-radius:11px;background:transparent;font-size:14px;color:var(--ink2);cursor:pointer;font-weight:500;transition:all .2s}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:var(--s1)}
-.tbtn{display:inline-flex;align-items:center;gap:4px;font:inherit;font-weight:600;color:var(--violet-d);background:#EDEDFD;border:0;border-radius:10px;padding:2px 10px;cursor:pointer;vertical-align:baseline}
+.tbtn{display:inline-flex;align-items:center;gap:4px;font:inherit;font-weight:600;color:var(--violet-d);background:#EDEDFD;border:0;border-radius:12px;padding:0 12px;min-height:44px;cursor:pointer;vertical-align:middle}
 .tbtn span{font-size:13px}
 .seg.sm{margin:0 0 8px}.seg.sm button{height:36px;font-size:13px}
 .wheel{position:relative;display:flex;justify-content:center;align-items:center;gap:6px;height:220px;margin:14px 0}
-.wheel .col{height:220px;width:90px;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;padding:88px 0;box-sizing:border-box;touch-action:pan-y;-webkit-mask-image:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent);mask-image:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent)}
+.wheel .col{height:220px;width:90px;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;padding:88px 0;box-sizing:border-box;touch-action:pan-y;overscroll-behavior:contain;border-radius:12px}
+.wheel .col:focus-visible{outline-offset:-3px}
+.wheel::before,.wheel::after{content:'';position:absolute;left:0;right:0;height:70px;pointer-events:none;z-index:1}
+.wheel::before{top:0;background:linear-gradient(var(--bg),rgba(243,242,238,0))}
+.wheel::after{bottom:0;background:linear-gradient(rgba(243,242,238,0),var(--bg))}
 .wheel .col::-webkit-scrollbar{display:none}
 .wheel .it{height:44px;line-height:44px;text-align:center;font-size:26px;font-weight:600;scroll-snap-align:center;cursor:pointer;color:var(--ink)}
 .wheel .colon{font-size:26px;font-weight:600}
 .wheel .lens{position:absolute;left:50%;top:50%;width:220px;height:48px;margin:-24px 0 0 -110px;border-radius:14px;background:rgba(85,85,221,.10);pointer-events:none}
 .card{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:var(--s1);cursor:pointer;position:relative;border:2px solid transparent;display:block;width:100%;text-align:left;font:inherit;color:inherit}
 .card.sel{border-color:var(--violet)}
-.card.late{opacity:.75}
+.card.late{background:#F6F5F9;box-shadow:none}
+.card.late .win{display:flex}
 .card .top{display:flex;align-items:center;gap:12px}
 .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex:none}
 .t{font-size:16px;font-weight:600}
@@ -95,12 +100,19 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .pois{display:flex;gap:10px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
 .poi{flex:none;width:170px;background:#fff;border-radius:16px;padding:12px;box-shadow:var(--s1);cursor:pointer;border:0;text-align:left;font:inherit;color:inherit}
 .poi .e{font-size:22px}.poi b{display:block;font-size:14px;margin-top:6px}.poi span{font-size:12px;color:var(--muted)}
-.toggle{width:46px;height:28px;border-radius:14px;background:#A8A4BD;position:relative;flex:none;transition:background .2s}
+.toggle{width:46px;height:28px;border-radius:14px;background:#8A86A3;position:relative;flex:none;transition:background .2s}
 .toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
 .toggle.on{background:var(--violet-btn)}.toggle.on::after{left:21px}
 .banner{background:var(--violet-btn);color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:12px;font-size:14px;box-shadow:var(--s1)}
 .banner b{font-size:16px}
-.banner.late{background:#97291F}
+.banner.late{background:#FBE3E1;color:#6E1D16;box-shadow:none;border:1px solid #F2B8B2}
+.banner.late .chip{height:40px}
+.hint{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:2px 0 10px;font-size:13px;color:var(--ink2)}
+.hint>span:nth-child(2){flex:1}
+.mlink{border:0;background:none;color:var(--violet-d);font:inherit;font-weight:600;cursor:pointer;min-height:44px;padding:0 4px}
+.best{position:absolute;top:-9px;left:14px;background:var(--ink);color:#fff;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:8px}
+.card .right .m{font-size:12px}
+.pill.r{background:#FBE3E1;color:#97291F}
 /* ведение */
 .guide{position:absolute;inset:0;z-index:26;pointer-events:none;display:none}
 .guide.on{display:block}
@@ -137,12 +149,12 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 <body>
 <div class="phone" id="phone">
   <div id="map" aria-label="Карта Москвы"></div>
-  <div class="fallback" id="fallback">Карта не загрузилась — нужен интернет и браузер с WebGL.<br>Всё остальное в прототипе работает.</div>
+  <div class="fallback" id="fallback">Карта не загрузилась — нужен интернет и браузер с WebGL.</div>
   <div class="status" aria-hidden="true"><span id="clock">8:20</span><span>● ● ▮</span></div>
   <div class="attrib" id="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · маршруты OSRM</div>
 
   <div class="topbar" id="topbar">
-    <button class="search press" onclick="toast('Поиск мест — в следующей версии')"><span aria-hidden="true">🔍</span><span><b>м. Бауманская</b> · от дома</span></button>
+    <button class="search press" onclick="toast('В прототипе маршрут один: дом → м. Бауманская')"><span aria-hidden="true">🔍</span><span><b>м. Бауманская</b> · от дома</span></button>
     <button class="round press" aria-label="Модули" onclick="go('modules')">⚙︎</button>
   </div>
 
@@ -152,14 +164,15 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
   </div>
 
   <div class="guide" id="guide">
-    <div class="gtop" id="gtop"></div>
+    <div class="gtop" id="gtop" tabindex="-1" aria-live="off"></div>
     <div class="gbot">
       <div class="row">
         <div><div class="eta" id="geta">8:46</div><div class="m" id="gleft">ещё 26 мин</div></div>
-        <button class="speed press" id="speedBtn" onclick="toggleSpeed()">Перемотка ×1</button>
+        <button class="speed press" id="speedBtn" onclick="toggleSpeed()" aria-label="Ускорить демонстрацию">Демо: ×1</button>
       </div>
+      <div id="ggoal" class="pill" hidden style="margin-top:8px"></div>
       <div style="height:12px"></div>
-      <button class="btn d press" onclick="endTrip()">Завершить поездку</button>
+      <button class="btn w press" id="stopBtn" onclick="endTrip()">Завершить поездку</button>
     </div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -184,86 +197,119 @@ const DEST = [37.67876,55.77235];          // Бауманская, выход �
 const YAUZA = [37.6905,55.7772], ELOKH = [37.6764,55.7731];
 const stops = n => n + ' ' + (n%10===1&&n%100!==11?'остановка':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'остановки':'остановок');
 
-const state = { arrive: 9*60, mode:'hurry', sel:'metro', modules:{weather:true,crowd:true,coffee:false,lifts:false}, view:'compare', history:[], timeMode:'arrive', depart:NOW };
+const state = { arrive: 9*60, mode:'hurry', sel:'metro', modules:{weather:true,crowd:true,coffee:false}, view:'compare', history:[], timeMode:'arrive', depart:NOW };
 
 // Каждый шаг — диапазон lo–hi минут. Прогноз = сумма шагов, считается симуляцией (см. forecast).
 // tail — редкий сбой: вероятность и добавка в минутах. geom — запечённая геометрия из BAKED.routes.
 const OPTIONS = {
-  metro:{ name:'Метро', ico:'Ⓜ', bg:'#E3EBFD', fg:'#2E6FE6', price:'≈ 70 ₽', tail:[0.03,6,12],
+  metro:{ name:'Метро', ico:'Ⓜ', bg:'#E3EBFD', fg:'#2E6FE6', price:'≈ 70 ₽', tail:[0.05,4,12],
     detail: stops(5) + ' без пересадок',
     legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы, ближе к дому', tip:'Вход №3'},
-           {type:'wait', at:ENTRY3, lo:1, hi:4, label:'Турникеты и поезд', lm:'В час пик поезда раз в 2–3 минуты'},
+           {type:'wait', kind:'Подожди', at:ENTRY3, lo:1, hi:4, label:'Турникеты и поезд', lm:'В час пик поезда раз в 2–3 минуты'},
            {type:'metro', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'В сторону центра. Перед выходом — вибрация'},
-           {type:'wait', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'Выход на Бауманской один — наверх по эскалатору', tip:'Ты на месте'} ] },
-  taxi:{ name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.08,5,15],
+           {type:'wait', kind:'Подъём', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'Выход на Бауманской один — наверх по эскалатору', tip:'Ты на месте'} ] },
+  taxi:{ name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.10,5,15],
     detail:'подача 3–9 мин',
-    legs:[ {type:'wait', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
+    legs:[ {type:'wait', kind:'Подача', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
            {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'Утренние пробки: возможна задержка', tip:'Ты на месте'} ] },
-  carshare:{ name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500\u00a0₽', tail:[0.08,5,15],
+  carshare:{ name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500\u00a0₽', tail:[0.10,5,15],
     detail:'машина в 360 м',
     legs:[ {type:'walk', geom:'toCar', lo:4, hi:6, label:'Пешком до машины', lm:'Ближайшая свободная машина — 360 м', tip:'Машина здесь'},
-           {type:'wait', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
+           {type:'wait', kind:'Подготовка', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
            {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:'Утренние пробки: возможна задержка'},
-           {type:'wait', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', tip:'Ты на месте'} ] },
+           {type:'wait', kind:'Парковка', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', tip:'Ты на месте'} ] },
   walk:{ name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0],
     detail:'≈ 10 км',
     legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
   // режим «Гуляю»
-  stroll:{ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', tail:[0.03,6,12],
-    detail:'метро + 2,9 км пешком',
+  stroll:{ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', tail:[0.05,4,12],
+    detail:'метро + 2,5 км пешком',
     pois:[ {e:'☕', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'},
            {e:'🌊', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
            {e:'⛪', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
     legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы', tip:'Вход №3'},
-           {type:'wait', at:ENTRY3, lo:1, hi:4, label:'Турникеты и поезд'},
+           {type:'wait', kind:'Подожди', at:ENTRY3, lo:1, hi:4, label:'Турникеты и поезд'},
            {type:'metro', stations:LINE3.slice(0,5), lo:9, hi:11, label:'Метро до Электрозаводской · ' + stops(4), lm:'Выходи на Электрозаводской — дальше пешком'},
-           {type:'walk', geom:'strollWalk', lo:32, hi:40, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Ты на месте'} ] },
-  loop:{ name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1A6B40', price:'3,7 км', tail:[0,0,0], noTarget:true,
+           {type:'walk', geom:'strollWalk', lo:29, hi:36, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Ты на месте'} ] },
+  loop:{ name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true,
     detail:'кольцо вдоль Измайловского лесопарка',
     pois:[ {e:'🌳', n:'Опушка леса', d:'тихий участок', at:[37.8115,55.78878], extra:'по пути'},
            {e:'🪑', n:'Скамейки', d:'можно передохнуть', at:[37.82262,55.78883], extra:'по пути'},
            {e:'☕', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'} ],
-    legs:[ {type:'walk', geom:'loop', lo:44, hi:52, label:'Кольцо 3,7 км и обратно домой', lm:'Можно сократить в любой момент', tip:'Почти дома'} ] }
+    legs:[ {type:'walk', geom:'loop', lo:30, hi:38, label:'Кольцо 2,6 км и обратно домой', lm:'Можно сократить в любой момент', tip:'Почти дома'} ] }
 };
 
 /* ================= ПРОГНОЗ =================
-   Одно правило для всех вариантов:
-   • время в пути — симуляция по шагам (P10, медиана, P90 = «самое позднее»);
-   • шаги маршрута показывают медиану, их сумма = медиана поездки. */
+   Модель (проверка 2, 22.11):
+   • поездка = шаги-диапазоны lo–hi; шаги связаны общим «характером дня» (если с утра всё медленно — медленно везде);
+   • редкие сбои (tail) — с вероятностью и добавкой в минутах;
+   • дождь замедляет пешие участки на RAIN;
+   • из 4000 поездок берём настоящую медиану (обычное время) и 95-й процентиль («самое позднее» — так в 19 поездках из 20);
+   • минуты шагов масштабируются, чтобы их сумма = медиане: что на экране складывается, то и в итоге. */
+const RAIN = 1.06;                                   // дождь с 8:40: пешком на 6% дольше
 function rng(seed){ let a = seed; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const tri = (r, lo, hi) => { const c = 0.35, u = r(); return u < c ? lo + Math.sqrt(u*c)*(hi-lo) : hi - Math.sqrt((1-u)*(1-c))*(hi-lo); };
-const legMid = l => Math.round(l.lo + 0.4*(l.hi-l.lo));
+const triQ = (u, lo, hi) => { const c = 0.35; return u < c ? lo + Math.sqrt(u*c)*(hi-lo) : hi - Math.sqrt((1-u)*(1-c))*(hi-lo); };
+const legK = l => l.type==='walk' ? RAIN : 1;
 const FC = {};
 function forecast(k){
   if(FC[k]) return FC[k];
   const o = OPTIONS[k], r = rng(k.length*7919 + k.charCodeAt(0)), N = 4000, s = new Float64Array(N);
-  for(let i=0;i<N;i++){ let t=0; for(const l of o.legs) t += tri(r,l.lo,l.hi); if(o.tail[0] && r()<o.tail[0]) t += o.tail[1] + r()*(o.tail[2]-o.tail[1]); s[i]=t; }
+  for(let i=0;i<N;i++){
+    const day = r(); let t = 0;                       // общий для всех шагов «характер дня»
+    for(const l of o.legs){ const u = 0.5*day + 0.5*r(); t += triQ(u, l.lo, l.hi) * legK(l); }
+    if(o.tail[0] && r() < o.tail[0]) t += o.tail[1] + r()*(o.tail[2]-o.tail[1]);
+    s[i] = t;
+  }
   s.sort(); const q = p => s[Math.min(N-1, Math.floor(p*N))];
-  const mid = o.legs.reduce((a,l)=>a+legMid(l),0);
-  return FC[k] = { p10: Math.round(q(0.1)), p90: Math.ceil(q(0.9)), mid, chance: budget => { let lo=0,hi=N; while(lo<hi){ const m=(lo+hi)>>1; if(s[m]<=budget) lo=m+1; else hi=m; } return lo/N; } };
+  const mid = Math.round(q(0.5));
+  // минуты шагов: базовая оценка, масштаб к медиане, остаток раздаём самым длинным шагам
+  const base = o.legs.map(l => (l.lo + 0.4*(l.hi-l.lo)) * legK(l)), sb = base.reduce((a,b)=>a+b,0);
+  const legMins = base.map(b => Math.max(1, Math.floor(b*mid/sb)));
+  let rest = mid - legMins.reduce((a,b)=>a+b,0);
+  const order = base.map((b,i)=>i).sort((a,b)=>base[b]-base[a]);
+  for(let i=0; rest>0; i=(i+1)%order.length){ legMins[order[i]]++; rest--; }
+  return FC[k] = { mid, p95: Math.ceil(q(0.95)), legMins,
+    chance: budget => { let lo=0, hi=N; while(lo<hi){ const m=(lo+hi)>>1; if(s[m]<=budget) lo=m+1; else hi=m; } return lo/N; } };
 }
+const legMin = (k, i) => forecast(k).legMins[i];
+const DAY = 24*60;
 const fmt = m => { m = Math.round(m); const h = Math.floor(m/60)%24, mm = ((m%60)+60)%60; return h + ':' + String(mm).padStart(2,'0'); };
-/* Что показываем из прогноза (решение 22.11: «N из 10» неинформативно):
-   • главное — во сколько будешь и какой запас;
-   • «самое позднее» — 1 поездка из 10 (90-й процентиль), в минутах; у рискованных — с причиной («в пробку — 9:06»);
-   • слово-итог цветом: надёжно / есть риск / не успеешь;
-   • «выйди до» — крайний срок, чтобы успеть и в плохой день. */
-const dep = () => state.timeMode==='depart' ? state.depart : NOW;
-const latest = k => state.arrive - forecast(k).p90;
-const dur = m => m>=60 ? Math.floor(m/60) + ' ч' + (m%60 ? ' ' + m%60 + ' мин' : '') : m + ' мин';
+const fmtD = m => fmt(m) + (m >= DAY ? ' завтра' : '');
+const dur = m => { m = Math.round(m); return m>=60 ? Math.floor(m/60) + ' ч' + (m%60 ? ' ' + m%60 + ' мин' : '') : m + ' мин'; };
 const isCar = k => k==='taxi' || k==='carshare';
 const delayWhy = k => isCar(k) ? 'в пробку' : k==='walk' || k==='loop' ? 'если задержишься' : 'если поезд задержится';
+const goVerb = k => k==='taxi' ? 'Вызывай' : 'Выходи';
+const arriveMode = () => state.mode==='hurry' && state.timeMode==='arrive';
+const dep = () => state.timeMode==='depart' || state.mode!=='hurry' ? state.depart : NOW;
+const latest = k => state.arrive - forecast(k).p95;
+/* Итог — по вероятности успеть (одинаково для всех видов транспорта):
+   ≥ 95% надёжно · 50–95% есть риск · 10–50% скорее опоздаешь · < 10% не успеешь.
+   Режим «Выйти в»: по относительному разбросу (самое позднее − обычное) / обычное. */
 function verdict(k){
-  const f = forecast(k), d = dep();
-  if(state.timeMode==='depart' || state.mode!=='hurry' || OPTIONS[k].noTarget){
-    const spread = f.p90 - f.mid;
-    return spread <= 5 ? { cls:'g', word:'стабильно' } : spread <= 10 ? { cls:'a', word: isCar(k) ? 'зависит от пробок' : 'бывает дольше' } : { cls:'r', word:'непредсказуемо' };
+  const o = OPTIONS[k], f = forecast(k);
+  if(!arriveMode() || o.noTarget){
+    const rel = (f.p95 - f.mid) / f.mid;
+    return rel <= 0.15 ? { cls:'g', word:'стабильно' } : rel <= 0.30 ? { cls:'a', word: isCar(k) ? 'зависит от пробок' : 'бывает дольше' } : { cls:'r', word:'непредсказуемо' };
   }
-  const budget = state.arrive - d;
-  if(f.p90 <= budget) return { cls:'g', word:'надёжно', spare: budget - f.mid };
-  if(f.mid <= budget) return { cls:'a', word: isCar(k) ? 'риск из-за пробок' : 'есть риск', spare: budget - f.mid, badLate: f.p90 - budget };
-  if(f.p10 <= budget) return { cls:'a', likelyLate:true, word:'скорее опоздаешь', late: f.mid - budget };
-  return { cls:'r', word:'не успеешь', late: f.mid - budget };
+  const L = latest(k);
+  if(L >= NOW + 1) return { cls:'g', word:'надёжно', plan:'until', L, spare: L - NOW };          // есть время собраться
+  const budget = state.arrive - NOW, p = f.chance(budget);
+  if(p >= 0.95) return { cls:'g', word:'надёжно', plan:'now' };
+  if(p >= 0.5)  return { cls:'a', word: isCar(k) ? 'риск из-за пробок' : 'есть риск', plan:'now', badLate: f.p95 - budget };
+  if(p >= 0.1)  return { cls:'r', word:'скорее опоздаешь', plan:'now', late: Math.max(1, f.mid - budget) };
+  return { cls:'r', word:'не успеешь', plan:'now', late: f.mid - budget, never:true };
+}
+// Цель «к 9:00» не теряется и в режиме «Выйти в»
+function targetPill(k){
+  if(state.mode!=='hurry' || state.timeMode!=='depart' || OPTIONS[k].noTarget) return '';
+  const f = forecast(k), b = state.arrive - state.depart, p = f.chance(b), T = fmtD(state.arrive);
+  if(p >= 0.95) return `<span class="pill g">к ${T} успеешь</span>`;
+  if(p >= 0.5) return `<span class="pill a">к ${T} — есть риск</span>`;
+  return `<span class="pill r">к ${T} опоздаешь на ~${dur(Math.max(1, f.mid - b))}</span>`;
+}
+function bestOption(keys){
+  const score = k => { const v = verdict(k), f = forecast(k); const rank = v.cls==='g' ? 0 : v.cls==='a' ? 1 : 2; return rank*1e4 + f.mid; };
+  return keys.filter(k=>!OPTIONS[k].noTarget).reduce((a,b)=>score(b)<score(a)?b:a);
 }
 
 /* ================= ЭКРАНЫ ================= */
@@ -271,137 +317,207 @@ const body = document.getElementById('body');
 const V = {};
 const ARR_CHIPS = [8*60+30, 9*60, 9*60+30, 10*60], DEP_CHIPS = [NOW, 8*60+30, 8*60+45, 9*60];
 function timeBtn(){
-  const arr = state.timeMode==='arrive' && state.mode==='hurry';
-  const label = arr ? fmt(state.arrive) : (state.depart===NOW ? 'сейчас' : 'в ' + fmt(state.depart));
+  const arr = arriveMode();
+  const label = arr ? fmtD(state.arrive) : (state.depart===NOW ? 'сейчас' : 'в ' + fmtD(state.depart));
   return `<button class="tbtn press" aria-label="Изменить время: ${arr?'прибыть к':'выйти'} ${label}" onclick="go('time')">${label} <span aria-hidden="true">▾</span></button>`;
 }
+function modsLink(){ return `<button class="mlink" onclick="go('modules')">Модули</button>`; }
 V.compare = () => {
-  const hurry = state.mode==='hurry', arr = state.timeMode==='arrive' && hurry;
+  const hurry = state.mode==='hurry', arr = arriveMode();
   const keys = hurry ? ['metro','taxi','carshare','walk'] : ['stroll','loop','walk'];
+  const best = bestOption(keys);
   const allLate = arr && keys.every(k=>verdict(k).cls==='r');
-  const late = allLate ? `<div class="banner late"><b>К ${fmt(state.arrive)} уже не успеть</b><br>Быстрее всего — ${OPTIONS[fastest()].name.toLowerCase()}, будешь около ${fmt(dep()+forecast(fastest()).mid)}</div>` : '';
-  const w = state.modules.weather ? `<div class="banner"><b><span aria-hidden="true">☔</span> Дождь с 8:40</b><br>Зонт пригодится на пеших участках</div>` : '';
+  let late = '';
+  if(allLate){
+    const fk = fastest(), f = forecast(fk), nextT = Math.ceil((NOW + f.p95) / 15) * 15;
+    late = `<div class="banner late" role="alert"><b>К ${fmtD(state.arrive)} уже не успеть</b><br>Быстрее всего — ${OPTIONS[fk].name.toLowerCase()}, будешь около ${fmt(NOW+f.mid)}
+      <div class="row" style="flex-wrap:wrap;margin-top:10px"><button class="chip press" onclick="setTime(${nextT})">Показать к ${fmt(nextT)}</button><button class="chip press" onclick="pick('${fk}')">Самый быстрый</button><button class="chip press" onclick="lateMsg('${fk}')">Предупредить, что опоздаю</button></div></div>`;
+  }
+  const w = state.modules.weather ? `<div class="hint"><span aria-hidden="true">☔</span> <span><b>Дождь с 8:40</b> — пешком чуть дольше, это уже в прогнозе</span>${modsLink()}</div>` : '';
   const title = !hurry ? 'Гуляем — выйти ' + timeBtn() : arr ? 'Как успеть к ' + timeBtn() : 'Если выйти ' + timeBtn();
   return `
-  <h1>${title}</h1>
+  <h1 tabindex="-1">${title}</h1>
   <div class="sub">Первомайская ул., 100 → м. Бауманская · сейчас ${fmt(NOW)}</div>
-  <div class="seg" role="tablist"><button role="tab" aria-selected="${hurry}" class="${hurry?'on':''}" onclick="setMode('hurry')">Тороплюсь</button><button role="tab" aria-selected="${!hurry}" class="${!hurry?'on':''}" onclick="setMode('walk')">Гуляю</button></div>
-  ${late}${w}
-  ${keys.map(k=>card(k)).join('')}
-  <div class="note">Время, цены и ориентиры в прототипе примерные</div>`;
+  <div class="seg" role="group" aria-label="Режим"><button aria-pressed="${hurry}" class="${hurry?'on':''}" onclick="setMode('hurry')">Тороплюсь</button><button aria-pressed="${!hurry}" class="${!hurry?'on':''}" onclick="setMode('walk')">Гуляю</button></div>
+  ${late}
+  ${keys.map(k=>card(k, k===best && !allLate)).join('')}
+  ${w}
+  <div class="note">Время, цены и ориентиры в прототипе примерные. «Самое позднее» — так в 19 поездках из 20.</div>`;
 };
 function fastest(){ return ['metro','taxi','carshare'].reduce((a,b)=>forecast(b).mid<forecast(a).mid?b:a); }
-function card(k){
-  const o = OPTIONS[k], f = forecast(k), d = dep(), v = verdict(k);
-  const arr = state.timeMode==='arrive' && state.mode==='hurry' && !o.noTarget;
+function card(k, isBest){
+  const o = OPTIONS[k], f = forecast(k), v = verdict(k), arr = arriveMode() && !o.noTarget;
   let right, pills = [];
-  if(o.noTarget){ right = `<div class="big">${f.mid} мин</div><div class="m">${o.price}</div>`; pills.push(`<span class="pill g">когда захочешь</span>`); }
-  else {
-    right = `<div class="big">${fmt(d+f.mid)}</div><div class="m">${arr ? (v.late ? 'опоздание ~' + dur(v.late) : 'запас ' + v.spare + ' мин') : 'в пути ~' + dur(f.mid)}</div>`;
+  if(o.noTarget){ right = `<div class="big">${f.mid} мин</div><div class="m">${o.price}</div>`; pills.push(`<span class="pill">когда захочешь</span>`); }
+  else if(arr && v.plan==='until'){
+    right = `<div class="m">выйди до</div><div class="big">${fmtD(v.L)}</div><div class="m">${v.spare >= 120 ? '' : 'ещё ' + dur(v.spare)}</div>`;
+    pills.push(`<span class="pill g">${v.word}</span>`, `<span class="pill">в пути ~${dur(f.mid)}</span>`);
+  } else if(arr){
+    right = `<div class="m">${goVerb(k).toLowerCase()}</div><div class="big">сейчас</div><div class="m">будешь ~${fmt(NOW+f.mid)}</div>`;
     pills.push(`<span class="pill ${v.cls}">${v.word}</span>`);
-    if(v.likelyLate) pills.push(`<span class="pill">успеешь, только если повезёт</span>`);
-    else if(v.cls==='r' && arr) {}
-    else if(v.badLate) pills.push(`<span class="pill a">${delayWhy(k)} — ${fmt(d+f.p90)}, опоздаешь на ${v.badLate} мин</span>`);
-    else pills.push(`<span class="pill">самое позднее ${fmt(d+f.p90)}</span>`);
-    if(arr){ const L = latest(k); if(L >= d && !v.late) pills.push(`<span class="pill">${v.cls==='g'?'можно выйти до':'надёжнее выйти до'} <b>&nbsp;${fmt(L)}</b></span>`); }
+    if(v.badLate) pills.push(`<span class="pill">${delayWhy(k)} — опоздаешь на ${v.badLate} мин</span>`);
+    else if(v.never) pills.push(`<span class="pill">опоздание ~${dur(v.late)}</span>`);
+    else if(v.late) pills.push(`<span class="pill">обычно опоздание ~${dur(v.late)}</span>`);
+  } else {
+    const d = dep();
+    right = `<div class="m">будешь в</div><div class="big">${fmtD(d+f.mid)}</div><div class="m">самое позднее ${fmt(d+f.p95)}</div>`;
+    pills.push(`<span class="pill ${v.cls}">${v.word}</span>`);
+    const tp = targetPill(k); if(tp) pills.push(tp);
   }
-  if(k==='walk' && state.modules.weather) pills.push(`<span class="pill a">нужен зонт</span>`);
-  return `<button class="card press ${state.sel===k?'sel':''} ${v.cls==='r'&&arr?'late':''}" data-k="${k}" onclick="pick('${k}')">
+  if(k==='walk' && state.modules.weather && !v.never) pills.push(`<span class="pill">нужен зонт</span>`);
+  const compact = arr && v.never;
+  return `<button class="card press ${state.sel===k?'sel':''} ${compact?'late':''}" data-k="${k}" onclick="pick('${k}')">
+    ${isBest ? '<div class="best">Лучше всего</div>' : ''}
     <div class="top"><div class="ico" aria-hidden="true" style="background:${o.bg};color:${o.fg}">${o.ico}</div>
-      <div><div class="t">${o.name}</div><div class="m">${o.detail}${o.noTarget?'':' · ' + o.price}</div></div>
+      <div style="flex:1;min-width:0"><div class="t">${o.name}</div><div class="m">${o.detail}${o.noTarget?'':' · ' + o.price}</div></div>
       <div class="right">${right}</div></div>
     <div class="win">${pills.join('')}</div></button>`;
 }
+function lateMsg(k){ const f = forecast(k), late = NOW + f.mid - state.arrive;
+  const txt = `Опаздываю минут на ${late}, буду около ${fmt(NOW+f.mid)}`;
+  try{ navigator.clipboard && navigator.clipboard.writeText(txt); }catch(e){}
+  toast('Скопировано: «' + txt + '»'); }
+
+/* ---------- Выбор времени: черновик до «Готово» ---------- */
 V.time = () => {
-  const arr = state.timeMode==='arrive', cur = arr ? state.arrive : state.depart;
-  const H = Array.from({length:18},(_,i)=>i+6), M = Array.from({length:12},(_,i)=>i*5);
-  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 style="margin:0">Когда?</h1></div>
-   ${state.mode!=='hurry' ? '' : `<div class="seg sm" role="tablist" style="margin-top:10px">
-      <button role="tab" aria-selected="${arr}" class="${arr?'on':''}" onclick="setTimeMode('arrive', true)">Прибыть к</button>
-      <button role="tab" aria-selected="${!arr}" class="${!arr?'on':''}" onclick="setTimeMode('depart', true)">Выйти в</button></div>`}
-   <div class="chips" style="margin-top:6px">${(arr ? ARR_CHIPS : DEP_CHIPS).map(t=>`<button class="chip press ${t===cur?'on':''}" onclick="wheelTo(${t})">${!arr && t===NOW ? 'Сейчас' : fmt(t)}</button>`).join('')}</div>
-   <div class="wheel" aria-label="Выбор времени">
-     <div class="col" id="wh" tabindex="0" role="listbox" aria-label="Часы">${H.map(h=>`<div class="it" data-v="${h}">${h}</div>`).join('')}</div>
+  const dr = state.draft, arr = dr.mode==='arrive', cur = dr.t;
+  const H = Array.from({length:24},(_,i)=>i), M = Array.from({length:12},(_,i)=>i*5);
+  return `<div class="row"><button class="back-btn" aria-label="Назад без изменений" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Когда?</h1></div>
+   ${state.mode!=='hurry' ? '' : `<div class="seg sm" role="group" aria-label="Что выбираем" style="margin-top:10px">
+      <button aria-pressed="${arr}" class="${arr?'on':''}" onclick="setTimeMode('arrive')">Прибыть к</button>
+      <button aria-pressed="${!arr}" class="${!arr?'on':''}" onclick="setTimeMode('depart')">Выйти в</button></div>`}
+   <div class="chips" style="margin-top:6px">${(arr ? ARR_CHIPS : DEP_CHIPS).map(t=>`<button class="chip press ${t===cur?'on':''}" aria-pressed="${t===cur}" data-t="${t}" onclick="chipTime(${t})">${!arr && t===NOW ? 'Сейчас' : fmt(t)}</button>`).join('')}</div>
+   <div class="wheel" role="group" aria-label="Время">
+     <div class="col" id="wh" tabindex="0" role="spinbutton" aria-label="Часы" aria-valuemin="0" aria-valuemax="23">${H.map(h=>`<div class="it" aria-hidden="true">${h}</div>`).join('')}</div>
      <div class="colon" aria-hidden="true">:</div>
-     <div class="col" id="wm" tabindex="0" role="listbox" aria-label="Минуты">${M.map(m=>`<div class="it" data-v="${m}">${String(m).padStart(2,'0')}</div>`).join('')}</div>
+     <div class="col" id="wm" tabindex="0" role="spinbutton" aria-label="Минуты" aria-valuemin="0" aria-valuemax="55">${M.map(m=>`<div class="it" aria-hidden="true">${String(m).padStart(2,'0')}</div>`).join('')}</div>
      <div class="lens" aria-hidden="true"></div>
    </div>
-   <div class="m" style="text-align:center;margin:-4px 0 14px">${arr ? 'Прогноз покажет, когда выйти' : 'Прогноз покажет, во сколько будешь на месте'}</div>
+   <div class="m" id="timeNote" style="text-align:center;margin:-4px 0 14px" aria-live="polite"></div>
    <button class="btn p press" onclick="applyTime()">Готово</button>`;
 };
 const IT = 44;
-function setupWheel(){
-  const arr = state.timeMode==='arrive', cur = arr ? state.arrive : state.depart;
+function colIdx(col){ return Math.max(0, Math.min(col.children.length-1, Math.round(col.scrollTop/IT))); }
+function setCol(col, i, smooth){ i = Math.max(0, Math.min(col.children.length-1, i)); col.scrollTo({top:i*IT, behavior: smooth && !reduced ? 'smooth' : 'auto'}); }
+function syncTime(t){ // черновик = выбранное значение, а не положение прокрутки
+  state.draft.t = t;
   const wh = document.getElementById('wh'), wm = document.getElementById('wm'); if(!wh) return;
-  wh.scrollTop = (Math.floor(cur/60) - 6) * IT; wm.scrollTop = Math.round((cur%60)/5) * IT;
+  const tod = ((t % DAY) + DAY) % DAY, h = Math.floor(tod/60), m = tod % 60;
+  wh.setAttribute('aria-valuenow', h); wh.setAttribute('aria-valuetext', h + ' часов');
+  wm.setAttribute('aria-valuenow', m); wm.setAttribute('aria-valuetext', m + ' минут');
+  document.querySelectorAll('.chips .chip[data-t]').forEach(c => { const on = +c.dataset.t === t; c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); });
+  const arr = state.draft.mode==='arrive', past = tod < NOW;
+  const note = document.getElementById('timeNote');
+  if(note) note.textContent = (past ? 'Это время уже прошло сегодня — будет завтра. ' : '') + (arr ? 'Прогноз покажет, когда выйти' : 'Прогноз покажет, во сколько будешь на месте');
+}
+function wheelTime(){ const wh = document.getElementById('wh'), wm = document.getElementById('wm'); let t = colIdx(wh)*60 + colIdx(wm)*5; return t; }
+function normDay(t){ t = ((t % DAY) + DAY) % DAY; return t < NOW ? t + DAY : t; }   // прошедшее время — это завтра
+function setupWheel(){
+  const wh = document.getElementById('wh'), wm = document.getElementById('wm'); if(!wh) return;
+  const tod = ((state.draft.t % DAY) + DAY) % DAY;
+  wh.scrollTop = Math.floor(tod/60) * IT; wm.scrollTop = Math.round((tod%60)/5) * IT;
+  syncTime(state.draft.t);
   for(const col of [wh, wm]){
-    col.addEventListener('click', e => { const it = e.target.closest('.it'); if(it) col.scrollTo({top: [...col.children].indexOf(it)*IT, behavior: reduced?'auto':'smooth'}); });
-    col.addEventListener('keydown', e => { if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); col.scrollTop += (e.key==='ArrowDown'?1:-1)*IT; } });
+    const n = col.children.length;
+    let st; col.addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(() => { if(state.view==='time' && document.getElementById('wh')) syncTime(normDay(wheelTime())); }, 90); });
+    col.addEventListener('click', e => { const it = e.target.closest('.it'); if(!it) return; const i = [...col.children].indexOf(it); setCol(col, i, true);
+      const t = col===wh ? i*60 + colIdx(wm)*5 : colIdx(wh)*60 + i*5; syncTime(normDay(t)); });
+    col.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); const i = colIdx(col) + Math.sign(e.deltaY); setCol(col, i, true);
+      const t = col===wh ? Math.max(0,Math.min(n-1,i))*60 + colIdx(wm)*5 : colIdx(wh)*60 + Math.max(0,Math.min(n-1,i))*5; syncTime(normDay(t)); }, {passive:false});
+    col.addEventListener('keydown', e => {
+      const step = {ArrowDown:1, ArrowUp:-1, PageDown:3, PageUp:-3}[e.key];
+      let i = colIdx(col);
+      if(step) i += step; else if(e.key==='Home') i = 0; else if(e.key==='End') i = n-1;
+      else if(e.key==='Enter'){ e.preventDefault(); applyTime(); return; } else if(e.key==='Escape'){ e.preventDefault(); back(); return; } else return;
+      e.preventDefault(); setCol(col, i, false);
+      const ci = Math.max(0, Math.min(n-1, i)); syncTime(normDay(col===wh ? ci*60 + colIdx(wm)*5 : colIdx(wh)*60 + ci*5)); });
   }
 }
-function wheelTo(t){ const wh = document.getElementById('wh'), wm = document.getElementById('wm'); const b = reduced ? 'auto' : 'smooth';
-  wh.scrollTo({top:(Math.floor(t/60)-6)*IT, behavior:b}); wm.scrollTo({top:Math.round((t%60)/5)*IT, behavior:b});
-  document.querySelectorAll('.chips .chip').forEach(c=>c.classList.toggle('on', c.getAttribute('onclick')==='wheelTo('+t+')')); }
-function wheelValue(){
-  const wh = document.getElementById('wh'), wm = document.getElementById('wm');
-  const h = 6 + Math.max(0, Math.min(17, Math.round(wh.scrollTop/IT))), m = 5*Math.max(0, Math.min(11, Math.round(wm.scrollTop/IT)));
-  return h*60 + m;
+function chipTime(t){ const wh = document.getElementById('wh'), wm = document.getElementById('wm'); const tod = t % DAY;
+  setCol(wh, Math.floor(tod/60), true); setCol(wm, Math.round((tod%60)/5), true); syncTime(t); }
+function applyTime(){
+  const dr = state.draft, t = dr.t;
+  state.timeMode = dr.mode; if(dr.mode==='arrive') state.arrive = t; else state.depart = Math.max(NOW, t);
+  back(); say((dr.mode==='arrive' ? 'Прибыть к ' : 'Выйти в ') + fmtD(t));
+  setTimeout(()=>{ const b = document.querySelector('.tbtn'); if(b) b.focus({preventScroll:true}); }, 0);
 }
-function applyTime(){ const t = wheelValue(); if(state.timeMode==='arrive') state.arrive = t; else state.depart = Math.max(NOW, t); back(); say('Время ' + fmt(t)); }
-function setTimeMode(m, keepView){ if(keepView){ const t = wheelValue(); state.timeMode = m; render(); setupWheel(); const wh = document.getElementById('wh'), wm = document.getElementById('wm'); wh.scrollTop = (Math.floor(t/60)-6)*IT; wm.scrollTop = Math.round((t%60)/5)*IT; return; }
-  state.timeMode = m; render(); }
-function setTime(t){ if(state.timeMode==='arrive') state.arrive = t; else state.depart = t; render(); }
+function setTimeMode(m){ const dr = state.draft; if(dr.mode===m) return; const t = dr.t; dr.mode = m;
+  dr.t = m==='arrive' ? (t===NOW ? state.arrive : t) : t;
+  render(); }
+function setTime(t){ if(arriveMode()) state.arrive = t; else state.depart = t; render(); }
+
 V.route = () => {
-  const k = state.sel, o = OPTIONS[k], f = forecast(k), d = dep(), v = verdict(k);
-  const arr = state.timeMode==='arrive' && state.mode==='hurry' && !o.noTarget;
-  let t = d;
+  const k = state.sel, o = OPTIONS[k], f = forecast(k), v = verdict(k), arr = arriveMode() && !o.noTarget;
+  const start = arr ? (v.plan==='until' ? v.L : NOW) : dep();
+  let t = start;
   const icon = l => l.type==='walk' ? '🚶' : l.type==='metro' ? 'Ⓜ' : l.type==='wait' ? '⏱' : k==='taxi' ? '🚕' : '🚗';
-  const steps = o.legs.map(l => { const mid = legMid(l); const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" aria-hidden="true" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
-     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div>${l.type==='metro' && state.modules.crowd ? '<div class="pill v" style="margin-top:6px">в 8:30–8:50 вагоны полные</div><br>' : ''}${l.lm?`<div class="lm"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
-  const pois = o.pois ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${o.pois.map((p,i)=>`<button class="poi press" onclick="flyPoi(${i})"><div class="e" aria-hidden="true">${p.e}</div><b>${p.n}</b><span>${p.d} · ${p.extra}</span></button>`).join('')}</div>` : '';
+  const crowdNow = state.modules.crowd && start >= 8*60+10 && start <= 8*60+45;
+  const steps = o.legs.map((l,i) => { const mid = legMin(k,i); const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" aria-hidden="true" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
+     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div>${l.type==='metro' && crowdNow ? '<button class="pill v press" style="margin-top:6px;border:0" onclick="go(\'modules\')">в 8:30–8:50 вагоны полные</button>' : ''}${l.lm?`<div class="lm"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
+  const pois = o.pois ? visiblePois(o).length ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${visiblePois(o).map(p=>`<button class="poi press" onclick="flyPoi(${o.pois.indexOf(p)})"><div class="e" aria-hidden="true">${p.e}</div><b>${p.n}</b><span>${p.d} · ${p.extra}</span></button>`).join('')}</div>` : '' : '';
   let head;
-  const when = d===NOW ? 'сейчас' : 'в ' + fmt(d);
-  if(o.noTarget) head = `<h1>${o.name}</h1><div class="sub">~${f.mid} мин · ${o.price} · можно сократить в любой момент</div>`;
-  else if(!arr) head = `<h1>Выйдешь ${when} — будешь в ${fmt(d+f.mid)}</h1><div class="sub">${o.name} · ${o.price} · самое позднее ${fmt(d+f.p90)}</div><span class="pill ${v.cls}">${v.word}</span>`;
-  else { const L = latest(k);
-    if(v.cls==='g') head = `<h1>Выходи до ${fmt(L)}</h1><div class="sub">Выйдешь ${when} — будешь в ${fmt(d+f.mid)}, самое позднее ${fmt(d+f.p90)}. Запас ${v.spare} мин</div>`;
-    else if(v.likelyLate) head = `<h1>Выходи ${when} — скорее опоздаешь</h1><div class="sub">Обычно будешь в ${fmt(d+f.mid)}, успеешь только если повезёт</div>`;
-    else if(v.cls==='a') head = `<h1>Выходи ${when} — есть риск</h1><div class="sub">Обычно будешь в ${fmt(d+f.mid)}, но ${delayWhy(k)} — опоздаешь на ${v.badLate} мин</div>`;
-    else head = `<h1>К ${fmt(state.arrive)} не успеть</h1><div class="sub">Выйдешь ${when} — будешь около ${fmt(d+f.mid)}</div>`;
-    head += `<span class="pill ${v.cls}">${v.word}</span>`; }
-  const cta = k==='taxi' ? 'Вызвать такси' : k==='carshare' ? 'Забронировать машину' : 'Поехали';
+  if(o.noTarget) head = `<h1 tabindex="-1">${o.name}</h1><div class="sub">~${f.mid} мин · ${o.price} · можно сократить в любой момент</div>`;
+  else if(!arr){ const d = dep();
+    head = `<h1 tabindex="-1">Выйдешь ${d===NOW?'сейчас':'в '+fmt(d)} — будешь в ${fmtD(d+f.mid)}</h1><div class="sub">${o.name} · ${o.price} · самое позднее ${fmt(d+f.p95)}</div><div class="row" style="flex-wrap:wrap;gap:6px"><span class="pill ${v.cls}">${v.word}</span>${targetPill(k)}</div>`; }
+  else if(v.plan==='until') head = `<h1 tabindex="-1">${goVerb(k)} до ${fmtD(v.L)}</h1><div class="sub">Ещё ${dur(v.spare)} на сборы. В пути ~${dur(f.mid)} — будешь около ${fmt(v.L+f.mid)}, самое позднее ${fmtD(state.arrive)}</div><span class="pill g">${v.word}</span>`;
+  else if(!v.cls.startsWith('r') ) head = `<h1 tabindex="-1">${goVerb(k)} сейчас${v.cls==='a'?' — есть риск':''}</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}${v.badLate ? ', но ' + delayWhy(k) + ' — опоздаешь на ' + v.badLate + ' мин' : ', самое позднее ' + fmt(NOW+f.p95)}</div><span class="pill ${v.cls}">${v.word}</span>`;
+  else if(!v.never) head = `<h1 tabindex="-1">${goVerb(k)} сейчас — скорее опоздаешь</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}, это ~${dur(v.late)} опоздания. Успеешь, только если повезёт</div><span class="pill r">${v.word}</span>`;
+  else head = `<h1 tabindex="-1">К ${fmtD(state.arrive)} не успеть</h1><div class="sub">Выйдешь сейчас — будешь около ${fmt(NOW+f.mid)}, опоздание ~${dur(v.late)}</div><div class="row" style="flex-wrap:wrap;gap:6px"><span class="pill r">${v.word}</span><button class="chip press" onclick="lateMsg('${k}')">Предупредить, что опоздаю</button></div>`;
+  const cta = k==='taxi' ? 'Вызвать такси' : k==='carshare' ? 'Забронировать машину' : (arr && v.never ? 'Всё равно поехать' : 'Поехали');
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">Маршрут с ориентирами</div></div>
     ${head}<div class="steps">${steps}</div>${pois}
-    <button class="btn p press" id="goBtn" onclick="startTrip()">${cta}</button>`;
+    <button class="btn ${arr && v.never ? 'w' : 'p'} press" id="goBtn" onclick="${isCar(k) ? "go('confirm')" : 'startTrip()'}">${cta}</button>`;
+};
+function visiblePois(o){ return (o.pois||[]).filter(p => p.e!=='☕' || state.modules.coffee); }
+// Подтверждение перед платным действием
+V.confirm = () => {
+  const k = state.sel, o = OPTIONS[k], taxi = k==='taxi';
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">${taxi?'Вызов такси':'Бронь машины'}</div></div>
+   <h1 tabindex="-1">${taxi ? 'Вызвать такси?' : 'Забронировать машину?'}</h1>
+   <div class="card" style="cursor:default">
+     <div class="row" style="justify-content:space-between"><span class="m">${taxi?'Тариф':'Машина'}</span><b>${taxi?'Эконом':'ближайшая, 360 м'}</b></div>
+     <div class="row" style="justify-content:space-between;margin-top:8px"><span class="m">Цена</span><b>${o.price}</b></div>
+     <div class="row" style="justify-content:space-between;margin-top:8px"><span class="m">${taxi?'Подача':'Бесплатное ожидание'}</span><b>${taxi?'3–9 мин':'20 мин'}</b></div>
+     <div class="m" style="margin-top:10px">Оформим в приложении ${taxi?'такси':'каршеринга'} — точная цена там. В прототипе это имитация.</div>
+   </div>
+   <button class="btn p press" onclick="startTrip()">${taxi ? 'Вызвать' : 'Забронировать'}</button>
+   <div style="height:8px"></div><button class="btn w press" onclick="back()">Отмена</button>`;
 };
 V.modules = () => {
-  const items = [['weather','☔','Погода в пути','Дождь, снег и гололёд — заранее'],['crowd','👥','Загруженность вагонов','Когда в поездах свободнее'],
-                 ['coffee','☕','Кофе по пути','Предлагать остановки в режиме «Гуляю»'],['lifts','🛗','Лифты и эскалаторы','Маршрут без лестниц']];
-  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 style="margin:0">Модули</h1></div>
+  const items = [['weather','☔','Погода в пути','Дождь и гололёд — в прогнозе и подсказках','Где: на главном, в шагах пешком'],
+                 ['crowd','👥','Загруженность вагонов','Когда в поездах свободнее','Где: в шаге метро'],
+                 ['coffee','☕','Кофе по пути','Предлагать кофейни в режиме «Гуляю»','Где: «По пути» на маршруте прогулки']];
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
    <div class="sub" style="margin-top:6px">Добавляют подсказки к твоим поездкам. Включай только нужное.</div>
-   ${items.map(([k,e,n,d])=>`<button class="card" role="switch" aria-checked="${state.modules[k]}" onclick="toggleMod('${k}')" style="display:flex;align-items:center;gap:12px;${state.modules[k]?'':'box-shadow:none;background:#FBFAF7'}">
-      <div class="ico" aria-hidden="true" style="background:#EDEDFD">${e}</div><div style="flex:1"><div class="t">${n}</div><div class="m">${d}</div></div>
+   ${items.map(([k,e,n,d,w])=>`<button class="card" role="switch" aria-checked="${state.modules[k]}" onclick="toggleMod('${k}')" style="display:flex;align-items:center;gap:12px;${state.modules[k]?'':'box-shadow:none;background:#FBFAF7'}">
+      <div class="ico" aria-hidden="true" style="background:#EDEDFD">${e}</div><div style="flex:1"><div class="t">${n}</div><div class="m">${d}</div><div class="m" style="font-size:12px">${w}</div></div>
       <div class="toggle ${state.modules[k]?'on':''}" aria-hidden="true"></div></button>`).join('')}`;
 };
 V.done = () => {
   const o = OPTIONS[state.sel], at = trip.endAt;
-  const diff = state.arrive - at, hurry = state.mode==='hurry' && state.timeMode==='arrive' && !o.noTarget;
-  const sub = o.noTarget ? `${trip.total} мин · ${o.price}` : hurry ? (diff>=0 ? `на ${diff} мин раньше, чем нужно` : `опоздание ${-diff} мин`) : `${trip.total} мин в пути`;
-  return `<h1>${o.noTarget ? 'Хорошо прогулялся' : 'Ты на месте в ' + fmt(at)}</h1>
+  const diff = state.arrive - at, hurry = arriveMode() && !o.noTarget;
+  const sub = o.noTarget ? `${trip.total} мин · ${o.price}` : hurry ? (diff>0 ? `на ${diff} мин раньше, чем нужно` : diff===0 ? 'ровно вовремя' : `опоздание ${-diff} мин`) : `${trip.total} мин в пути`;
+  const chips = o.noTarget ? ['Было приятно','Слишком долго','Хочу другой маршрут'] : ['Всё по плану','Была задержка','Сложно найти'];
+  return `<h1 tabindex="-1">${o.noTarget ? 'Прогулка позади' : 'Ты на месте в ' + fmt(at)}</h1>
    <div class="sub">${sub}</div>
    <div class="card" style="cursor:default"><div class="t">Как прошло?</div><div class="m" style="margin:4px 0 10px">Ответ уточнит прогноз для этого маршрута</div>
-   <div class="row" style="flex-wrap:wrap"><button class="chip press" onclick="thanks()">Всё по плану</button><button class="chip press" onclick="thanks()">Задержался</button><button class="chip press" onclick="thanks()">Сложно найти</button></div></div>
+   <div class="row" style="flex-wrap:wrap">${chips.map(c=>`<button class="chip press" onclick="thanks()">${c}</button>`).join('')}</div></div>
    <button class="btn w press" onclick="restart()">Готово</button>`;
 };
 
 const glue = h => h.replace(/(\d) (мин|ч|₽|км|м)(?=[\s<.,·)]|$)/g, '$1&nbsp;$2').replace(/≈ /g, '≈&nbsp;');
+// Короткая блокировка кликов после смены экрана: второй тап двойного клика не попадает в новую кнопку
+let navLock = 0; const lockNav = () => { navLock = performance.now() + 450; };
 function render(anim){
   body.innerHTML = `<div class="view ${anim==='back'?'back':anim==='in'?'in':''}">${glue(V[state.view]())}</div>`;
-  if(anim) body.scrollTop = 0;
+  if(anim) { body.scrollTop = 0; lockNav(); const h = body.querySelector('h1'); if(h) h.focus({preventScroll:true}); }
   if(state.view==='time') setupWheel();
 }
-function go(v){ if(state.view===v) return; state.history.push(state.view); state.view = v; render('in'); if(v==='modules'||v==='time') snap('full'); if(v==='route') snap('half'); }
-function back(){ state.view = state.history.pop() || 'compare'; render('back'); if(state.view==='compare'){ snap('half'); showRoute(state.sel); fitAll(); } }
+function go(v){ if(state.view===v) return;
+  if(v==='time') state.draft = { mode: state.mode==='hurry' ? state.timeMode : 'depart', t: state.mode==='hurry' && state.timeMode==='arrive' ? state.arrive : state.depart };
+  state.history.push(state.view); state.view = v; render('in'); if(v==='modules'||v==='time'||v==='confirm') snap('full'); if(v==='route') snap('half'); }
+function back(){ state.view = state.history.pop() || 'compare'; render('back');
+  if(state.view==='compare'){ snap('half'); showRoute(state.sel); fitAll(); } else if(state.view==='route') snap('half'); }
 function setMode(m){ state.mode = m; state.sel = m==='hurry' ? 'metro' : 'stroll'; state.timeMode = m==='walk' ? 'depart' : 'arrive'; render(); showRoute(state.sel); fitAll(); }
 function pick(k){ state.sel = k; showRoute(k); go('route'); fitAll(); }
 function toggleMod(k){ state.modules[k] = !state.modules[k]; render(); say((state.modules[k]?'Включено':'Выключено')); }
@@ -439,15 +555,16 @@ let dragMoved = false;
   sheet.addEventListener('click', e => { if(dragMoved){ e.stopPropagation(); e.preventDefault(); } }, true);
   // колесо мыши: у верха списка — разворачивает/сворачивает шторку
   let wheelLock = 0;
-  sheet.addEventListener('wheel', e => { if(e.target.closest('.wheel')) return; const now = Date.now(); if(now < wheelLock) return;
+  sheet.addEventListener('wheel', e => { if(e.target.closest('.wheel') || state.view==='time') return; const now = Date.now(); if(now < wheelLock) return;
     const i = ORDER.indexOf(sheet.dataset.snap);
     if(e.deltaY > 0 && i < 2){ e.preventDefault(); snap(ORDER[i+1]); wheelLock = now+400; }
     else if(e.deltaY < 0 && body.scrollTop<=0 && i > 0){ e.preventDefault(); snap(ORDER[i-1]); wheelLock = now+400; } }, {passive:false});
 })();
+phone.addEventListener('click', e => { if(performance.now() < navLock){ e.stopPropagation(); e.preventDefault(); } }, true);
 
 /* ================= КАРТА ================= */
 let map, mapOk=false; const markers=[]; const geo={};
-function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1600); }
+function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2600); }
 function pinEl(text, cls){ const d=document.createElement('div'); d.className='pin '+(cls||''); d.textContent=text; return d; }
 function addMarker(el, ll, anchor){ if(!mapOk) return null; const m=new maplibregl.Marker({element:el, anchor:anchor||'bottom'}).setLngLat(ll).addTo(map); markers.push(m); return m; }
 function clearMarkers(){ while(markers.length) markers.pop().remove(); }
@@ -567,7 +684,8 @@ function initMap(){
   map.on('load', () => {
     clearTimeout(loadTimer); mapOk = true; document.getElementById('fallback').style.display='none';
     brand(); addRouteLayers();
-    showRoute(state.sel).then(fitAll);
+    if(trip.on) trip.lastLeg = -1;
+    showRoute(state.sel).then(()=>{ if(!trip.on) fitAll(); });
   });
 }
 
@@ -580,22 +698,30 @@ function along(L, f){
     const p=[a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k]; return { p, brg: seg[i]?bearing(a,b):null, passed:c.slice(0,i+1).concat([p]) }; } t-=seg[i]; }
   return { p:c[c.length-1], brg:null, passed:c };
 }
-const trip = { on:false, t:0, speed:1, raf:0, me:null, tip:null, buzzed:false, lastLeg:-1, smoothBrg:0, lastSet:0, lastHtml:'', total:0, endAt:0 };
+const trip = { on:false, t:0, speed:1, raf:0, me:null, tip:null, buzzed:false, lastLeg:-1, smoothBrg:0, lastSet:0, lastHtml:'', total:0, endAt:0, startAt:NOW, legs:[] };
 const SIM_SECONDS_PER_MIN = 2.2;   // ×1: минута пути ≈ 2 секунды
 async function startTrip(){
   if(trip.on) return;
   trip.on = true;                                       // защита от двойного нажатия
+  lockNav();
   const btn = document.getElementById('goBtn'); if(btn){ btn.disabled = true; btn.textContent = 'Строю маршрут…'; }
   await routeReady;
   if(routeKey !== state.sel) await showRoute(state.sel);
-  const o = OPTIONS[state.sel];
-  if(state.sel==='taxi' || state.sel==='carshare') toast(state.sel==='taxi' ? 'Машина найдена · подача ~5 мин' : 'Машина забронирована · 20 мин бесплатно');
+  const k = state.sel, o = OPTIONS[k];
+  if(k==='taxi' || k==='carshare') toast(k==='taxi' ? 'Такси вызвано · подача ~5 мин' : 'Машина забронирована · 20 мин бесплатно');
   document.getElementById('topbar').classList.add('hide'); document.getElementById('topbar').inert = true;
   sheet.inert = true; snap('hidden'); document.getElementById('guide').classList.add('on');
   document.getElementById('attrib').classList.add('guiding');
   Object.assign(trip, { t:0, buzzed:false, lastLeg:-1, smoothBrg: mapOk ? map.getBearing() : 0, lastSet:0, lastHtml:'' });
-  trip.total = o.legs.reduce((s,l)=>s+legMid(l),0); trip.startAt = dep(); trip.endAt = trip.startAt + trip.total;
+  trip.legs = o.legs.map((l,i)=>legMin(k,i));
+  trip.total = trip.legs.reduce((s,m)=>s+m,0); trip.startAt = dep(); trip.endAt = trip.startAt + trip.total;
   document.getElementById('geta').textContent = fmt(trip.endAt);
+  const goal = document.getElementById('ggoal');
+  if(arriveMode() && !o.noTarget){ const sp = state.arrive - trip.endAt;
+    goal.className = 'pill ' + (sp >= 0 ? 'g' : 'r'); goal.textContent = sp >= 0 ? 'успеваешь к ' + fmtD(state.arrive) + ' · запас ' + dur(sp) : 'к ' + fmtD(state.arrive) + ' опоздание ~' + dur(-sp); goal.hidden = false;
+  } else goal.hidden = true;
+  const stop = document.getElementById('stopBtn'); stop.textContent = 'Завершить поездку'; stop.dataset.armed = '';
+  setTimeout(()=>{ document.getElementById('gtop').focus({preventScroll:true}); }, 0);
   let last = performance.now();
   const tick = now => { if(!trip.on) return;
     const dt = Math.min(0.1, (now-last)/1000); last = now;   // после фоновой вкладки не перескакиваем
@@ -603,13 +729,14 @@ async function startTrip(){
     if(trip.t>=trip.total){ finish(); return; } trip.raf=requestAnimationFrame(tick); };
   trip.raf = requestAnimationFrame(tick);
 }
+const KIND = { walk:'Пешком', car:'В пути', metro:'Метро' };
 function update(dt){
   const o = OPTIONS[state.sel]; let acc=0, li=0;
-  for(; li<o.legs.length-1; li++){ const m = legMid(o.legs[li]); if(trip.t < acc+m) break; acc+=m; }
-  const l = o.legs[li], lm = legMid(l), f = Math.min(1,(trip.t-acc)/lm), leg = routeLegs[li];
+  for(; li<o.legs.length-1; li++){ const m = trip.legs[li]; if(trip.t < acc+m) break; acc+=m; }
+  const l = o.legs[li], lm = trip.legs[li], f = Math.min(1,(trip.t-acc)/lm), leg = routeLegs[li];
   const left = Math.max(0, Math.ceil(trip.total-trip.t));
-  document.getElementById('clock').textContent = fmt(trip.startAt + trip.t);
-  document.getElementById('gleft').textContent = left ? 'ещё ' + left + ' мин' : 'почти на месте';
+  document.getElementById('clock').textContent = fmt(Math.floor(trip.startAt + trip.t));
+  document.getElementById('gleft').textContent = left ? 'ещё ' + dur(left) : 'почти на месте';
   let html, alert=false;
   if(l.type==='metro'){
     const n = l.stations.length-1, fr = leg && leg.stFrac, passed = fr ? fr.filter((x,i)=>i>0 && x<=f+1e-6).length : Math.min(n, Math.floor(f*n+1e-4)), rest = n - passed;
@@ -618,11 +745,11 @@ function update(dt){
       if(!reduced){ phone.classList.add('shake'); setTimeout(()=>phone.classList.remove('shake'),500); } say('Следующая — ' + lastSt + ', выходи'); }
     alert = rest<=1;
     html = `<div class="k">Метро · следующая ${next}</div><div class="h">${rest<=1 ? 'Следующая — ' + lastSt + ', выходи' : 'Выходить через ' + stops(rest)}</div>
-      <div class="stations" aria-hidden="true">${Array.from({length:n},(_,i)=>`<i class="${i<passed?'f':''}"></i>`).join('')}</div>${l.lm?`<div class="lmk">📍 ${l.lm}</div>`:''}`;
+      <div class="stations" aria-hidden="true">${Array.from({length:n},(_,i)=>`<i class="${i<passed?'f':''}"></i>`).join('')}</div>${l.lm?`<div class="lmk"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}`;
   } else {
     const mleft = Math.max(1, Math.ceil(lm*(1-f)));
-    const kind = l.type==='walk'?'Пешком':l.type==='wait'?'Подожди':'В пути';
-    html = `<div class="k">${kind} · ${mleft} мин</div><div class="h">${l.label}</div>${l.lm?`<div class="lmk">📍 ${l.lm}</div>`:''}`;
+    const kind = l.kind || KIND[l.type] || 'Шаг';
+    html = `<div class="k">${kind} · ${mleft}&nbsp;мин</div><div class="h">${l.label}</div>${l.lm?`<div class="lmk"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}`;
   }
   if(html !== trip.lastHtml){ const g = document.getElementById('gtop'); g.className = 'gtop' + (alert?' alert':''); g.innerHTML = html; trip.lastHtml = html; }
   if(trip.lastLeg!==li){ trip.lastLeg=li; say(l.label);
@@ -639,18 +766,24 @@ function update(dt){
   if(a.brg!==null){ const db = ((a.brg - trip.smoothBrg + 540) % 360) - 180; trip.smoothBrg += db*(1-Math.exp(-dt*3)); }
   map.jumpTo({ center:a.p, bearing:trip.smoothBrg, pitch: reduced?0:(l.type==='metro'?40:62), zoom: l.type==='metro'?13.6:l.type==='car'?15.4:17 });
 }
-function toggleSpeed(){ trip.speed = trip.speed===1 ? 5 : 1; document.getElementById('speedBtn').textContent = 'Перемотка ×' + trip.speed; }
+function toggleSpeed(){ trip.speed = trip.speed===1 ? 5 : 1; document.getElementById('speedBtn').textContent = 'Демо: ×' + trip.speed; }
 function stopTrip(){
   trip.on=false; cancelAnimationFrame(trip.raf);
   if(trip.me){ trip.me.remove(); trip.me=null; } if(trip.tip){ trip.tip.remove(); trip.tip=null; }
-  trip.speed = 1; trip.smoothBrg = 0; document.getElementById('speedBtn').textContent = 'Перемотка ×1';
-  document.getElementById('clock').textContent = fmt(NOW);
+  trip.speed = 1; trip.smoothBrg = 0; document.getElementById('speedBtn').textContent = 'Демо: ×1';
   document.getElementById('guide').classList.remove('on'); document.getElementById('attrib').classList.remove('guiding');
   const tb = document.getElementById('topbar'); tb.classList.remove('hide'); tb.inert = false; sheet.inert = false;
   if(mapOk) map.getSource('r-me').setData({type:'FeatureCollection',features:[]});
 }
-function finish(){ stopTrip(); state.history=[]; state.view='done'; render('in'); snap('half'); if(mapOk) map.easeTo({pitch:30, zoom:16, bearing:0, duration:reduced?0:900}); }
-function endTrip(){ stopTrip(); state.view='route'; render('back'); snap('half'); fitAll(); toast('Поездка завершена'); }
+function finish(){ stopTrip(); document.getElementById('clock').textContent = fmt(trip.endAt);
+  state.history=[]; state.view='done'; render('in'); snap('half'); if(mapOk) map.easeTo({pitch:30, zoom:16, bearing:0, duration:reduced?0:900}); }
+// «Завершить» — в два нажатия, чтобы случайный тап не обрывал поездку
+function endTrip(){
+  const b = document.getElementById('stopBtn');
+  if(!b.dataset.armed){ b.dataset.armed = '1'; b.textContent = 'Точно завершить? Нажми ещё раз'; clearTimeout(endTrip._t);
+    endTrip._t = setTimeout(()=>{ b.dataset.armed=''; b.textContent='Завершить поездку'; }, 3000); return; }
+  clearTimeout(endTrip._t); stopTrip(); document.getElementById('clock').textContent = fmt(NOW);
+  state.view='route'; render('back'); snap('half'); fitAll(); toast('Поездка завершена'); }
 
 /* ================= СТАРТ ================= */
 render(); requestAnimationFrame(()=>snap('half'));

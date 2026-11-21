@@ -1,4 +1,4 @@
-// Своя ГИС — прогноз v2: время прибытия и запас, «самое позднее», итог цветом; выбор времени (Прибыть к / Выйти в / колесо).
+// Своя ГИС — прогноз v3 (после проверки 2): время прибытия и запас, «самое позднее», итог цветом; выбор времени (Прибыть к / Выйти в / колесо).
 // Общие помощники и иконки — как в плагине «Без машины».
 
 const PAL = {
@@ -513,56 +513,65 @@ const VERDICT = {
 };
 const LATE = { 'Скорее опоздаешь': 1, 'Не успеешь': 1 };
 
-// ---------- Компонент «Карточка варианта» ----------
-async function buildCard() {
-  const ex = LIB.find('Карточка варианта');
-  if (ex) { await migrateCard(ex); return ex; }
+
+// ---------- Компонент «Карточка варианта · v2» (проверка 2, 22.11) ----------
+// Справа — главный ответ: «выйди до / 8:27 / ещё 7 мин», «выходи / сейчас / будешь ~8:54» или «будешь в / 9:14 / самое позднее 9:18».
+// Цвета итога: зелёный — надёжно/стабильно, оранжевый — риск, красный — опоздание.
+const V2 = {
+  'Надёжно': 'g', 'Стабильно': 'g', 'Есть риск': 'a', 'Риск из-за пробок': 'a', 'Зависит от пробок': 'a', 'Бывает дольше': 'a',
+  'Скорее опоздаешь': 'r', 'Не успеешь': 'r'
+};
+const PILLC = { g: ['limeP', 'limeT'], a: ['orange', 'orangeT'], r: ['pinkL', 'pinkT'], n: ['soft', 'ink'] };
+async function recolor(frame, cls) {
+  if (!frame) return; const [bg, fg] = PILLC[cls] || PILLC.n;
+  try { frame.fills = [pv(bg)]; } catch (e) { }
+  const t = frame.findOne(n => n.type === 'TEXT'); if (t) { try { t.fills = [pv(fg)]; } catch (e) { } }
+}
+async function buildCard2() {
+  const ex = LIB.find('Карточка варианта · v2');
+  if (ex) return ex;
   const comps = [];
-  for (const v of Object.keys(VERDICT)) for (const sel of [false, true]) {
-    const c = compAL('Итог=' + v + ', Состояние=' + (sel ? 'Выбрана' : 'Обычная'), 'VERTICAL', { px: 14, py: 12, gap: 10, r: 16, bg: 'white', stroke: sel ? 'accent' : 'line', sw: sel ? 2 : 1 });
-    c.counterAxisSizingMode = 'FIXED'; c.resize(328, 100); c.primaryAxisSizingMode = 'AUTO'; c.counterAxisAlignItems = 'MIN';
+  for (const v of Object.keys(V2)) for (const sel of [false, true]) {
+    const cls = V2[v], never = v === 'Не успеешь';
+    const c = compAL('Итог=' + v + ', Выбрана=' + (sel ? 'Да' : 'Нет'), 'VERTICAL', { px: 14, py: 12, gap: 10, r: 16, bg: never ? 'soft' : 'white', stroke: sel ? 'accent' : 'line', sw: sel ? 2 : 1 });
+    c.counterAxisSizingMode = 'FIXED'; c.resize(328, 100); c.primaryAxisSizingMode = 'AUTO'; c.counterAxisAlignItems = 'MIN'; c.clipsContent = false;
+    const best = AL(c, 'HORIZONTAL', { name: 'Лучше всего', px: 8, py: 2, r: 8, bg: 'dark' }); await TX(best, 'Лучше всего', 'tiny', 'white', { name: 'Метка' });
     const top = ROW(c, { name: 'Верх', gap: 12, align: 'CENTER' }); top.layoutSizingHorizontal = 'FILL';
     const box = AL(top, 'HORIZONTAL', { name: 'Плашка иконки', r: 12, bg: 'lav', align: 'CENTER', justify: 'CENTER' });
     box.primaryAxisSizingMode = 'FIXED'; box.counterAxisSizingMode = 'FIXED'; box.resize(36, 36);
     const ic = icoInst('Метро', 'lavT'); ic.name = 'Иконка'; box.appendChild(ic);
     const info = AL(top, 'VERTICAL', { name: 'Инфо', gap: 2 }); info.layoutGrow = 1;
     await TX(info, 'Метро', 'bodyM', 'ink', { name: 'Название' });
-    const d = await TX(info, '5 остановок · ≈ 70 ₽', 'small', 'mute', { name: 'Детали', fill: true });
-    const right = AL(top, 'VERTICAL', { name: 'Прибытие', gap: 0, align: 'MAX' });
-    const big = await TX(right, '8:48', 'big', LATE[v] ? 'pinkT' : 'ink', { name: 'Время прибытия' });
-    await TX(right, 'запас 12 мин', 'small', LATE[v] ? 'pinkT' : 'mute', { name: 'Запас' });
+    await TX(info, '5 остановок без пересадок · ≈ 70 ₽', 'small', 'mute', { name: 'Детали', fill: true });
+    const right = AL(top, 'VERTICAL', { name: 'Ответ', gap: 0, align: 'MAX' });
+    await TX(right, 'выйди до', 'small', 'mute', { name: 'Подпись сверху' });
+    await TX(right, '8:27', 'big', 'ink', { name: 'Главное' });
+    await TX(right, 'ещё 7 мин', 'small', 'mute', { name: 'Подпись снизу' });
     const pills = AL(c, 'HORIZONTAL', { name: 'Пилюли', gap: 6, wrap: true }); pills.layoutSizingHorizontal = 'FILL'; pills.primaryAxisSizingMode = 'FIXED';
-    const [bg, fg] = VERDICT[v];
+    const [bg, fg] = PILLC[cls];
     const p1 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: итог', px: 10, py: 4, r: 12, bg }); await TX(p1, v.toLowerCase(), 'small', fg, { name: 'Итог · текст' });
-    const p2 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: самое позднее', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p2, 'самое позднее 8:51', 'small', 'ink', { name: 'Самое позднее' });
-    const p3 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: выйти до', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p3, 'можно выйти до 8:29', 'small', 'ink', { name: 'Выйти до' });
+    const p2 = AL(pills, 'HORIZONTAL', { name: 'Пилюля 2', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p2, 'в пути ~29 мин', 'small', 'ink', { name: 'Пилюля 2 · текст' });
+    const p3 = AL(pills, 'HORIZONTAL', { name: 'Пилюля 3', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p3, 'нужен зонт', 'small', 'ink', { name: 'Пилюля 3 · текст' });
     CP.appendChild(c); comps.push(c);
   }
   const set = figma.combineAsVariants(comps, CP);
-  tidySet(set, 'Карточка варианта', 'HORIZONTAL'); set.layoutWrap = 'WRAP'; set.counterAxisSpacing = 16; set.primaryAxisSizingMode = 'FIXED'; set.resize(2 * 328 + 3 * 20, set.height);
-  bindTexts(set, [['Название', 'Метро'], ['Детали', '5 остановок · ≈ 70 ₽'], ['Время прибытия', '8:48'], ['Запас', 'запас 12 мин'], ['Итог · текст', 'надёжно'], ['Самое позднее', 'самое позднее 8:51'], ['Выйти до', 'можно выйти до 8:29']]);
-  const bKey = set.addComponentProperty('Показать «выйти до»', 'BOOLEAN', true);
-  const sKey = set.addComponentProperty('Иконка · вид', 'INSTANCE_SWAP', IC['Метро'].id);
+  tidySet(set, 'Карточка варианта · v2', 'HORIZONTAL'); set.layoutWrap = 'WRAP'; set.counterAxisSpacing = 24; set.primaryAxisSizingMode = 'FIXED'; set.resize(2 * 328 + 3 * 20, set.height);
+  bindTexts(set, [['Название', 'Метро'], ['Детали', '5 остановок без пересадок · ≈ 70 ₽'], ['Подпись сверху', 'выйди до'], ['Главное', '8:27'], ['Подпись снизу', 'ещё 7 мин'],
+    ['Итог · текст', 'надёжно'], ['Пилюля 2 · текст', 'в пути ~29 мин'], ['Пилюля 3 · текст', 'нужен зонт'], ['Метка', 'Лучше всего']]);
+  const kBest = set.addComponentProperty('Лучше всего', 'BOOLEAN', false);
+  const kP2 = set.addComponentProperty('Показать пилюлю 2', 'BOOLEAN', true);
+  const kP3 = set.addComponentProperty('Показать пилюлю 3', 'BOOLEAN', false);
+  const kIco = set.addComponentProperty('Иконка · вид', 'INSTANCE_SWAP', IC['Метро'].id);
   for (const c of set.children) {
-    const p3 = c.findOne(n => n.name === 'Пилюля: выйти до'); if (p3) p3.componentPropertyReferences = { visible: bKey };
-    const ic = c.findOne(n => n.name === 'Иконка' && n.type === 'INSTANCE'); if (ic) ic.componentPropertyReferences = { mainComponent: sKey };
+    const b = c.findOne(n => n.name === 'Лучше всего'); if (b) b.componentPropertyReferences = { visible: kBest };
+    const a = c.findOne(n => n.name === 'Пилюля 2'); if (a) a.componentPropertyReferences = { visible: kP2 };
+    const d = c.findOne(n => n.name === 'Пилюля 3'); if (d) d.componentPropertyReferences = { visible: kP3 };
+    const ic = c.findOne(n => n.name === 'Иконка' && n.type === 'INSTANCE'); if (ic) ic.componentPropertyReferences = { mainComponent: kIco };
     await fx(c, 'ГИС/Карточка на светлом');
   }
   const bottom = CP.children.filter(n => n !== set).reduce((mx, n) => Math.max(mx, n.y + n.height), 0);
   set.x = 0; set.y = bottom + 48;
   return set;
-}
-let CARD;
-// Обновление уже созданной карточки: «Плохой день» → «Самое позднее» (решение 22.11)
-async function migrateCard(set) {
-  let defs = {}; try { defs = set.componentPropertyDefinitions; } catch (e) { return; }
-  const old = Object.keys(defs).find(k => k.split('#')[0] === 'Плохой день');
-  if (old) { try { set.editComponentProperty(old, { name: 'Самое позднее', defaultValue: 'самое позднее 8:51' }); } catch (e) { SET_ISSUES.add('карточка: ' + e.message); } }
-  for (const c of set.children) {
-    const t = c.findOne(n => n.type === 'TEXT' && (n.name === 'Плохой день' || n.name === 'Самое позднее'));
-    if (t) { t.name = 'Самое позднее'; try { await figma.loadFontAsync(t.fontName); if (/плохой день/.test(t.characters)) t.characters = t.characters.replace('в плохой день', 'самое позднее'); } catch (e) { } }
-    const f = c.findOne(n => n.name === 'Пилюля: плохой день'); if (f) f.name = 'Пилюля: самое позднее';
-  }
 }
 // Починка набора: одинаковые варианты — ошибка набора. Лишний вариант без экземпляров удаляем, с экземплярами — переименовываем.
 async function repairSet(set) {
@@ -578,11 +587,16 @@ async function repairSet(set) {
   }
   return { removed, renamed };
 }
-function card(parent, o) {
-  const i = inst(CARD, { 'Итог': o.v, 'Состояние': o.sel ? 'Выбрана' : 'Обычная' },
-    { 'Название': o.n, 'Детали': o.d, 'Время прибытия': o.t, 'Запас': o.z, 'Итог · текст': o.v.toLowerCase(), 'Самое позднее': o.bad, 'Выйти до': o.until || '' },
-    { 'Показать «выйти до»': !!o.until });
-  const k = pkey(CARD, 'Иконка · вид'); if (k) i.setProperties({ [k]: IC[o.ic].id });
+let CARD2;
+// o: { n, ic, d, top, main, bottom, v, p2:[cls,text], p3:[cls,text], best, sel }
+async function card2(parent, o) {
+  const i = inst(CARD2, { 'Итог': o.v, 'Выбрана': o.sel ? 'Да' : 'Нет' },
+    { 'Название': o.n, 'Детали': o.d, 'Подпись сверху': o.top, 'Главное': o.main, 'Подпись снизу': o.bottom || '', 'Итог · текст': o.v.toLowerCase(),
+      'Пилюля 2 · текст': o.p2 ? o.p2[1] : '', 'Пилюля 3 · текст': o.p3 ? o.p3[1] : '', 'Метка': 'Лучше всего' },
+    { 'Лучше всего': !!o.best, 'Показать пилюлю 2': !!o.p2, 'Показать пилюлю 3': !!o.p3 });
+  const k = pkey(CARD2, 'Иконка · вид'); if (k) { try { i.setProperties({ [k]: IC[o.ic].id }); } catch (e) { } }
+  if (o.p2) await recolor(i.findOne(n => n.name === 'Пилюля 2'), o.p2[0]);
+  if (o.p3) await recolor(i.findOne(n => n.name === 'Пилюля 3'), o.p3[0]);
   i.name = 'Вариант: ' + o.n;
   parent.appendChild(i); i.layoutSizingHorizontal = 'FILL';
   return i;
@@ -612,39 +626,71 @@ async function timeChips(parent, mode) {
   for (const l of list) chips.appendChild(await pillC(l === on ? 'Активная' : 'Обычная', l));
   return chips;
 }
+async function hint(parent, text) {
+  const h = ROW(parent, { name: 'Подсказка: дождь', gap: 8, px: 12, py: 10, r: 14, bg: 'white', stroke: 'line', align: 'CENTER' }); h.layoutSizingHorizontal = 'FILL';
+  h.appendChild(icoInst('Дождь', 'accent'));
+  const t = await TX(h, text, 'cap', 'ink'); t.layoutGrow = 1; t.textAutoResize = 'HEIGHT';
+  await TX(h, 'Модули', 'cap', 'accent', { name: 'Ссылка: модули' });
+  return h;
+}
+
+// ---------- Данные экранов (из прототипа index.html, 22.11) ----------
+const D = {
+  metro: { n: 'Метро', ic: 'Метро', d: '5 остановок без пересадок · ≈ 70 ₽' },
+  taxi: { n: 'Такси', ic: 'Машина', d: 'подача 3–9 мин · ≈ 650 ₽' },
+  carshare: { n: 'Каршеринг', ic: 'Машина', d: 'машина в 360 м · ≈ 300–500 ₽' },
+  walk: { n: 'Пешком', ic: 'Пешком', d: '≈ 10 км · бесплатно' }
+};
+const C = (k, o) => Object.assign({}, D[k], o);
 
 // ---------- Экраны ----------
-async function p1() {
-  const s = phone('P1 · Как успеть к 9:00', 0);
-  const h = await header(s, 'Первомайская ул., 100 → м. Бауманская', 'Как успеть к', 'Сейчас 8:20', 'Дождь с 8:40', '9:00');
-  const chipP1 = LAST_TIME_CHIP;
+async function compareScreen(i, name, title, chipText, cards, extra) {
+  const s = phone(name, i);
+  const h = await header(s, 'Первомайская ул., 100 → м. Бауманская', title, 'Сейчас 8:20', null, chipText);
+  const chip = LAST_TIME_CHIP;
   const c = await controls(s, h.height + 12);
-  const list = AL(s, 'VERTICAL', { name: 'Способы', gap: 8, w: 360, px: 16, x: 0, y: c.box.y + c.box.height + 12 });
-  const O = [
-    { n: 'Метро', ic: 'Метро', d: '5 остановок · ≈ 70 ₽', t: '8:48', z: 'запас 12 мин', v: 'Надёжно', bad: 'самое позднее 8:51', until: 'можно выйти до 8:29', sel: true },
-    { n: 'Такси', ic: 'Машина', d: 'подача 3–9 мин · ≈ 650 ₽', t: '8:53', z: 'запас 7 мин', v: 'Надёжно', bad: 'самое позднее 9:00', until: 'можно выйти до 8:20' },
-    { n: 'Каршеринг', ic: 'Машина', d: 'машина в 360 м · ≈ 400 ₽', t: '9:01', z: 'опоздание ~1 мин', v: 'Скорее опоздаешь', bad: 'успеешь, только если повезёт' },
-    { n: 'Пешком', ic: 'Пешком', d: '≈ 10 км · бесплатно', t: '10:23', z: 'опоздание ~1 ч 23 мин', v: 'Не успеешь', bad: 'дождь с 8:40 — нужен зонт' }
-  ];
-  const cards = []; for (const o of O) cards.push(card(list, o));
+  const list = AL(s, 'VERTICAL', { name: 'Способы', gap: 14, w: 360, px: 16, x: 0, y: c.box.y + c.box.height + 16 });
+  list.clipsContent = false;
+  if (extra) await extra(list);
+  const made = []; for (const o of cards) made.push(await card2(list, o));
+  await hint(list, 'Дождь с 8:40 — пешком чуть дольше, это уже в прогнозе');
+  await TX(list, 'Время, цены и ориентиры в прототипе примерные. «Самое позднее» — так в 19 поездках из 20.', 'small', 'mute', { fill: true });
   scrollable(s, list);
-  return { s, other: chipP1, metro: cards[0], carshare: cards[2] };
+  return { s, chip, made };
+}
+async function p1() {
+  const r = await compareScreen(0, 'P1 · Как успеть к 9:00', 'Как успеть к', '9:00', [
+    C('metro', { top: 'выйди до', main: '8:27', bottom: 'ещё 7 мин', v: 'Надёжно', p2: ['n', 'в пути ~29 мин'], best: true, sel: true }),
+    C('taxi', { top: 'вызывай', main: 'сейчас', bottom: 'будешь ~8:54', v: 'Риск из-за пробок', p2: ['n', 'в пробку — опоздаешь на 4 мин'] }),
+    C('carshare', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~9:02', v: 'Скорее опоздаешь', p2: ['n', 'обычно опоздание ~2 мин'] }),
+    C('walk', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~10:31', v: 'Не успеешь', p2: ['n', 'опоздание ~1 ч 31 мин'] })
+  ]);
+  return { s: r.s, other: r.chip, metro: r.made[0], taxi: r.made[1] };
 }
 async function p2() {
-  const s = phone('P2 · Если выйти в 8:45', 1);
-  const h = await header(s, 'Первомайская ул., 100 → м. Бауманская', 'Если выйти', 'Сейчас 8:20', 'Дождь с 8:40', 'в 8:45');
-  const chipP2 = LAST_TIME_CHIP;
-  const c = await controls(s, h.height + 12);
-  const list = AL(s, 'VERTICAL', { name: 'Способы', gap: 8, w: 360, px: 16, x: 0, y: c.box.y + c.box.height + 12 });
-  const O = [
-    { n: 'Метро', ic: 'Метро', d: '5 остановок · ≈ 70 ₽', t: '9:13', z: 'в пути ~28 мин', v: 'Стабильно', bad: 'самое позднее 9:16', sel: true },
-    { n: 'Такси', ic: 'Машина', d: 'подача 3–9 мин · ≈ 650 ₽', t: '9:18', z: 'в пути ~33 мин', v: 'Зависит от пробок', bad: 'самое позднее 9:25' },
-    { n: 'Каршеринг', ic: 'Машина', d: 'машина в 360 м · ≈ 400 ₽', t: '9:26', z: 'в пути ~41 мин', v: 'Зависит от пробок', bad: 'самое позднее 9:33' },
-    { n: 'Пешком', ic: 'Пешком', d: '≈ 10 км · бесплатно', t: '10:48', z: 'в пути ~2 ч 3 мин', v: 'Стабильно', bad: 'самое позднее 10:56' }
-  ];
-  for (const o of O) card(list, o);
-  scrollable(s, list);
-  return { s, other: chipP2 };
+  const r = await compareScreen(1, 'P2 · Если выйти в 8:45', 'Если выйти', 'в 8:45', [
+    C('metro', { top: 'будешь в', main: '9:14', bottom: 'самое позднее 9:18', v: 'Стабильно', p2: ['r', 'к 9:00 опоздаешь на ~14 мин'], best: true, sel: true }),
+    C('taxi', { top: 'будешь в', main: '9:19', bottom: 'самое позднее 9:29', v: 'Зависит от пробок', p2: ['r', 'к 9:00 опоздаешь на ~19 мин'] }),
+    C('carshare', { top: 'будешь в', main: '9:27', bottom: 'самое позднее 9:37', v: 'Зависит от пробок', p2: ['r', 'к 9:00 опоздаешь на ~27 мин'] }),
+    C('walk', { top: 'будешь в', main: '10:56', bottom: 'самое позднее 11:02', v: 'Стабильно', p2: ['r', 'к 9:00 опоздаешь на ~1 ч 56 мин'], p3: ['n', 'нужен зонт'] })
+  ]);
+  return { s: r.s, other: r.chip };
+}
+async function p7() {
+  let banner = null;
+  const r = await compareScreen(6, 'P7 · К 8:30 уже не успеть', 'Как успеть к', '8:30', [
+    C('metro', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~8:49', v: 'Не успеешь', p2: ['n', 'опоздание ~19 мин'] }),
+    C('taxi', { top: 'вызывай', main: 'сейчас', bottom: 'будешь ~8:54', v: 'Не успеешь', p2: ['n', 'опоздание ~24 мин'] }),
+    C('carshare', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~9:02', v: 'Не успеешь', p2: ['n', 'опоздание ~32 мин'] }),
+    C('walk', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~10:31', v: 'Не успеешь', p2: ['n', 'опоздание ~2 ч 1 мин'] })
+  ], async list => {
+    banner = AL(list, 'VERTICAL', { name: 'Поздно: действия', gap: 8, px: 14, py: 12, r: 16, bg: 'pinkL', fill: true });
+    await TX(banner, 'К 8:30 уже не успеть', 'bodyM', 'pinkT', { fill: true });
+    await TX(banner, 'Быстрее всего — метро, будешь около 8:49', 'cap', 'pinkT', { fill: true });
+    const row = AL(banner, 'HORIZONTAL', { name: 'Действия', gap: 6, wrap: true }); row.layoutSizingHorizontal = 'FILL'; row.primaryAxisSizingMode = 'FIXED';
+    for (const t of ['Показать к 9:00', 'Самый быстрый', 'Предупредить, что опоздаю']) row.appendChild(await pillC('Кнопка', t));
+  });
+  return { s: r.s, banner };
 }
 async function p3() {
   const s = phone('P3 · Когда? (шторка)', 2);
@@ -668,18 +714,16 @@ async function p3() {
     const b = await TX(wheel, M[i], i === 2 ? 'title' : 'big', 'ink', { x: 198, y, name: 'Минуты ' + M[i] }); b.opacity = op; if (i === 2) b.fontSize = 28;
   }
   const colon = await TX(wheel, ':', 'title', 'ink', { x: 160, y: 96, name: 'Двоеточие' }); colon.fontSize = 28;
-  await TX(box, 'Прибыть к 9:00 — прогноз покажет, когда выйти', 'cap', 'mute', { fill: true });
+  await TX(box, 'Прогноз покажет, когда выйти. Прошедшее время — это завтра.', 'cap', 'mute', { fill: true });
   const done = await pillC('Тёмная', 'Готово'); box.appendChild(done); done.layoutSizingHorizontal = 'FILL';
   sheet.y = 800 - sheet.height;
   return { s, done };
 }
-async function route(i, name, small, title, sub, verdict, bad, steps, idx) {
+async function route(i, name, small, title, sub, pills, steps, cta) {
   const s = phone(name, i);
-  const h = await header(s, small, title, sub);
+  const h = await header(s, '← ' + small, title, sub);
   const pr = AL(s, 'HORIZONTAL', { name: 'Итог', gap: 6, x: 16, y: h.height + 12 });
-  const [bg, fg] = VERDICT[verdict];
-  const a = AL(pr, 'HORIZONTAL', { name: 'Пилюля: итог', px: 10, py: 4, r: 12, bg }); await TX(a, verdict.toLowerCase(), 'small', fg);
-  const b = AL(pr, 'HORIZONTAL', { name: 'Пилюля: самое позднее', px: 10, py: 4, r: 12, bg: 'white' }); await TX(b, bad, 'small', 'ink');
+  for (const [cls, text] of pills) { const p = AL(pr, 'HORIZONTAL', { name: 'Пилюля', px: 10, py: 4, r: 12, bg: PILLC[cls][0] }); await TX(p, text, 'small', PILLC[cls][1]); }
   let y = pr.y + pr.height + 30;
   const step = 92;
   for (let k = 0; k < steps.length; k++) {
@@ -696,26 +740,37 @@ async function route(i, name, small, title, sub, verdict, bad, steps, idx) {
     }
     y += step;
   }
-  const row = ROW(s, { name: 'Кнопки', gap: 8, w: 328, x: 16, y: 800 - 24 - 40 });
-  const other = await pillC('Кнопка', 'Другой способ'), go = await pillC('Тёмная', idx === 'car' ? 'Забронировать' : 'Поехали');
-  row.appendChild(other); row.appendChild(go); other.layoutSizingHorizontal = 'FILL'; go.layoutSizingHorizontal = 'FILL';
-  return { s, other };
+  const go = await pillC('Тёмная', cta); s.appendChild(go); go.resize(328, 44); go.x = 16; go.y = 800 - 24 - 44;
+  return { s, go, back: h };
 }
 async function p4() {
-  return route(3, 'P4 · Маршрут: метро', 'Метро · прибыть к 9:00', 'Выходи до 8:29', 'Выйдешь сейчас — будешь в 8:48, самое позднее 8:51. Запас 12 мин', 'Надёжно', 'самое позднее 8:51', [
-    { c: 'dash', dash: true, t: 'Пешком до м. Первомайская', m: '8:20 · ~11 мин (обычно 9–13)', ic: 'Вход', l: 'Вход №3 — на южной стороне улицы' },
-    { c: 'bg', t: 'Турникеты и поезд', m: '8:31 · ~2 мин (обычно 1–4)', ic: 'Часы', l: 'В час пик поезда раз в 2–3 минуты' },
-    { c: 'bg', t: 'Метро до Бауманской · 5 остановок', m: '8:33 · ~13 мин (обычно 12–15)', ic: 'Колокол', l: 'Перед выходом — вибрация' },
-    { c: 'dash', dash: true, t: 'Подъём в город', m: '8:46 · ~2 мин', ic: 'Здание', l: 'Выход на Бауманской один' }
-  ], 'metro');
+  return route(3, 'P4 · Маршрут: метро', 'Метро · прибыть к 9:00', 'Выходи до 8:27', 'Ещё 7 мин на сборы. В пути ~29 мин — будешь около 8:56, самое позднее 9:00', [['g', 'надёжно']], [
+    { c: 'dash', dash: true, t: 'Пешком до м. Первомайская', m: '8:27 · ~11 мин (обычно 9–13)', ic: 'Вход', l: 'Вход №3 — на южной стороне, ближе к дому' },
+    { c: 'bg', t: 'Турникеты и поезд', m: '8:38 · ~2 мин (обычно 1–4)', ic: 'Часы', l: 'В час пик поезда раз в 2–3 минуты' },
+    { c: 'bg', t: 'Метро до Бауманской · 5 остановок', m: '8:40 · ~14 мин (обычно 12–15)', ic: 'Колокол', l: 'В сторону центра. Перед выходом — вибрация' },
+    { c: 'dash', dash: true, t: 'Подъём в город', m: '8:54 · ~2 мин (обычно 2–3)', ic: 'Здание', l: 'Выход на Бауманской один — наверх по эскалатору' }
+  ], 'Поехали');
 }
 async function p5() {
-  return route(4, 'P5 · Маршрут: каршеринг', 'Каршеринг · прибыть к 9:00', 'Выходи сейчас — скорее опоздаешь', 'Обычно будешь в 9:01, успеешь, только если повезёт', 'Скорее опоздаешь', 'надёжнее — метро', [
-    { c: 'dash', dash: true, t: 'Пешком до машины', m: '8:20 · ~5 мин (обычно 4–6)', ic: 'Машина', l: 'Ближайшая свободная машина — 360 м' },
-    { c: 'bg', t: 'Открыть машину и выехать', m: '8:25 · ~2 мин', ic: 'Часы', l: 'Осмотр и фото — пока идёшь' },
-    { c: 'orange', t: 'За рулём до Бауманской', m: '8:27 · ~28 мин (обычно 22–36)', ic: 'Навигатор', l: 'Утренние пробки: возможна задержка' },
-    { c: 'dash', dash: true, t: 'Парковка и пешком до входа', m: '8:55 · ~6 мин (обычно 4–9)', ic: 'Парковка', l: 'Завершай аренду только в разрешённой зоне' }
-  ], 'car');
+  return route(4, 'P5 · Маршрут: такси', 'Такси · прибыть к 9:00', 'Вызывай сейчас — есть риск', 'Обычно будешь в 8:54, но в пробку — опоздаешь на 4 мин', [['a', 'риск из-за пробок']], [
+    { c: 'bg', t: 'Подача машины', m: '8:20 · ~5 мин (обычно 3–9)', ic: 'Часы', l: 'Выйди к подъезду, когда машина будет в 2 минутах' },
+    { c: 'orange', t: 'Такси до Бауманской', m: '8:25 · ~29 мин (обычно 22–36)', ic: 'Навигатор', l: 'Утренние пробки: возможна задержка' }
+  ], 'Вызвать такси');
+}
+async function p6() {
+  const s = phone('P6 · Вызвать такси?', 5);
+  const h = await header(s, '← Такси · прибыть к 9:00', 'Вызвать такси?', 'Перед платным действием — всегда подтверждение');
+  const box = AL(s, 'VERTICAL', { name: 'Подтверждение', gap: 12, w: 360, px: 16, x: 0, y: h.height + 16 });
+  const card = AL(box, 'VERTICAL', { name: 'Детали', gap: 10, px: 16, py: 14, r: 16, bg: 'white', stroke: 'line', fill: true });
+  await fx(card, 'ГИС/Карточка на светлом');
+  for (const [a, b] of [['Тариф', 'Эконом'], ['Цена', '≈ 650 ₽'], ['Подача', '3–9 мин']]) {
+    const r = ROW(card, { name: a, gap: 8, align: 'CENTER', justify: 'SPACE_BETWEEN' }); r.layoutSizingHorizontal = 'FILL';
+    await TX(r, a, 'cap', 'mute'); await TX(r, b, 'bodyM', 'ink');
+  }
+  await TX(card, 'Оформим в приложении такси — точная цена там.', 'small', 'mute', { fill: true });
+  const ok = await pillC('Тёмная', 'Вызвать'); box.appendChild(ok); ok.layoutSizingHorizontal = 'FILL';
+  const no = await pillC('Кнопка', 'Отмена'); box.appendChild(no); no.layoutSizingHorizontal = 'FILL';
+  return { s, ok, no };
 }
 
 (async () => {
@@ -727,22 +782,24 @@ async function p5() {
   if (!holder) holder = AL(CP, 'HORIZONTAL', { name: 'Иконки', gap: 16, pad: 20, r: 16, bg: 'white', align: 'CENTER', x: 0, y: bottom0 + 48 });
   buildIcons(holder);
   const fix = await repairSet(LIB['Пилюля']);
-  CARD = await buildCard();
+  CARD2 = await buildCard2();
 
-  const base = 'ГИС · Прогноз v2';
+  const base = 'ГИС · Прогноз v3';
   let name = base, k = 2; while (figma.root.children.some(p => p.name === name)) name = base + ' (' + (k++) + ')';
   PG = figma.createPage(); PG.name = name;
   await figma.setCurrentPageAsync(PG);
-  const A = await p1(), B = await p2(), C = await p3(), D = await p4(), E = await p5();
-  for (const f of [A.s, B.s, C.s, D.s, E.s]) await TX(PG, f.name, 'big', 'ink', { x: f.x, y: -36 });
+  const A = await p1(), B = await p2(), Cc = await p3(), Dd = await p4(), E = await p5(), F = await p6(), G = await p7();
+  const all = [A.s, B.s, Cc.s, Dd.s, E.s, F.s, G.s];
+  for (const f of all) await TX(PG, f.name, 'big', 'ink', { x: f.x, y: -36 });
   const GO = id => ({ type: 'NODE', destinationId: id, navigation: 'NAVIGATE', transition: { type: 'SMART_ANIMATE', easing: { type: 'EASE_OUT' }, duration: 0.3 }, preserveScrollPosition: false });
   const link = async (n, a) => { if (n) await n.setReactionsAsync([{ trigger: { type: 'ON_CLICK' }, actions: [a] }]); };
-  await link(A.metro, GO(D.s.id)); await link(A.carshare, GO(E.s.id));
-  await link(A.other, GO(C.s.id)); await link(B.other, GO(C.s.id));
-  await link(C.done, { type: 'BACK' }); await link(D.other, { type: 'BACK' }); await link(E.other, { type: 'BACK' });
-  PG.flowStartingPoints = [{ nodeId: A.s.id, name: 'Прогноз v2' }];
-  figma.viewport.scrollAndZoomIntoView([A.s, B.s, C.s, D.s, E.s]);
+  await link(A.metro, GO(Dd.s.id)); await link(A.taxi, GO(E.s.id));
+  await link(A.other, GO(Cc.s.id)); await link(B.other, GO(Cc.s.id));
+  await link(Cc.done, { type: 'BACK' }); await link(E.go, GO(F.s.id)); await link(F.no, { type: 'BACK' });
+  await link(Dd.back, { type: 'BACK' }); await link(E.back, { type: 'BACK' });
+  PG.flowStartingPoints = [{ nodeId: A.s.id, name: 'Прогноз v3' }, { nodeId: G.s.id, name: 'Поздно' }];
+  figma.viewport.scrollAndZoomIntoView(all);
   const fixed = fix.removed || fix.renamed ? ' · «Пилюля» починена: удалено ' + fix.removed + ', переименовано ' + fix.renamed : '';
   const warn = SET_ISSUES.size ? ' · ⚠ ' + [...SET_ISSUES].slice(0, 2).join('; ') : '';
-  figma.closePlugin('Готово: «' + name + '» — 5 экранов и компонент «Карточка варианта» (6 итогов × выбрана/обычная)' + fixed + warn);
+  figma.closePlugin('Готово: «' + name + '» — 7 экранов и «Карточка варианта · v2» (8 итогов × выбрана/нет)' + fixed + warn);
 })().catch(e => figma.closePlugin('Ошибка: ' + (e && e.message ? e.message : e)));
