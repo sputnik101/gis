@@ -1,0 +1,9 @@
+{
+  "name": "Своя ГИС — прогноз v2",
+  "id": "own-gis-forecast-v2-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] }
+}
