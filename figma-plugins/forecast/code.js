@@ -1,4 +1,4 @@
-// Своя ГИС — прогноз v2: время прибытия и запас, «в плохой день», итог цветом; выбор времени (Прибыть к / Выйти в / колесо).
+// Своя ГИС — прогноз v2: время прибытия и запас, «самое позднее», итог цветом; выбор времени (Прибыть к / Выйти в / колесо).
 // Общие помощники и иконки — как в плагине «Без машины».
 
 const PAL = {
@@ -516,7 +516,7 @@ const LATE = { 'Скорее опоздаешь': 1, 'Не успеешь': 1 };
 // ---------- Компонент «Карточка варианта» ----------
 async function buildCard() {
   const ex = LIB.find('Карточка варианта');
-  if (ex) return ex;
+  if (ex) { await migrateCard(ex); return ex; }
   const comps = [];
   for (const v of Object.keys(VERDICT)) for (const sel of [false, true]) {
     const c = compAL('Итог=' + v + ', Состояние=' + (sel ? 'Выбрана' : 'Обычная'), 'VERTICAL', { px: 14, py: 12, gap: 10, r: 16, bg: 'white', stroke: sel ? 'accent' : 'line', sw: sel ? 2 : 1 });
@@ -534,13 +534,13 @@ async function buildCard() {
     const pills = AL(c, 'HORIZONTAL', { name: 'Пилюли', gap: 6, wrap: true }); pills.layoutSizingHorizontal = 'FILL'; pills.primaryAxisSizingMode = 'FIXED';
     const [bg, fg] = VERDICT[v];
     const p1 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: итог', px: 10, py: 4, r: 12, bg }); await TX(p1, v.toLowerCase(), 'small', fg, { name: 'Итог · текст' });
-    const p2 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: плохой день', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p2, 'в плохой день 8:51', 'small', 'ink', { name: 'Плохой день' });
+    const p2 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: самое позднее', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p2, 'самое позднее 8:51', 'small', 'ink', { name: 'Самое позднее' });
     const p3 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: выйти до', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p3, 'можно выйти до 8:29', 'small', 'ink', { name: 'Выйти до' });
     CP.appendChild(c); comps.push(c);
   }
   const set = figma.combineAsVariants(comps, CP);
   tidySet(set, 'Карточка варианта', 'HORIZONTAL'); set.layoutWrap = 'WRAP'; set.counterAxisSpacing = 16; set.primaryAxisSizingMode = 'FIXED'; set.resize(2 * 328 + 3 * 20, set.height);
-  bindTexts(set, [['Название', 'Метро'], ['Детали', '5 остановок · ≈ 70 ₽'], ['Время прибытия', '8:48'], ['Запас', 'запас 12 мин'], ['Итог · текст', 'надёжно'], ['Плохой день', 'в плохой день 8:51'], ['Выйти до', 'можно выйти до 8:29']]);
+  bindTexts(set, [['Название', 'Метро'], ['Детали', '5 остановок · ≈ 70 ₽'], ['Время прибытия', '8:48'], ['Запас', 'запас 12 мин'], ['Итог · текст', 'надёжно'], ['Самое позднее', 'самое позднее 8:51'], ['Выйти до', 'можно выйти до 8:29']]);
   const bKey = set.addComponentProperty('Показать «выйти до»', 'BOOLEAN', true);
   const sKey = set.addComponentProperty('Иконка · вид', 'INSTANCE_SWAP', IC['Метро'].id);
   for (const c of set.children) {
@@ -553,6 +553,17 @@ async function buildCard() {
   return set;
 }
 let CARD;
+// Обновление уже созданной карточки: «Плохой день» → «Самое позднее» (решение 22.11)
+async function migrateCard(set) {
+  let defs = {}; try { defs = set.componentPropertyDefinitions; } catch (e) { return; }
+  const old = Object.keys(defs).find(k => k.split('#')[0] === 'Плохой день');
+  if (old) { try { set.editComponentProperty(old, { name: 'Самое позднее', defaultValue: 'самое позднее 8:51' }); } catch (e) { SET_ISSUES.add('карточка: ' + e.message); } }
+  for (const c of set.children) {
+    const t = c.findOne(n => n.type === 'TEXT' && (n.name === 'Плохой день' || n.name === 'Самое позднее'));
+    if (t) { t.name = 'Самое позднее'; try { await figma.loadFontAsync(t.fontName); if (/плохой день/.test(t.characters)) t.characters = t.characters.replace('в плохой день', 'самое позднее'); } catch (e) { } }
+    const f = c.findOne(n => n.name === 'Пилюля: плохой день'); if (f) f.name = 'Пилюля: самое позднее';
+  }
+}
 // Починка набора: одинаковые варианты — ошибка набора. Лишний вариант без экземпляров удаляем, с экземплярами — переименовываем.
 async function repairSet(set) {
   const groups = {}; let removed = 0, renamed = 0;
@@ -569,7 +580,7 @@ async function repairSet(set) {
 }
 function card(parent, o) {
   const i = inst(CARD, { 'Итог': o.v, 'Состояние': o.sel ? 'Выбрана' : 'Обычная' },
-    { 'Название': o.n, 'Детали': o.d, 'Время прибытия': o.t, 'Запас': o.z, 'Итог · текст': o.v.toLowerCase(), 'Плохой день': o.bad, 'Выйти до': o.until || '' },
+    { 'Название': o.n, 'Детали': o.d, 'Время прибытия': o.t, 'Запас': o.z, 'Итог · текст': o.v.toLowerCase(), 'Самое позднее': o.bad, 'Выйти до': o.until || '' },
     { 'Показать «выйти до»': !!o.until });
   const k = pkey(CARD, 'Иконка · вид'); if (k) i.setProperties({ [k]: IC[o.ic].id });
   i.name = 'Вариант: ' + o.n;
@@ -610,8 +621,8 @@ async function p1() {
   const c = await controls(s, h.height + 12);
   const list = AL(s, 'VERTICAL', { name: 'Способы', gap: 8, w: 360, px: 16, x: 0, y: c.box.y + c.box.height + 12 });
   const O = [
-    { n: 'Метро', ic: 'Метро', d: '5 остановок · ≈ 70 ₽', t: '8:48', z: 'запас 12 мин', v: 'Надёжно', bad: 'в плохой день 8:51', until: 'можно выйти до 8:29', sel: true },
-    { n: 'Такси', ic: 'Машина', d: 'подача 3–9 мин · ≈ 650 ₽', t: '8:53', z: 'запас 7 мин', v: 'Надёжно', bad: 'в плохой день 9:00', until: 'можно выйти до 8:20' },
+    { n: 'Метро', ic: 'Метро', d: '5 остановок · ≈ 70 ₽', t: '8:48', z: 'запас 12 мин', v: 'Надёжно', bad: 'самое позднее 8:51', until: 'можно выйти до 8:29', sel: true },
+    { n: 'Такси', ic: 'Машина', d: 'подача 3–9 мин · ≈ 650 ₽', t: '8:53', z: 'запас 7 мин', v: 'Надёжно', bad: 'самое позднее 9:00', until: 'можно выйти до 8:20' },
     { n: 'Каршеринг', ic: 'Машина', d: 'машина в 360 м · ≈ 400 ₽', t: '9:01', z: 'опоздание ~1 мин', v: 'Скорее опоздаешь', bad: 'успеешь, только если повезёт' },
     { n: 'Пешком', ic: 'Пешком', d: '≈ 10 км · бесплатно', t: '10:23', z: 'опоздание ~1 ч 23 мин', v: 'Не успеешь', bad: 'дождь с 8:40 — нужен зонт' }
   ];
@@ -626,10 +637,10 @@ async function p2() {
   const c = await controls(s, h.height + 12);
   const list = AL(s, 'VERTICAL', { name: 'Способы', gap: 8, w: 360, px: 16, x: 0, y: c.box.y + c.box.height + 12 });
   const O = [
-    { n: 'Метро', ic: 'Метро', d: '5 остановок · ≈ 70 ₽', t: '9:13', z: 'в пути ~28 мин', v: 'Стабильно', bad: 'в плохой день 9:16', sel: true },
-    { n: 'Такси', ic: 'Машина', d: 'подача 3–9 мин · ≈ 650 ₽', t: '9:18', z: 'в пути ~33 мин', v: 'Зависит от пробок', bad: 'в плохой день 9:25' },
-    { n: 'Каршеринг', ic: 'Машина', d: 'машина в 360 м · ≈ 400 ₽', t: '9:26', z: 'в пути ~41 мин', v: 'Зависит от пробок', bad: 'в плохой день 9:33' },
-    { n: 'Пешком', ic: 'Пешком', d: '≈ 10 км · бесплатно', t: '10:48', z: 'в пути ~2 ч 3 мин', v: 'Стабильно', bad: 'в плохой день 10:56' }
+    { n: 'Метро', ic: 'Метро', d: '5 остановок · ≈ 70 ₽', t: '9:13', z: 'в пути ~28 мин', v: 'Стабильно', bad: 'самое позднее 9:16', sel: true },
+    { n: 'Такси', ic: 'Машина', d: 'подача 3–9 мин · ≈ 650 ₽', t: '9:18', z: 'в пути ~33 мин', v: 'Зависит от пробок', bad: 'самое позднее 9:25' },
+    { n: 'Каршеринг', ic: 'Машина', d: 'машина в 360 м · ≈ 400 ₽', t: '9:26', z: 'в пути ~41 мин', v: 'Зависит от пробок', bad: 'самое позднее 9:33' },
+    { n: 'Пешком', ic: 'Пешком', d: '≈ 10 км · бесплатно', t: '10:48', z: 'в пути ~2 ч 3 мин', v: 'Стабильно', bad: 'самое позднее 10:56' }
   ];
   for (const o of O) card(list, o);
   scrollable(s, list);
@@ -668,7 +679,7 @@ async function route(i, name, small, title, sub, verdict, bad, steps, idx) {
   const pr = AL(s, 'HORIZONTAL', { name: 'Итог', gap: 6, x: 16, y: h.height + 12 });
   const [bg, fg] = VERDICT[verdict];
   const a = AL(pr, 'HORIZONTAL', { name: 'Пилюля: итог', px: 10, py: 4, r: 12, bg }); await TX(a, verdict.toLowerCase(), 'small', fg);
-  const b = AL(pr, 'HORIZONTAL', { name: 'Пилюля: плохой день', px: 10, py: 4, r: 12, bg: 'white' }); await TX(b, bad, 'small', 'ink');
+  const b = AL(pr, 'HORIZONTAL', { name: 'Пилюля: самое позднее', px: 10, py: 4, r: 12, bg: 'white' }); await TX(b, bad, 'small', 'ink');
   let y = pr.y + pr.height + 30;
   const step = 92;
   for (let k = 0; k < steps.length; k++) {
@@ -691,7 +702,7 @@ async function route(i, name, small, title, sub, verdict, bad, steps, idx) {
   return { s, other };
 }
 async function p4() {
-  return route(3, 'P4 · Маршрут: метро', 'Метро · прибыть к 9:00', 'Выходи до 8:29', 'Выйдешь сейчас — будешь в 8:48, запас 12 мин', 'Надёжно', 'в плохой день 8:51', [
+  return route(3, 'P4 · Маршрут: метро', 'Метро · прибыть к 9:00', 'Выходи до 8:29', 'Выйдешь сейчас — будешь в 8:48, самое позднее 8:51. Запас 12 мин', 'Надёжно', 'самое позднее 8:51', [
     { c: 'dash', dash: true, t: 'Пешком до м. Первомайская', m: '8:20 · ~11 мин (обычно 9–13)', ic: 'Вход', l: 'Вход №3 — на южной стороне улицы' },
     { c: 'bg', t: 'Турникеты и поезд', m: '8:31 · ~2 мин (обычно 1–4)', ic: 'Часы', l: 'В час пик поезда раз в 2–3 минуты' },
     { c: 'bg', t: 'Метро до Бауманской · 5 остановок', m: '8:33 · ~13 мин (обычно 12–15)', ic: 'Колокол', l: 'Перед выходом — вибрация' },

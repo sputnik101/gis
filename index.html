@@ -190,27 +190,27 @@ const state = { arrive: 9*60, mode:'hurry', sel:'metro', modules:{weather:true,c
 // tail — редкий сбой: вероятность и добавка в минутах. geom — запечённая геометрия из BAKED.routes.
 const OPTIONS = {
   metro:{ name:'Метро', ico:'Ⓜ', bg:'#E3EBFD', fg:'#2E6FE6', price:'≈ 70 ₽', tail:[0.03,6,12],
-    detail:'870 м пешком · ' + stops(5) + ' без пересадок',
+    detail: stops(5) + ' без пересадок',
     legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы, ближе к дому', tip:'Вход №3'},
            {type:'wait', at:ENTRY3, lo:1, hi:4, label:'Турникеты и поезд', lm:'В час пик поезда раз в 2–3 минуты'},
            {type:'metro', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'В сторону центра. Перед выходом — вибрация'},
            {type:'wait', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'Выход на Бауманской один — наверх по эскалатору', tip:'Ты на месте'} ] },
   taxi:{ name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.08,5,15],
-    detail:'≈ 9,8 км · подача 3–9 мин',
+    detail:'подача 3–9 мин',
     legs:[ {type:'wait', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
            {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'Утренние пробки: возможна задержка', tip:'Ты на месте'} ] },
-  carshare:{ name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 400 ₽', tail:[0.08,5,15],
-    detail:'машина в 360 м · ≈ 9,7 км · парковка учтена',
+  carshare:{ name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500\u00a0₽', tail:[0.08,5,15],
+    detail:'машина в 360 м',
     legs:[ {type:'walk', geom:'toCar', lo:4, hi:6, label:'Пешком до машины', lm:'Ближайшая свободная машина — 360 м', tip:'Машина здесь'},
            {type:'wait', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
            {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:'Утренние пробки: возможна задержка'},
            {type:'wait', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', tip:'Ты на месте'} ] },
   walk:{ name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0],
-    detail:'≈ 10 км · ~13 000 шагов',
+    detail:'≈ 10 км',
     legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
   // режим «Гуляю»
   stroll:{ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', tail:[0.03,6,12],
-    detail:'метро ' + stops(4) + ' · ~2,9 км пешком',
+    detail:'метро + 2,9 км пешком',
     pois:[ {e:'☕', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'},
            {e:'🌊', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
            {e:'⛪', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
@@ -228,7 +228,7 @@ const OPTIONS = {
 
 /* ================= ПРОГНОЗ =================
    Одно правило для всех вариантов:
-   • время в пути — симуляция по шагам (P10, медиана, P90 = «плохой день»);
+   • время в пути — симуляция по шагам (P10, медиана, P90 = «самое позднее»);
    • шаги маршрута показывают медиану, их сумма = медиана поездки. */
 function rng(seed){ let a = seed; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const tri = (r, lo, hi) => { const c = 0.35, u = r(); return u < c ? lo + Math.sqrt(u*c)*(hi-lo) : hi - Math.sqrt((1-u)*(1-c))*(hi-lo); };
@@ -245,13 +245,14 @@ function forecast(k){
 const fmt = m => { m = Math.round(m); const h = Math.floor(m/60)%24, mm = ((m%60)+60)%60; return h + ':' + String(mm).padStart(2,'0'); };
 /* Что показываем из прогноза (решение 22.11: «N из 10» неинформативно):
    • главное — во сколько будешь и какой запас;
-   • «в плохой день» — 1 поездка из 10 (90-й процентиль), в минутах;
+   • «самое позднее» — 1 поездка из 10 (90-й процентиль), в минутах; у рискованных — с причиной («в пробку — 9:06»);
    • слово-итог цветом: надёжно / есть риск / не успеешь;
    • «выйди до» — крайний срок, чтобы успеть и в плохой день. */
 const dep = () => state.timeMode==='depart' ? state.depart : NOW;
 const latest = k => state.arrive - forecast(k).p90;
 const dur = m => m>=60 ? Math.floor(m/60) + ' ч' + (m%60 ? ' ' + m%60 + ' мин' : '') : m + ' мин';
 const isCar = k => k==='taxi' || k==='carshare';
+const delayWhy = k => isCar(k) ? 'в пробку' : k==='walk' || k==='loop' ? 'если задержишься' : 'если поезд задержится';
 function verdict(k){
   const f = forecast(k), d = dep();
   if(state.timeMode==='depart' || state.mode!=='hurry' || OPTIONS[k].noTarget){
@@ -300,13 +301,11 @@ function card(k){
     pills.push(`<span class="pill ${v.cls}">${v.word}</span>`);
     if(v.likelyLate) pills.push(`<span class="pill">успеешь, только если повезёт</span>`);
     else if(v.cls==='r' && arr) {}
-    else if(v.badLate) pills.push(`<span class="pill a">в плохой день опоздаешь на ${v.badLate} мин</span>`);
-    else pills.push(`<span class="pill">в плохой день ${fmt(d+f.p90)}</span>`);
+    else if(v.badLate) pills.push(`<span class="pill a">${delayWhy(k)} — ${fmt(d+f.p90)}, опоздаешь на ${v.badLate} мин</span>`);
+    else pills.push(`<span class="pill">самое позднее ${fmt(d+f.p90)}</span>`);
     if(arr){ const L = latest(k); if(L >= d && !v.late) pills.push(`<span class="pill">${v.cls==='g'?'можно выйти до':'надёжнее выйти до'} <b>&nbsp;${fmt(L)}</b></span>`); }
   }
-  if(k==='metro' && state.modules.crowd) pills.push(`<span class="pill v">в 8:30–8:50 вагоны полные</span>`);
-  if(k==='walk' && state.modules.weather) pills.push(`<span class="pill a">дождь с 8:40 — нужен зонт</span>`);
-  if(k==='carshare') pills.push(`<span class="pill">цена зависит от пробок: 300–500 ₽</span>`);
+  if(k==='walk' && state.modules.weather) pills.push(`<span class="pill a">нужен зонт</span>`);
   return `<button class="card press ${state.sel===k?'sel':''} ${v.cls==='r'&&arr?'late':''}" data-k="${k}" onclick="pick('${k}')">
     <div class="top"><div class="ico" aria-hidden="true" style="background:${o.bg};color:${o.fg}">${o.ico}</div>
       <div><div class="t">${o.name}</div><div class="m">${o.detail}${o.noTarget?'':' · ' + o.price}</div></div>
@@ -358,16 +357,16 @@ V.route = () => {
   let t = d;
   const icon = l => l.type==='walk' ? '🚶' : l.type==='metro' ? 'Ⓜ' : l.type==='wait' ? '⏱' : k==='taxi' ? '🚕' : '🚗';
   const steps = o.legs.map(l => { const mid = legMid(l); const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" aria-hidden="true" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
-     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div>${l.lm?`<div class="lm"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
+     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div>${l.type==='metro' && state.modules.crowd ? '<div class="pill v" style="margin-top:6px">в 8:30–8:50 вагоны полные</div><br>' : ''}${l.lm?`<div class="lm"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
   const pois = o.pois ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${o.pois.map((p,i)=>`<button class="poi press" onclick="flyPoi(${i})"><div class="e" aria-hidden="true">${p.e}</div><b>${p.n}</b><span>${p.d} · ${p.extra}</span></button>`).join('')}</div>` : '';
   let head;
   const when = d===NOW ? 'сейчас' : 'в ' + fmt(d);
   if(o.noTarget) head = `<h1>${o.name}</h1><div class="sub">~${f.mid} мин · ${o.price} · можно сократить в любой момент</div>`;
-  else if(!arr) head = `<h1>Выйдешь ${when} — будешь в ${fmt(d+f.mid)}</h1><div class="sub">${o.name} · ${o.price} · в плохой день ${fmt(d+f.p90)}</div><span class="pill ${v.cls}">${v.word}</span>`;
+  else if(!arr) head = `<h1>Выйдешь ${when} — будешь в ${fmt(d+f.mid)}</h1><div class="sub">${o.name} · ${o.price} · самое позднее ${fmt(d+f.p90)}</div><span class="pill ${v.cls}">${v.word}</span>`;
   else { const L = latest(k);
-    if(v.cls==='g') head = `<h1>Выходи до ${fmt(L)}</h1><div class="sub">Выйдешь ${when} — будешь в ${fmt(d+f.mid)}, запас ${v.spare} мин · в плохой день ${fmt(d+f.p90)}</div>`;
+    if(v.cls==='g') head = `<h1>Выходи до ${fmt(L)}</h1><div class="sub">Выйдешь ${when} — будешь в ${fmt(d+f.mid)}, самое позднее ${fmt(d+f.p90)}. Запас ${v.spare} мин</div>`;
     else if(v.likelyLate) head = `<h1>Выходи ${when} — скорее опоздаешь</h1><div class="sub">Обычно будешь в ${fmt(d+f.mid)}, успеешь только если повезёт</div>`;
-    else if(v.cls==='a') head = `<h1>Выходи ${when} — есть риск</h1><div class="sub">Обычно будешь в ${fmt(d+f.mid)}, но в плохой день опоздаешь на ${v.badLate} мин</div>`;
+    else if(v.cls==='a') head = `<h1>Выходи ${when} — есть риск</h1><div class="sub">Обычно будешь в ${fmt(d+f.mid)}, но ${delayWhy(k)} — опоздаешь на ${v.badLate} мин</div>`;
     else head = `<h1>К ${fmt(state.arrive)} не успеть</h1><div class="sub">Выйдешь ${when} — будешь около ${fmt(d+f.mid)}</div>`;
     head += `<span class="pill ${v.cls}">${v.word}</span>`; }
   const cta = k==='taxi' ? 'Вызвать такси' : k==='carshare' ? 'Забронировать машину' : 'Поехали';
@@ -395,8 +394,9 @@ V.done = () => {
    <button class="btn w press" onclick="restart()">Готово</button>`;
 };
 
+const glue = h => h.replace(/(\d) (мин|ч|₽|км|м)(?=[\s<.,·)]|$)/g, '$1&nbsp;$2').replace(/≈ /g, '≈&nbsp;');
 function render(anim){
-  body.innerHTML = `<div class="view ${anim==='back'?'back':anim==='in'?'in':''}">${V[state.view]()}</div>`;
+  body.innerHTML = `<div class="view ${anim==='back'?'back':anim==='in'?'in':''}">${glue(V[state.view]())}</div>`;
   if(anim) body.scrollTop = 0;
   if(state.view==='time') setupWheel();
 }
