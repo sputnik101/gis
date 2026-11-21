@@ -96,7 +96,8 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .st.metro:not(:last-child)::after{background:var(--metro3)}
 .st .tx{flex:1}
 .st .tx b{font-weight:600;font-size:15px}
-.lm{display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:#F7F6E8;border:1px dashed #C9C47A;color:#5E5718;border-radius:10px;padding:5px 9px;font-size:12.5px}
+.lm{display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:#FFFFFF;border:1px solid #E4E2F0;color:#4A4670;border-radius:10px;padding:5px 9px;font-size:12.5px}
+.lm.w{background:#FDF0DA;border-color:#F3D9A8;color:#8A5610}   /* предупреждение: тот же оранжевый, что у «есть риск» */
 .pois{display:flex;gap:10px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
 .poi{flex:none;width:170px;background:#fff;border-radius:16px;padding:12px;box-shadow:var(--s1);cursor:pointer;border:0;text-align:left;font:inherit;color:inherit}
 .poi .e{font-size:22px}.poi b{display:block;font-size:14px;margin-top:6px}.poi span{font-size:12px;color:var(--muted)}
@@ -238,7 +239,7 @@ function applyMetro(){
       l.lo = Math.round(t * 0.97); l.hi = Math.round(t * 1.08 + (peak ? 1 : 0)); }
     if(l.model === 'exit'){ const d = DEPTH[l.station];
       l.lo = d.lo; l.hi = d.hi + (peak && d.deep ? 1 : 0);
-      l.lm = (l.station === 'Бауманская' ? 'Выход на Бауманской один — наверх по эскалатору' : d.how[0].toUpperCase() + d.how.slice(1)) + (peak && d.deep ? '. В час пик у эскалатора бывает очередь' : ''); }
+      l.lm = (l.station === 'Бауманская' ? 'Выход на Бауманской один — наверх по эскалатору' : d.how[0].toUpperCase() + d.how.slice(1)) + (peak && d.deep ? '. В час пик у эскалатора бывает очередь' : ''); l.warn = peak && d.deep; }
   } }
   return true;
 }
@@ -255,13 +256,13 @@ const OPTIONS = {
   taxi:{ name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.10,5,15],
     detail:'подача 3–9 мин',
     legs:[ {type:'wait', kind:'Подача', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
-           {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'Утренние пробки: возможна задержка', tip:'Ты на месте'} ] },
+           {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'Утренние пробки: возможна задержка', warn:true, tip:'Ты на месте'} ] },
   carshare:{ name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500\u00a0₽', tail:[0.10,5,15],
     detail:'машина в 360 м',
     legs:[ {type:'walk', geom:'toCar', lo:4, hi:6, label:'Пешком до машины', lm:'Ближайшая свободная машина — 360 м', tip:'Машина здесь'},
            {type:'wait', kind:'Подготовка', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
-           {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:'Утренние пробки: возможна задержка'},
-           {type:'wait', kind:'Парковка', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', tip:'Ты на месте'} ] },
+           {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:'Утренние пробки: возможна задержка', warn:true},
+           {type:'wait', kind:'Парковка', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', warn:true, tip:'Ты на месте'} ] },
   walk:{ name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0],
     detail:'≈ 10 км',
     legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
@@ -503,7 +504,7 @@ V.route = () => {
   const icon = l => l.type==='walk' ? '🚶' : l.type==='metro' ? 'Ⓜ' : l.type==='wait' ? '⏱' : k==='taxi' ? '🚕' : '🚗';
   const crowdNow = state.modules.crowd && start >= 8*60+10 && start <= 8*60+45;
   const steps = o.legs.map((l,i) => { const mid = legMin(k,i); const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" aria-hidden="true" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
-     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div>${l.type==='metro' && crowdNow ? '<button class="pill v press" style="margin-top:6px;border:0" onclick="go(\'modules\')">в 8:30–8:50 вагоны полные</button>' : ''}${l.lm?`<div class="lm"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
+     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div>${l.type==='metro' && crowdNow ? '<button class="pill v press" style="margin-top:6px;border:0" onclick="go(\'modules\')">в 8:30–8:50 вагоны полные</button>' : ''}${l.lm?`<div class="lm${l.warn?' w':''}"><span aria-hidden="true">${l.warn?'⚠️':'📍'}</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
   const pois = o.pois ? visiblePois(o).length ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${visiblePois(o).map(p=>`<button class="poi press" onclick="flyPoi(${o.pois.indexOf(p)})"><div class="e" aria-hidden="true">${p.e}</div><b>${p.n}</b><span>${p.d} · ${p.extra}</span></button>`).join('')}</div>` : '' : '';
   let head;
   if(v.closed) head = `<h1 tabindex="-1">Метро ночью закрыто</h1><div class="sub">Откроется в ${fmt(OPEN)}. Ночью доберёшься на такси или пешком</div>`;
