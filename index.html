@@ -2,15 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Своя ГИС · живой прототип · Москва</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
 :root{
-  --violet:#6C6CF0; --violet-d:#5656D6; --river:#8C8DF5; --lime:#D7F26B; --lime-d:#B9DA3E;
-  --ink:#1A1640; --ink2:#4A4670; --muted:#8A87A3; --bg:#F3F2EE; --white:#fff; --line:#E6E4DE;
-  --green:#3BB273; --amber:#F2A93B; --red:#E5534B; --metro3:#2E6FE6;
+  --violet:#6C6CF0; --violet-btn:#5555DD; --violet-d:#4B4BC8; --lime:#D7F26B;
+  --ink:#1A1640; --ink2:#4A4670; --muted:#6B6787; --bg:#F3F2EE; --line:#E1DED6;
+  --metro3:#2E6FE6;
   --s1:0 1px 2px rgba(20,17,58,.06),0 4px 14px rgba(20,17,58,.07);
   --s2:0 4px 10px rgba(20,17,58,.18),0 16px 36px rgba(20,17,58,.22);
   --s3:0 -4px 12px rgba(20,17,58,.12),0 -16px 40px rgba(20,17,58,.24);
@@ -18,29 +18,31 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:#E9E7F7;font-family:Inter,Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
 body{display:flex;align-items:center;justify-content:center}
+button{font-family:inherit}
+:focus-visible{outline:3px solid #F2A93B;outline-offset:2px}
 .phone{position:relative;width:390px;height:844px;border-radius:44px;overflow:hidden;background:var(--violet);box-shadow:0 30px 80px rgba(40,30,120,.35),0 0 0 10px #15123a}
 @media (max-width:500px){.phone{width:100vw;height:100dvh;border-radius:0;box-shadow:none}}
 #map{position:absolute;inset:0}
-.maplibregl-ctrl-attrib{font-size:9px;opacity:.6}
-.maplibregl-ctrl-bottom-right{bottom:auto;top:44px}
-/* статус-бар */
+/* подпись авторов карты — всегда видна */
+.attrib{position:absolute;left:16px;top:98px;z-index:19;font-size:10.5px;color:#fff;background:rgba(26,22,64,.55);padding:3px 8px;border-radius:8px;transition:top .3s,bottom .3s}
+.attrib a{color:#fff}
+.attrib.guiding{top:auto;bottom:178px}
 .status{position:absolute;top:0;left:0;right:0;height:36px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:13px;font-weight:600;color:#fff;z-index:30;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.2)}
-/* верхние кнопки на карте */
 .topbar{position:absolute;top:44px;left:14px;right:14px;display:flex;gap:8px;z-index:20;transition:opacity .25s,transform .25s}
 .topbar.hide{opacity:0;transform:translateY(-12px);pointer-events:none}
-.search{flex:1;height:46px;border-radius:23px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 16px;box-shadow:var(--s2);font-size:14px;color:var(--ink2)}
+.search{flex:1;height:48px;border-radius:24px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 16px;box-shadow:var(--s2);font-size:14px;color:var(--ink2);border:0;text-align:left;cursor:pointer}
 .search b{color:var(--ink);font-weight:600}
-.round{width:46px;height:46px;border-radius:23px;background:#fff;display:grid;place-items:center;box-shadow:var(--s2);border:0;cursor:pointer;color:var(--ink);font-size:18px}
+.round{width:48px;height:48px;border-radius:24px;background:#fff;display:grid;place-items:center;box-shadow:var(--s2);border:0;cursor:pointer;color:var(--ink);font-size:18px}
 .press{transition:transform .12s ease,box-shadow .12s ease,background .12s}
 .press:active{transform:scale(.96);box-shadow:0 1px 3px rgba(20,17,58,.18)!important}
 /* шторка */
-.sheet{position:absolute;left:0;right:0;bottom:0;height:56%;overflow:hidden;background:var(--bg);border-radius:26px 26px 0 0;box-shadow:var(--s3);z-index:25;display:flex;flex-direction:column;will-change:transform;touch-action:none}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:56%;overflow:hidden;background:var(--bg);border-radius:26px 26px 0 0;box-shadow:var(--s3);z-index:25;display:flex;flex-direction:column;touch-action:none;user-select:none;-webkit-user-select:none}
 .sheet.anim{transition:height .35s cubic-bezier(.2,.8,.2,1)}
-.grab{padding:10px 0 4px;display:flex;justify-content:center;cursor:grab}
-.grab i{width:40px;height:5px;border-radius:3px;background:#CFCCD9}
+.grab{border:0;background:none;padding:12px 0 6px;display:flex;justify-content:center;cursor:grab;width:100%}
+.grab i{width:44px;height:5px;border-radius:3px;background:#8F8BA6}
 .body{flex:1;min-height:0;overflow-y:auto;padding:4px 16px 40px;touch-action:pan-y;scrollbar-width:none;-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 36px),transparent)}
 .body::-webkit-scrollbar{display:none}
-.view{animation:vin .28s ease}
+.view.in{animation:vin .28s ease}
 @keyframes vin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
 .view.back{animation:vback .28s ease}
 @keyframes vback{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
@@ -48,31 +50,31 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
 .row{display:flex;gap:8px;align-items:center}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
-.chip{flex:none;height:34px;padding:0 14px;border-radius:17px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink);cursor:pointer;box-shadow:var(--s1)}
+.chip{flex:none;height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink);cursor:pointer;box-shadow:var(--s1)}
 .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .seg{display:flex;background:#E7E5F3;border-radius:14px;padding:3px;margin:4px 0 12px}
-.seg button{flex:1;height:36px;border:0;border-radius:11px;background:transparent;font-size:14px;color:var(--ink2);cursor:pointer;font-weight:500;transition:all .2s}
+.seg button{flex:1;height:42px;border:0;border-radius:11px;background:transparent;font-size:14px;color:var(--ink2);cursor:pointer;font-weight:500;transition:all .2s}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:var(--s1)}
-.card{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:var(--s1);cursor:pointer;position:relative;border:2px solid transparent}
+.card{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:var(--s1);cursor:pointer;position:relative;border:2px solid transparent;display:block;width:100%;text-align:left;font:inherit;color:inherit}
 .card.sel{border-color:var(--violet)}
+.card.late{opacity:.75}
 .card .top{display:flex;align-items:center;gap:12px}
 .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex:none}
 .t{font-size:16px;font-weight:600}
 .m{font-size:13px;color:var(--muted)}
-.right{margin-left:auto;text-align:right}
-.big{font-size:18px;font-weight:600}
+.right{margin-left:auto;text-align:right;flex:none}
+.big{font-size:18px;font-weight:600;white-space:nowrap}
 .win{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
-.pill{height:26px;padding:0 10px;border-radius:13px;font-size:12.5px;display:inline-flex;align-items:center;gap:5px;background:#F1F0F8;color:var(--ink2)}
-.pill.g{background:#E3F5EA;color:#1F7A4A}.pill.a{background:#FDF0DA;color:#9A6212}.pill.r{background:#FBE3E1;color:#A3302A}
+.pill{min-height:26px;padding:3px 10px;border-radius:13px;font-size:12.5px;display:inline-flex;align-items:center;gap:5px;background:#F1F0F8;color:var(--ink2)}
+.pill.g{background:#E3F5EA;color:#1A6B40}.pill.a{background:#FDF0DA;color:#8A5610}.pill.r{background:#FBE3E1;color:#97291F}
 .pill.v{background:#EDEDFD;color:var(--violet-d)}
-.rel{display:inline-flex;gap:2px;margin-left:2px}.rel i{width:5px;height:10px;border-radius:2px;background:#D9D7E6}.rel i.f{background:currentColor}
+.rel{display:inline-flex;gap:2px;margin-left:2px}.rel i{width:5px;height:10px;border-radius:2px;background:#CFCCDD}.rel i.f{background:currentColor}
 .note{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
-.btn{height:50px;border-radius:25px;border:0;font-size:16px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 2px 4px rgba(20,17,58,.18),0 6px 14px rgba(20,17,58,.14)}
-.btn.p{background:var(--violet);color:#fff;background-image:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 60%)}
+.btn{height:52px;border-radius:26px;border:0;font-size:16px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 2px 4px rgba(20,17,58,.18),0 6px 14px rgba(20,17,58,.14)}
+.btn.p{background:var(--violet-btn);color:#fff;background-image:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0) 60%)}
 .btn.d{background:var(--ink);color:#fff;background-image:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,0) 60%)}
 .btn.w{background:#fff;color:var(--ink)}
-.back-btn{border:0;background:none;font-size:22px;color:var(--ink);cursor:pointer;padding:4px 8px 4px 0}
-/* шаги */
+.back-btn{border:0;background:none;font-size:22px;color:var(--ink);cursor:pointer;width:44px;height:44px;margin-left:-10px;border-radius:22px}
 .steps{position:relative;margin:8px 0 14px}
 .st{display:flex;gap:12px;padding:8px 0;position:relative}
 .st .dot{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;font-size:14px;flex:none;z-index:1;background:#fff;box-shadow:var(--s1)}
@@ -80,30 +82,31 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .st.metro:not(:last-child)::after{background:var(--metro3)}
 .st .tx{flex:1}
 .st .tx b{font-weight:600;font-size:15px}
-.lm{display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:#F7F6E8;border:1px dashed #D9D58C;color:#6B6420;border-radius:10px;padding:5px 9px;font-size:12.5px}
+.lm{display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:#F7F6E8;border:1px dashed #C9C47A;color:#5E5718;border-radius:10px;padding:5px 9px;font-size:12.5px}
 .pois{display:flex;gap:10px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
-.poi{flex:none;width:170px;background:#fff;border-radius:16px;padding:12px;box-shadow:var(--s1);cursor:pointer}
+.poi{flex:none;width:170px;background:#fff;border-radius:16px;padding:12px;box-shadow:var(--s1);cursor:pointer;border:0;text-align:left;font:inherit;color:inherit}
 .poi .e{font-size:22px}.poi b{display:block;font-size:14px;margin-top:6px}.poi span{font-size:12px;color:var(--muted)}
-.toggle{width:46px;height:28px;border-radius:14px;background:#D9D7E6;position:relative;flex:none;transition:background .2s;cursor:pointer}
+.toggle{width:46px;height:28px;border-radius:14px;background:#A8A4BD;position:relative;flex:none;transition:background .2s}
 .toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
-.toggle.on{background:var(--violet)}.toggle.on::after{left:21px}
-.banner{background:var(--violet);color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:12px;font-size:14px;box-shadow:var(--s1)}
+.toggle.on{background:var(--violet-btn)}.toggle.on::after{left:21px}
+.banner{background:var(--violet-btn);color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:12px;font-size:14px;box-shadow:var(--s1)}
 .banner b{font-size:16px}
+.banner.late{background:#97291F}
 /* ведение */
 .guide{position:absolute;inset:0;z-index:26;pointer-events:none;display:none}
 .guide.on{display:block}
 .gtop{position:absolute;top:44px;left:12px;right:12px;background:var(--ink);color:#fff;border-radius:20px;padding:14px 16px;box-shadow:var(--s2);pointer-events:auto;transition:background .3s}
-.gtop .k{font-size:12.5px;opacity:.7}
+.gtop .k{font-size:12.5px;opacity:.8}
 .gtop .h{font-size:21px;font-weight:600;margin-top:2px;line-height:1.2}
 .gtop .lmk{margin-top:8px;font-size:13px;background:rgba(255,255,255,.12);border-radius:10px;padding:6px 10px;display:inline-block}
-.gtop.alert{background:var(--violet)}
+.gtop.alert{background:var(--violet-d)}
 .stations{display:flex;gap:4px;margin-top:10px}
 .stations i{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.25)}
 .stations i.f{background:var(--lime)}
 .gbot{position:absolute;left:12px;right:12px;bottom:18px;background:#fff;border-radius:22px;padding:14px;box-shadow:var(--s3);pointer-events:auto}
 .gbot .row{justify-content:space-between}
 .eta{font-size:22px;font-weight:600}
-.speed{border:1px solid var(--line);background:#fff;border-radius:14px;height:30px;padding:0 10px;font-size:13px;cursor:pointer}
+.speed{border:1px solid var(--line);background:#fff;border-radius:20px;height:40px;padding:0 14px;font-size:13px;cursor:pointer;color:var(--ink)}
 .me{width:22px;height:22px;border-radius:11px;background:#fff;border:5px solid var(--ink);box-shadow:0 0 0 8px rgba(215,242,107,.45),0 4px 10px rgba(0,0,0,.35)}
 .pin{width:max-content;background:#fff;color:var(--ink);font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:14px;box-shadow:0 2px 4px rgba(20,17,58,.3),0 6px 12px rgba(20,17,58,.18);white-space:nowrap}
 .pin::after{content:"";position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-bottom:0;border-top-color:#fff}
@@ -113,26 +116,29 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .st-dot{width:12px;height:12px;border-radius:6px;background:#fff;border:3px solid var(--metro3)}
 .tip{background:var(--ink);color:#fff;font-size:13px;padding:8px 11px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:200px;width:max-content}
 .tip::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:var(--ink)}
-.toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);background:rgba(26,22,64,.92);color:#fff;border-radius:18px;padding:16px 20px;font-size:15px;z-index:40;opacity:0;pointer-events:none;transition:all .25s;text-align:center}
+.toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);background:rgba(26,22,64,.94);color:#fff;border-radius:18px;padding:16px 20px;font-size:15px;z-index:40;opacity:0;pointer-events:none;transition:all .25s;text-align:center}
 .toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#fff;text-align:center;padding:40px;font-size:14px;z-index:5}
 .shake{animation:shake .5s}
 @keyframes shake{0%,100%{transform:none}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="phone" id="phone">
-  <div id="map"></div>
-  <div class="fallback" id="fallback">Карта не загрузилась — нужен интернет.<br>Прототип открывается в браузере, подложка — OpenFreeMap.</div>
-  <div class="status"><span id="clock">8:20</span><span>● ● ▮</span></div>
+  <div id="map" aria-label="Карта Москвы"></div>
+  <div class="fallback" id="fallback">Карта не загрузилась — нужен интернет и браузер с WebGL.<br>Всё остальное в прототипе работает.</div>
+  <div class="status" aria-hidden="true"><span id="clock">8:20</span><span>● ● ▮</span></div>
+  <div class="attrib" id="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · маршруты OSRM</div>
 
   <div class="topbar" id="topbar">
-    <div class="search press" onclick="toast('Поиск мест — в следующей версии')">🔍 <span><b>м. Бауманская</b> · от дома</span></div>
-    <button class="round press" title="Модули" onclick="go('modules')">⚙︎</button>
+    <button class="search press" onclick="toast('Поиск мест — в следующей версии')"><span aria-hidden="true">🔍</span><span><b>м. Бауманская</b> · от дома</span></button>
+    <button class="round press" aria-label="Модули" onclick="go('modules')">⚙︎</button>
   </div>
 
   <div class="sheet anim" id="sheet">
-    <div class="grab" id="grab"><i></i></div>
+    <button class="grab" id="grab" aria-label="Развернуть или свернуть панель"><i></i></button>
     <div class="body" id="body"></div>
   </div>
 
@@ -140,240 +146,327 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
     <div class="gtop" id="gtop"></div>
     <div class="gbot">
       <div class="row">
-        <div><div class="eta" id="geta">8:54</div><div class="m" id="gleft">ещё 22 мин</div></div>
+        <div><div class="eta" id="geta">8:46</div><div class="m" id="gleft">ещё 26 мин</div></div>
         <button class="speed press" id="speedBtn" onclick="toggleSpeed()">Перемотка ×1</button>
       </div>
       <div style="height:12px"></div>
       <button class="btn d press" onclick="endTrip()">Завершить поездку</button>
     </div>
   </div>
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="sr" id="live" aria-live="polite"></div>
 </div>
 
 <script>
-/* ============ ДАННЫЕ ============ */
-// [долгота, широта]. Точку дома можно поправить здесь.
-const HOME = [37.7905, 55.7946];
+/* ================= ДАННЫЕ =================
+   Геометрия — настоящая, из OpenStreetMap (выгрузка 22.11.2026): дом по адресу (Nominatim),
+   линия 3 по путям (relation 1472298), входы в метро, пешие и автомобильные маршруты (routing.openstreetmap.de).
+   Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
+const NOW = 8*60+20;                       // «сейчас» в прототипе
+const BAKED = {"seg":[[37.7995,55.7947],[37.79953,55.79381],[37.79952,55.79292],[37.79964,55.78984],[37.79963,55.78967],[37.79959,55.78949],[37.79952,55.78932],[37.79941,55.78915],[37.79928,55.78899],[37.79912,55.78884],[37.79894,55.7887],[37.79873,55.78856],[37.7985,55.78844],[37.79825,55.78834],[37.79798,55.78824],[37.7977,55.78817],[37.79743,55.78811],[37.79715,55.78807],[37.79681,55.78803],[37.79646,55.78802],[37.7929,55.78801],[37.79227,55.788],[37.7882,55.7879],[37.78578,55.78786],[37.7854,55.78784],[37.78502,55.78783],[37.78467,55.7878],[37.78397,55.78775],[37.78369,55.78773],[37.78339,55.78771],[37.78286,55.78771],[37.78166,55.78769],[37.78045,55.78767],[37.77978,55.78767],[37.77935,55.78767],[37.7781,55.78769],[37.77754,55.78769],[37.77455,55.78764],[37.77326,55.78762],[37.77273,55.78764],[37.77227,55.78768],[37.77181,55.78775],[37.77133,55.78785],[37.77051,55.78804],[37.77013,55.78812],[37.76972,55.78818],[37.76938,55.78822],[37.76904,55.78824],[37.76869,55.78825],[37.76828,55.78825],[37.76745,55.78823],[37.76713,55.78823],[37.76686,55.78824],[37.76659,55.78827],[37.76634,55.7883],[37.76612,55.78834],[37.76569,55.78845],[37.76441,55.78875],[37.76376,55.78887],[37.76304,55.78895],[37.76244,55.78898],[37.76183,55.78898],[37.75551,55.7887],[37.75486,55.78867],[37.75454,55.78866],[37.75421,55.78863],[37.75322,55.7885],[37.75298,55.78848],[37.751,55.78839],[37.74912,55.78831],[37.74876,55.78829],[37.74839,55.78826],[37.74803,55.78822],[37.74767,55.78817],[37.74732,55.78811],[37.74688,55.78802],[37.74623,55.78787],[37.72997,55.78406],[37.72897,55.78386],[37.72796,55.7837],[37.72692,55.78357],[37.72588,55.78349],[37.72127,55.78319],[37.70802,55.78234],[37.70716,55.78226],[37.70636,55.78215],[37.70559,55.782],[37.70386,55.78161],[37.70221,55.78123],[37.69987,55.78069],[37.69883,55.78041],[37.69776,55.78007],[37.69668,55.77966],[37.68064,55.77293]],"routes":{"walkToMetro":[[37.8114,55.79272],[37.81138,55.79303],[37.81166,55.79306],[37.81165,55.79331],[37.80094,55.79313],[37.80092,55.79339],[37.8006,55.79338],[37.8006,55.79345],[37.80035,55.79357],[37.79975,55.79357]],"strollWalk":[[37.70422,55.78181],[37.70559,55.78211],[37.7056,55.78222],[37.70296,55.7826],[37.69727,55.78253],[37.69721,55.78233],[37.6969,55.78226],[37.69675,55.78202],[37.6966,55.78135],[37.69515,55.78073],[37.69264,55.77953],[37.68973,55.77765],[37.68437,55.77485],[37.68367,55.77454],[37.68167,55.77394],[37.68035,55.77358],[37.68021,55.77374],[37.67839,55.77322],[37.67742,55.77302],[37.67734,55.77301],[37.67826,55.7732],[37.67849,55.77233],[37.67876,55.77235]],"walkAll":[[37.8114,55.79272],[37.81142,55.7924],[37.81117,55.79212],[37.81044,55.79211],[37.81048,55.79133],[37.79101,55.79099],[37.79094,55.79082],[37.79098,55.79009],[37.78579,55.78997],[37.78576,55.78983],[37.7845,55.78981],[37.78443,55.78975],[37.7841,55.78974],[37.78416,55.78849],[37.78368,55.78819],[37.78334,55.78819],[37.78334,55.78781],[37.78286,55.78777],[37.78286,55.78773],[37.78045,55.78768],[37.78045,55.78773],[37.78014,55.78772],[37.78,55.7877],[37.78001,55.78764],[37.7767,55.78757],[37.77437,55.78745],[37.77197,55.7876],[37.77077,55.78786],[37.77045,55.788],[37.76933,55.78795],[37.76879,55.78775],[37.76711,55.78765],[37.76663,55.78751],[37.7661,55.78753],[37.76573,55.78774],[37.76275,55.78769],[37.76281,55.78826],[37.7626,55.78819],[37.76223,55.78819],[37.76205,55.78825],[37.76071,55.78823],[37.74725,55.78767],[37.74697,55.78786],[37.74593,55.78761],[37.74586,55.78753],[37.74529,55.78733],[37.74278,55.78718],[37.74134,55.78701],[37.73886,55.78689],[37.73887,55.78674],[37.73032,55.78641],[37.7244,55.78603],[37.72228,55.78534],[37.72201,55.78531],[37.72218,55.78378],[37.72207,55.78372],[37.7221,55.78348],[37.7199,55.78339],[37.71976,55.78319],[37.71976,55.7825],[37.71955,55.78244],[37.71855,55.78238],[37.71844,55.78231],[37.71771,55.78238],[37.71657,55.78229],[37.71372,55.78225],[37.71198,55.78186],[37.71157,55.78182],[37.70968,55.78214],[37.70959,55.78196],[37.70544,55.78222],[37.70278,55.78261],[37.69727,55.78253],[37.69721,55.78233],[37.6969,55.78226],[37.69675,55.78202],[37.6966,55.78135],[37.69515,55.78073],[37.69264,55.77953],[37.68981,55.77769],[37.68465,55.77498],[37.68367,55.77454],[37.67856,55.77307],[37.67876,55.77235]],"loop":[[37.8114,55.79272],[37.81142,55.7924],[37.81117,55.79212],[37.81044,55.79211],[37.8105,55.79117],[37.81035,55.79117],[37.81046,55.78921],[37.81026,55.78898],[37.81032,55.78876],[37.81043,55.78878],[37.8115,55.78878],[37.81184,55.78871],[37.81261,55.78881],[37.81369,55.7888],[37.81504,55.78889],[37.81621,55.78887],[37.81657,55.78893],[37.81697,55.78883],[37.81746,55.78889],[37.81787,55.78886],[37.8182,55.78877],[37.81812,55.78863],[37.81844,55.78863],[37.81847,55.78873],[37.81876,55.78871],[37.81883,55.78881],[37.82262,55.78883],[37.8233,55.78889],[37.82361,55.78903],[37.82375,55.7893],[37.82381,55.78996],[37.82364,55.79005],[37.82356,55.79136],[37.82337,55.79136],[37.82335,55.79155],[37.81943,55.7915],[37.81939,55.79218],[37.8195,55.79218],[37.81927,55.79217],[37.81927,55.79224],[37.81417,55.79215],[37.81384,55.79242],[37.81142,55.7924],[37.8114,55.79272]],"toCar":[[37.8114,55.79272],[37.81138,55.79303],[37.81166,55.79306],[37.81165,55.79331],[37.80947,55.79328],[37.80948,55.79288],[37.8092,55.79287],[37.80922,55.79237],[37.80908,55.79237],[37.80909,55.7922]],"carDrive":[[37.80909,55.7922],[37.80908,55.79237],[37.80922,55.79237],[37.8092,55.79287],[37.80948,55.79288],[37.80946,55.79337],[37.81028,55.79339],[37.8103,55.79349],[37.79103,55.79321],[37.78505,55.79307],[37.78281,55.7929],[37.77688,55.79204],[37.76787,55.78934],[37.76671,55.78906],[37.76485,55.78872],[37.76228,55.78839],[37.74754,55.78783],[37.74706,55.78775],[37.74592,55.78735],[37.74525,55.78719],[37.7426,55.787],[37.74279,55.78404],[37.74267,55.78321],[37.74244,55.78319],[37.71892,55.78225],[37.71848,55.78224],[37.71771,55.78233],[37.71672,55.78225],[37.71385,55.7822],[37.71152,55.78172],[37.70964,55.78207],[37.70605,55.7823],[37.70491,55.78244],[37.70299,55.78279],[37.69723,55.78269],[37.69693,55.7826],[37.69668,55.78244],[37.69649,55.78185],[37.69599,55.78132],[37.69235,55.77962],[37.68979,55.77792],[37.68415,55.77495],[37.68303,55.7745],[37.6784,55.77318],[37.67842,55.77311],[37.67895,55.77326],[37.67919,55.77303],[37.67895,55.77294],[37.67905,55.77259]],"taxiDrive":[[37.8114,55.79272],[37.81138,55.79303],[37.81166,55.79306],[37.81165,55.7934],[37.81264,55.79342],[37.81264,55.79354],[37.79103,55.79321],[37.78505,55.79307],[37.78281,55.7929],[37.77688,55.79204],[37.76787,55.78934],[37.76671,55.78906],[37.76485,55.78872],[37.76228,55.78839],[37.74754,55.78783],[37.74706,55.78775],[37.74592,55.78735],[37.74525,55.78719],[37.7426,55.787],[37.7428,55.78449],[37.74267,55.78321],[37.71892,55.78225],[37.71848,55.78224],[37.71771,55.78233],[37.71672,55.78225],[37.71385,55.7822],[37.71152,55.78172],[37.70964,55.78207],[37.70605,55.7823],[37.70491,55.78244],[37.70299,55.78279],[37.69723,55.78269],[37.69693,55.7826],[37.69668,55.78244],[37.69649,55.78185],[37.69599,55.78132],[37.69235,55.77962],[37.68979,55.77792],[37.68415,55.77495],[37.68303,55.7745],[37.6784,55.77318],[37.67842,55.77311],[37.67895,55.77326],[37.67919,55.77303],[37.67895,55.77294],[37.67905,55.77259]]}};
+const HOME = [37.8111, 55.79271];          // Первомайская ул., 100
 const ST = {
-  'Первомайская':[37.7994,55.7944], 'Измайловская':[37.7812,55.7876], 'Партизанская':[37.7489,55.7884],
-  'Семёновская':[37.7194,55.7832], 'Электрозаводская':[37.7053,55.7822], 'Бауманская':[37.6790,55.7724]
+  'Первомайская':[37.7995,55.7947], 'Измайловская':[37.78166,55.78769], 'Партизанская':[37.751,55.78839],
+  'Семёновская':[37.72127,55.78319], 'Электрозаводская':[37.70386,55.78161], 'Бауманская':[37.68064,55.77293]
 };
 const LINE3 = Object.keys(ST);
-const DEST = ST['Бауманская'];
+const ENTRY3 = [37.79975,55.79357];        // Первомайская, вход №3 (южная сторона)
+const DEST = [37.67876,55.77235];          // Бауманская, выход в город (он один)
 const YAUZA = [37.6905,55.7772], ELOKH = [37.6764,55.7731];
-const PARK = [[37.7930,55.7848],[37.8015,55.7812],[37.8085,55.7858],[37.8040,55.7915]];
+const stops = n => n + ' ' + (n%10===1&&n%100!==11?'остановка':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'остановки':'остановок');
 
 const state = { arrive: 9*60, mode:'hurry', sel:'metro', modules:{weather:true,crowd:true,coffee:false,lifts:false}, view:'compare', history:[] };
 
-// Варианты. min/max — честное окно в минутах; legs — для ведения.
+// Каждый шаг — диапазон lo–hi минут. Прогноз = сумма шагов, считается симуляцией (см. forecast).
+// tail — редкий сбой: вероятность и добавка в минутах. geom — запечённая геометрия из BAKED.routes.
 const OPTIONS = {
-  metro:{ name:'Метро', ico:'Ⓜ', bg:'#E3EBFD', fg:'#2E6FE6', min:22, max:27, price:'≈ 70 ₽', rel:9,
-    detail:'7 мин пешком · 6 станций без пересадок',
-    legs:[ {type:'walk', from:HOME, to:ST['Первомайская'], min:7, label:'Пешком до м. Первомайская', lm:'Вход в метро — слева, сразу за перекрёстком', tip:'Вход в метро'},
-           {type:'metro', stations:LINE3, min:13, label:'Метро до Бауманской · 6 станций', lm:'Садись в сторону центра. Перед Бауманской — вибрация'},
-           {type:'walk', from:ST['Бауманская'], to:ELOKH, min:2, label:'Выход в город', lm:'Из вагона — направо к эскалатору', tip:'Ты на месте'} ] },
-  carshare:{ name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#5D7A0E', min:29, max:48, price:'≈ 380 ₽', rel:6,
-    detail:'машина в 4 мин · парковка у метро 4–9 мин',
-    legs:[ {type:'walk', from:HOME, to:[37.7930,55.7935], min:4, label:'Пешком до машины', lm:'Белая машина у второго подъезда', tip:'Машина здесь'},
-           {type:'car', from:[37.7930,55.7935], to:DEST, min:30, label:'За рулём до Бауманской', lm:'Пробки на Щербаковской: +6 мин'},
-           {type:'walk', from:DEST, to:ELOKH, min:5, label:'Парковка и пешком', lm:'Платная зона — завершай аренду на парковке', tip:'Ты на месте'} ] },
-  taxi:{ name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#9A6212', min:25, max:42, price:'≈ 650 ₽', rel:6,
-    detail:'подача 3–8 мин · утренние пробки',
-    legs:[ {type:'walk', from:HOME, to:[37.7908,55.7940], min:2, label:'Выйди к подъезду', lm:'Машина подъедет со стороны улицы', tip:'Подача здесь'},
-           {type:'car', from:[37.7908,55.7940], to:DEST, min:30, label:'Такси до Бауманской', lm:'Водитель высадит у входа в метро'} ] },
-  walk:{ name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', min:108, max:118, price:'бесплатно', rel:10,
-    detail:'≈ 9 км по городу',
-    legs:[ {type:'walk', from:HOME, to:DEST, via:[ST['Измайловская'],ST['Семёновская']], min:112, label:'Пешком до Бауманской', lm:'Мимо Измайловского парка и Семёновской', tip:'Ты на месте'} ] },
+  metro:{ name:'Метро', ico:'Ⓜ', bg:'#E3EBFD', fg:'#2E6FE6', price:'≈ 70 ₽', tail:[0.03,6,12],
+    detail:'870 м пешком · ' + stops(5) + ' без пересадок',
+    legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы, ближе к дому', tip:'Вход №3'},
+           {type:'wait', at:ENTRY3, lo:1, hi:4, label:'Турникеты и поезд', lm:'В час пик поезда раз в 2–3 минуты'},
+           {type:'metro', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'В сторону центра. Перед выходом — вибрация'},
+           {type:'wait', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'Выход на Бауманской один — наверх по эскалатору', tip:'Ты на месте'} ] },
+  taxi:{ name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.08,5,15],
+    detail:'≈ 9,8 км · подача 3–9 мин',
+    legs:[ {type:'wait', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
+           {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'Утренние пробки: возможна задержка', tip:'Ты на месте'} ] },
+  carshare:{ name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 400 ₽', tail:[0.08,5,15],
+    detail:'машина в 360 м · ≈ 9,7 км · парковка учтена',
+    legs:[ {type:'walk', geom:'toCar', lo:4, hi:6, label:'Пешком до машины', lm:'Ближайшая свободная машина — 360 м', tip:'Машина здесь'},
+           {type:'wait', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
+           {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:'Утренние пробки: возможна задержка'},
+           {type:'wait', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', tip:'Ты на месте'} ] },
+  walk:{ name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0],
+    detail:'≈ 10 км · ~13 000 шагов',
+    legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
   // режим «Гуляю»
-  stroll:{ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#5D7A0E', min:41, max:46, price:'≈ 70 ₽', rel:9,
-    detail:'метро 4 станции · 24 мин пешком',
-    pois:[ {e:'☕', n:'Кофе с собой', d:'у выхода с Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'},
-           {e:'🌊', n:'Набережная Яузы', d:'тихий участок вдоль воды', at:YAUZA, extra:'по пути'},
-           {e:'⛪', n:'Елоховский собор', d:'в двух минутах от метро', at:ELOKH, extra:'по пути'} ],
-    legs:[ {type:'walk', from:HOME, to:ST['Первомайская'], min:7, label:'Пешком до м. Первомайская', lm:'Вход в метро — слева, за перекрёстком', tip:'Вход в метро'},
-           {type:'metro', stations:LINE3.slice(0,5), min:11, label:'Метро до Электрозаводской · 4 станции', lm:'Выходи на Электрозаводской — дальше пешком'},
-           {type:'walk', from:ST['Электрозаводская'], to:DEST, via:[YAUZA, ELOKH], min:24, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Набережная Яузы'} ] },
-  loop:{ name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1F7A4A', min:45, max:45, price:'3,4 км', rel:10,
-    detail:'кольцо по Измайловскому лесопарку',
-    pois:[ {e:'🌳', n:'Лесопарк', d:'тихие дорожки', at:PARK[1], extra:'по пути'},
-           {e:'🦆', n:'Пруд', d:'можно присесть', at:PARK[2], extra:'+3 мин'},
-           {e:'☕', n:'Кофейня у дома', d:'на обратном пути', at:PARK[3], extra:'+2 мин'} ],
-    legs:[ {type:'walk', from:HOME, to:HOME, via:PARK, min:45, label:'Кольцо 3,4 км и обратно домой', lm:'Без спешки: можно сократить в любой момент', tip:'Лесопарк'} ] }
+  stroll:{ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', tail:[0.03,6,12],
+    detail:'метро ' + stops(4) + ' · ~2,9 км пешком',
+    pois:[ {e:'☕', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'},
+           {e:'🌊', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
+           {e:'⛪', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
+    legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы', tip:'Вход №3'},
+           {type:'wait', at:ENTRY3, lo:1, hi:4, label:'Турникеты и поезд'},
+           {type:'metro', stations:LINE3.slice(0,5), lo:9, hi:11, label:'Метро до Электрозаводской · ' + stops(4), lm:'Выходи на Электрозаводской — дальше пешком'},
+           {type:'walk', geom:'strollWalk', lo:32, hi:40, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Ты на месте'} ] },
+  loop:{ name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1A6B40', price:'3,7 км', tail:[0,0,0], noTarget:true,
+    detail:'кольцо вдоль Измайловского лесопарка',
+    pois:[ {e:'🌳', n:'Опушка леса', d:'тихий участок', at:[37.8115,55.78878], extra:'по пути'},
+           {e:'🪑', n:'Скамейки', d:'можно передохнуть', at:[37.82262,55.78883], extra:'по пути'},
+           {e:'☕', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'} ],
+    legs:[ {type:'walk', geom:'loop', lo:44, hi:52, label:'Кольцо 3,7 км и обратно домой', lm:'Можно сократить в любой момент', tip:'Почти дома'} ] }
 };
 
-/* ============ ВРЕМЯ ============ */
+/* ================= ПРОГНОЗ =================
+   Одно правило для всех вариантов:
+   • общий момент выхода — «сейчас»;
+   • «успеешь в N из 10» — доля симуляций, где выйдя сейчас, приедешь не позже нужного времени;
+   • «выйти до» — крайний момент, при котором успеешь в 9 из 10 (90-й процентиль времени в пути);
+   • шаги маршрута показывают медиану, их сумма = медиана поездки. */
+function rng(seed){ let a = seed; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const tri = (r, lo, hi) => { const c = 0.35, u = r(); return u < c ? lo + Math.sqrt(u*c)*(hi-lo) : hi - Math.sqrt((1-u)*(1-c))*(hi-lo); };
+const legMid = l => Math.round(l.lo + 0.4*(l.hi-l.lo));
+const FC = {};
+function forecast(k){
+  if(FC[k]) return FC[k];
+  const o = OPTIONS[k], r = rng(k.length*7919 + k.charCodeAt(0)), N = 4000, s = new Float64Array(N);
+  for(let i=0;i<N;i++){ let t=0; for(const l of o.legs) t += tri(r,l.lo,l.hi); if(o.tail[0] && r()<o.tail[0]) t += o.tail[1] + r()*(o.tail[2]-o.tail[1]); s[i]=t; }
+  s.sort(); const q = p => s[Math.min(N-1, Math.floor(p*N))];
+  const mid = o.legs.reduce((a,l)=>a+legMid(l),0);
+  return FC[k] = { p10: Math.round(q(0.1)), p90: Math.ceil(q(0.9)), mid, chance: budget => { let lo=0,hi=N; while(lo<hi){ const m=(lo+hi)>>1; if(s[m]<=budget) lo=m+1; else hi=m; } return lo/N; } };
+}
 const fmt = m => { m = Math.round(m); const h = Math.floor(m/60)%24, mm = ((m%60)+60)%60; return h + ':' + String(mm).padStart(2,'0'); };
-const leaveBy = o => state.arrive - o.max;
-const relBars = n => '<span class="rel">' + Array.from({length:10},(_,i)=>'<i class="'+(i<n?'f':'')+'"></i>').join('') + '</span>';
-const relPill = o => { const c = o.rel>=9?'g':o.rel>=7?'a':'r'; return `<span class="pill ${c}">успеешь в ${o.rel} из 10 ${relBars(o.rel)}</span>`; };
+const latest = k => state.arrive - forecast(k).p90;
+function verdict(k){
+  const f = forecast(k), p = f.chance(state.arrive - NOW), n = Math.floor(p*10 + 1e-9);
+  if(p >= 0.97) return { cls:'g', text:'выйдешь сейчас — успеешь почти наверняка', n:10 };
+  if(n >= 1) return { cls: n>=8?'g':n>=5?'a':'r', text:`выйдешь сейчас — успеешь в ${n} из 10`, n };
+  return { cls:'r', text:`не успеешь — приедешь ~${fmt(NOW+f.mid)}`, n:0 };
+}
+const relBars = n => '<span class="rel" aria-hidden="true">' + Array.from({length:10},(_,i)=>'<i class="'+(i<n?'f':'')+'"></i>').join('') + '</span>';
 
-/* ============ ВИДЫ ============ */
+/* ================= ЭКРАНЫ ================= */
 const body = document.getElementById('body');
 const V = {};
 V.compare = () => {
-  const keys = state.mode==='hurry' ? ['metro','taxi','carshare','walk'] : ['stroll','loop','walk'];
-  const w = state.modules.weather ? `<div class="banner"><b>☔ Дождь с 8:40</b><br>Зонт пригодится на последних минутах пешком</div>` : '';
+  const hurry = state.mode==='hurry';
+  const keys = hurry ? ['metro','taxi','carshare','walk'] : ['stroll','loop','walk'];
+  const best = hurry ? keys.map(k=>forecast(k).chance(state.arrive-NOW)).reduce((a,b)=>Math.max(a,b),0) : 1;
+  const late = hurry && best < 0.1 ? `<div class="banner late"><b>К ${fmt(state.arrive)} уже не успеть</b><br>Быстрее всего — ${OPTIONS[fastest()].name.toLowerCase()}, будешь около ${fmt(NOW+forecast(fastest()).mid)}</div>` : '';
+  const w = state.modules.weather ? `<div class="banner"><b><span aria-hidden="true">☔</span> Дождь с 8:40</b><br>Зонт пригодится на пеших участках</div>` : '';
   return `
-  <h1>${state.mode==='hurry' ? 'Как успеть к ' + fmt(state.arrive) : 'Как доехать с удовольствием'}</h1>
-  <div class="sub">Первомайская ул., 100 → м. Бауманская</div>
-  <div class="seg"><button class="${state.mode==='hurry'?'on':''}" onclick="setMode('hurry')">Тороплюсь</button><button class="${state.mode==='walk'?'on':''}" onclick="setMode('walk')">Гуляю</button></div>
-  ${state.mode==='hurry' ? `<div class="m" style="margin-bottom:6px">Прибыть к</div>
-  <div class="chips">${[8*60+30,9*60,9*60+30,10*60].map(t=>`<button class="chip press ${t===state.arrive?'on':''}" onclick="setArrive(${t})">${fmt(t)}</button>`).join('')}</div>` : ''}
-  ${w}
+  <h1>${hurry ? 'Как успеть к ' + fmt(state.arrive) : 'Как доехать с удовольствием'}</h1>
+  <div class="sub">Первомайская ул., 100 → м. Бауманская · сейчас ${fmt(NOW)}</div>
+  <div class="seg" role="tablist"><button role="tab" aria-selected="${hurry}" class="${hurry?'on':''}" onclick="setMode('hurry')">Тороплюсь</button><button role="tab" aria-selected="${!hurry}" class="${!hurry?'on':''}" onclick="setMode('walk')">Гуляю</button></div>
+  ${hurry ? `<div class="m" style="margin-bottom:6px">Прибыть к</div>
+  <div class="chips">${[8*60+30,9*60,9*60+30,10*60].map(t=>`<button class="chip press ${t===state.arrive?'on':''}" aria-pressed="${t===state.arrive}" onclick="setArrive(${t})">${fmt(t)}</button>`).join('')}</div>` : ''}
+  ${late}${w}
   ${keys.map(k=>card(k)).join('')}
-  <div class="note">Время и цены в прототипе примерные</div>`;
+  <div class="note">Время, цены и ориентиры в прототипе примерные</div>`;
 };
+function fastest(){ return ['metro','taxi','carshare'].reduce((a,b)=>forecast(b).mid<forecast(a).mid?b:a); }
 function card(k){
-  const o = OPTIONS[k];
-  const isLoop = k==='loop';
-  const right = isLoop ? `<div class="big">${o.min} мин</div><div class="m">${o.price}</div>`
-                       : `<div class="big">${o.min===o.max?o.min:o.min+'–'+o.max} мин</div><div class="m">${o.price}</div>`;
-  const crowd = k==='metro' && state.modules.crowd ? `<span class="pill v">в хвосте поезда свободнее</span>` : '';
-  const win = isLoop ? `<span class="pill g">когда захочешь</span>` :
-    `<span class="pill">выйти до <b>&nbsp;${fmt(leaveBy(o))}</b></span><span class="pill">приедешь ${fmt(leaveBy(o)+o.min)}–${fmt(state.arrive)}</span>${relPill(o)}${crowd}`;
-  return `<div class="card press ${state.sel===k?'sel':''}" onclick="pick('${k}')">
-    <div class="top"><div class="ico" style="background:${o.bg};color:${o.fg}">${o.ico}</div>
+  const o = OPTIONS[k], f = forecast(k), hurry = state.mode==='hurry';
+  const range = o.noTarget ? `${f.mid} мин` : `${f.p10}–${f.p90} мин`;
+  let pills, lateCls = '';
+  if(o.noTarget) pills = `<span class="pill g">когда захочешь</span>`;
+  else if(!hurry) pills = `<span class="pill">выйдешь сейчас — будешь ~${fmt(NOW+f.mid)}</span>`;
+  else {
+    const v = verdict(k), L = latest(k);
+    lateCls = v.n===0 ? 'late' : '';
+    const leave = L >= NOW ? `<span class="pill">выйти до <b>&nbsp;${fmt(L)}</b>&nbsp;— 9 из 10</span>` : `<span class="pill r">крайний срок прошёл</span>`;
+    const crowd = (k==='metro' && state.modules.crowd ? `<span class="pill v">в 8:30–8:50 вагоны полные</span>` : '') + (k==='walk' && state.modules.weather ? `<span class="pill a">дождь с 8:40 — нужен зонт</span>` : '') + (k==='carshare' ? `<span class="pill">цена зависит от пробок: 300–500 ₽</span>` : '');
+    pills = `${leave}<span class="pill ${v.cls}">${v.text} ${v.n?relBars(v.n):''}</span><span class="pill">приедешь ${fmt(NOW+f.p10)}–${fmt(NOW+f.p90)}</span>${crowd}`;
+  }
+  return `<button class="card press ${state.sel===k?'sel':''} ${lateCls}" data-k="${k}" onclick="pick('${k}')">
+    <div class="top"><div class="ico" aria-hidden="true" style="background:${o.bg};color:${o.fg}">${o.ico}</div>
       <div><div class="t">${o.name}</div><div class="m">${o.detail}</div></div>
-      <div class="right">${right}</div></div>
-    <div class="win">${win}</div></div>`;
+      <div class="right"><div class="big">${range}</div><div class="m">${o.price}</div></div></div>
+    <div class="win">${pills}</div></button>`;
 }
 V.route = () => {
-  const o = OPTIONS[state.sel];
-  let t = state.sel==='loop' ? 0 : leaveBy(o);
-  const icon = l => l.type==='walk' ? '🚶' : l.type==='metro' ? 'Ⓜ' : state.sel==='taxi' ? '🚕' : '🚗';
-  const steps = o.legs.map(l => { const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
-     <div class="tx"><b>${l.label}</b><div class="m">${state.sel==='loop'?'':fmt(t)+' · '}${l.min} мин</div>${l.lm?`<div class="lm">📍 ${l.lm}</div>`:''}</div></div>`; t += l.min; return s; }).join('');
-  const pois = o.pois ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${o.pois.map((p,i)=>`<div class="poi press" onclick="flyPoi(${i})"><div class="e">${p.e}</div><b>${p.n}</b><span>${p.d} · ${p.extra}</span></div>`).join('')}</div>` : '';
-  const head = state.sel==='loop' ? `<h1>${o.name}</h1><div class="sub">${o.min} мин · ${o.price} · можно сократить в любой момент</div>`
-    : `<h1>Выходи до ${fmt(leaveBy(o))}</h1><div class="sub">${o.name} · приедешь ${fmt(leaveBy(o)+o.min)}–${fmt(state.arrive)} · ${o.price}</div>`;
-  const cta = state.sel==='taxi' ? 'Вызвать такси' : state.sel==='carshare' ? 'Забронировать машину' : 'Поехали';
-  return `<div class="row"><button class="back-btn" onclick="back()">←</button><div class="m">Маршрут с ориентирами</div></div>
-    ${head}${state.sel!=='loop'?relPill(o):''}
-    <div class="steps">${steps}</div>${pois}
-    <button class="btn p press" onclick="startTrip()">${cta}</button>`;
+  const k = state.sel, o = OPTIONS[k], f = forecast(k), hurry = state.mode==='hurry' && !o.noTarget;
+  let t = NOW;
+  const icon = l => l.type==='walk' ? '🚶' : l.type==='metro' ? 'Ⓜ' : l.type==='wait' ? '⏱' : k==='taxi' ? '🚕' : '🚗';
+  const steps = o.legs.map(l => { const mid = legMid(l); const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" aria-hidden="true" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
+     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div>${l.lm?`<div class="lm"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
+  const pois = o.pois ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${o.pois.map((p,i)=>`<button class="poi press" onclick="flyPoi(${i})"><div class="e" aria-hidden="true">${p.e}</div><b>${p.n}</b><span>${p.d} · ${p.extra}</span></button>`).join('')}</div>` : '';
+  let head;
+  if(o.noTarget) head = `<h1>${o.name}</h1><div class="sub">~${f.mid} мин · ${o.price} · можно сократить в любой момент</div>`;
+  else if(!hurry) head = `<h1>Выйдешь сейчас — будешь ~${fmt(NOW+f.mid)}</h1><div class="sub">${o.name} · ${o.price}</div>`;
+  else { const v = verdict(k), L = latest(k);
+    head = `<h1>${L>=NOW ? 'Выходи до ' + fmt(L) : v.n ? 'Выходи сейчас' : 'К ' + fmt(state.arrive) + ' не успеть'}</h1>
+      <div class="sub">${o.name} · ${o.price} · выйдешь сейчас — приедешь ${fmt(NOW+f.p10)}–${fmt(NOW+f.p90)}</div>
+      <span class="pill ${v.cls}">${v.text} ${v.n?relBars(v.n):''}</span>`; }
+  const cta = k==='taxi' ? 'Вызвать такси' : k==='carshare' ? 'Забронировать машину' : 'Поехали';
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">Маршрут с ориентирами</div></div>
+    ${head}<div class="steps">${steps}</div>${pois}
+    <button class="btn p press" id="goBtn" onclick="startTrip()">${cta}</button>`;
 };
 V.modules = () => {
-  const items = [['weather','☔','Погода в пути','Дождь, снег и гололёд — заранее'],['crowd','👥','Загруженность вагонов','Где в поезде свободнее'],
+  const items = [['weather','☔','Погода в пути','Дождь, снег и гололёд — заранее'],['crowd','👥','Загруженность вагонов','Когда в поездах свободнее'],
                  ['coffee','☕','Кофе по пути','Предлагать остановки в режиме «Гуляю»'],['lifts','🛗','Лифты и эскалаторы','Маршрут без лестниц']];
-  return `<div class="row"><button class="back-btn" onclick="back()">←</button><h1 style="margin:0">Модули</h1></div>
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 style="margin:0">Модули</h1></div>
    <div class="sub" style="margin-top:6px">Добавляют подсказки к твоим поездкам. Включай только нужное.</div>
-   ${items.map(([k,e,n,d])=>`<div class="card" onclick="toggleMod('${k}')" style="display:flex;align-items:center;gap:12px;${state.modules[k]?'':'box-shadow:none;background:#FBFAF7'}">
-      <div class="ico" style="background:#EDEDFD">${e}</div><div style="flex:1"><div class="t">${n}</div><div class="m">${d}</div></div>
-      <div class="toggle ${state.modules[k]?'on':''}"></div></div>`).join('')}`;
+   ${items.map(([k,e,n,d])=>`<button class="card" role="switch" aria-checked="${state.modules[k]}" onclick="toggleMod('${k}')" style="display:flex;align-items:center;gap:12px;${state.modules[k]?'':'box-shadow:none;background:#FBFAF7'}">
+      <div class="ico" aria-hidden="true" style="background:#EDEDFD">${e}</div><div style="flex:1"><div class="t">${n}</div><div class="m">${d}</div></div>
+      <div class="toggle ${state.modules[k]?'on':''}" aria-hidden="true"></div></button>`).join('')}`;
 };
 V.done = () => {
-  const o = OPTIONS[state.sel];
-  const at = state.sel==='loop' ? null : leaveBy(o) + Math.round((o.min+o.max)/2) - 2;
-  return `<h1>${state.sel==='loop' ? 'Хорошо прогулялся' : 'Ты на месте в ' + fmt(at)}</h1>
-   <div class="sub">${state.sel==='loop' ? o.min + ' мин · ' + o.price : 'на ' + (state.arrive-at) + ' мин раньше, чем нужно'}</div>
+  const o = OPTIONS[state.sel], at = trip.endAt;
+  const diff = state.arrive - at, hurry = state.mode==='hurry' && !o.noTarget;
+  const sub = o.noTarget ? `${trip.total} мин · ${o.price}` : hurry ? (diff>=0 ? `на ${diff} мин раньше, чем нужно` : `опоздание ${-diff} мин`) : `${trip.total} мин в пути`;
+  return `<h1>${o.noTarget ? 'Хорошо прогулялся' : 'Ты на месте в ' + fmt(at)}</h1>
+   <div class="sub">${sub}</div>
    <div class="card" style="cursor:default"><div class="t">Как прошло?</div><div class="m" style="margin:4px 0 10px">Ответ уточнит прогноз для этого маршрута</div>
-   <div class="row"><button class="chip press" onclick="thanks()">Всё по плану</button><button class="chip press" onclick="thanks()">Задержался</button><button class="chip press" onclick="thanks()">Сложно найти</button></div></div>
+   <div class="row" style="flex-wrap:wrap"><button class="chip press" onclick="thanks()">Всё по плану</button><button class="chip press" onclick="thanks()">Задержался</button><button class="chip press" onclick="thanks()">Сложно найти</button></div></div>
    <button class="btn w press" onclick="restart()">Готово</button>`;
 };
 
-function render(dir){
-  body.innerHTML = `<div class="view ${dir==='back'?'back':''}">${V[state.view]()}</div>`;
-  body.scrollTop = 0;
+function render(anim){
+  body.innerHTML = `<div class="view ${anim==='back'?'back':anim==='in'?'in':''}">${V[state.view]()}</div>`;
+  if(anim) body.scrollTop = 0;
 }
-function go(v){ state.history.push(state.view); state.view = v; render(); if(v==='modules') snap('full'); if(v==='route'){ snap('half'); } }
+function go(v){ if(state.view===v) return; state.history.push(state.view); state.view = v; render('in'); if(v==='modules') snap('full'); if(v==='route') snap('half'); }
 function back(){ state.view = state.history.pop() || 'compare'; render('back'); if(state.view==='compare'){ snap('half'); showRoute(state.sel); fitAll(); } }
 function setMode(m){ state.mode = m; state.sel = m==='hurry' ? 'metro' : 'stroll'; render(); showRoute(state.sel); fitAll(); }
 function setArrive(t){ state.arrive = t; render(); }
 function pick(k){ state.sel = k; showRoute(k); go('route'); fitAll(); }
-function toggleMod(k){ state.modules[k] = !state.modules[k]; render(); }
+function toggleMod(k){ state.modules[k] = !state.modules[k]; render(); say((state.modules[k]?'Включено':'Выключено')); }
 function thanks(){ toast('Спасибо! Учту в прогнозе'); }
 function restart(){ state.view='compare'; state.history=[]; render('back'); snap('half'); showRoute(state.sel); fitAll(); }
+function say(t){ document.getElementById('live').textContent = t; }
 
-/* ============ ШТОРКА ============ */
+/* ================= ШТОРКА ================= */
 const sheet = document.getElementById('sheet'), phone = document.getElementById('phone');
 let snapY = 0;
 function snaps(){ const H = phone.clientHeight; return { full: H*0.9, half: H*0.56, peek: 150, hidden: 0 }; }
-function snap(name){ sheet.classList.add('anim'); snapY = snaps()[name]; sheet.style.height = snapY + 'px'; sheet.dataset.snap = name; }
+function snap(name){ sheet.classList.add('anim'); snapY = snaps()[name]; sheet.style.height = snapY + 'px'; sheet.dataset.snap = name;
+  document.getElementById('grab').setAttribute('aria-expanded', name==='full'); }
+const ORDER = ['peek','half','full'];
+document.getElementById('grab').addEventListener('click', e => { if(dragMoved) return; const i = ORDER.indexOf(sheet.dataset.snap); snap(ORDER[(i+1)%3]); });
+let dragMoved = false;
 (function drag(){
-  let sy=0, st=0, dragging=false, lastY=0, lastT=0, v=0;
-  const start = e => { if(e.target.closest('button,.chip,.toggle') && !e.target.closest('#grab')) return;
+  let sy=0, st=0, dragging=false, lastY=0, lastT=0, v=0, pid=null;
+  sheet.addEventListener('pointerdown', e => {
+    if(e.button>0) return;
     if(e.target.closest('.body') && body.scrollTop>0) return;
-    dragging=true; sy=e.clientY; st=snapY; lastY=e.clientY; lastT=Date.now(); sheet.classList.remove('anim'); };
-  const move = e => { if(!dragging) return; const dy=e.clientY-sy; if(Math.abs(dy)<4) return;
-    snapY = Math.min(phone.clientHeight*0.9, Math.max(110, st-dy)); sheet.style.height = snapY + 'px'; const now=Date.now(); v=(e.clientY-lastY)/Math.max(1,now-lastT); lastY=e.clientY; lastT=now; };
-  const end = () => { if(!dragging) return; dragging=false; const s=snaps();
-    let target = Object.entries({full:s.full,half:s.half,peek:s.peek}).reduce((a,b)=>Math.abs(b[1]-(snapY-v*180))<Math.abs(a[1]-(snapY-v*180))?b:a)[0];
-    snap(target); };
-  sheet.addEventListener('pointerdown', start); window.addEventListener('pointermove', move); window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end);
+    dragging=true; dragMoved=false; v=0; sy=e.clientY; st=snapY; lastY=e.clientY; lastT=performance.now(); pid=e.pointerId;
+  });
+  window.addEventListener('pointermove', e => { if(!dragging || e.pointerId!==pid) return; const dy=e.clientY-sy;
+    if(!dragMoved){ if(Math.abs(dy)<6) return; dragMoved=true; sheet.classList.remove('anim'); try{ sheet.setPointerCapture(pid); }catch(_){}}
+    snapY = Math.min(phone.clientHeight*0.9, Math.max(110, st-dy)); sheet.style.height = snapY + 'px';
+    const now=performance.now(); v=(e.clientY-lastY)/Math.max(1,now-lastT); lastY=e.clientY; lastT=now; });
+  const end = e => { if(!dragging || (e && e.pointerId!==pid)) return; dragging=false; if(!dragMoved) return;
+    const s=snaps(), aim = snapY - v*180;
+    snap(ORDER.reduce((a,b)=>Math.abs(s[b]-aim)<Math.abs(s[a]-aim)?b:a));
+    setTimeout(()=>{ dragMoved=false; }, 0); };
+  window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end);
+  // клик после перетаскивания не должен открывать карточку
+  sheet.addEventListener('click', e => { if(dragMoved){ e.stopPropagation(); e.preventDefault(); } }, true);
+  // колесо мыши: у верха списка — разворачивает/сворачивает шторку
+  let wheelLock = 0;
+  sheet.addEventListener('wheel', e => { const now = Date.now(); if(now < wheelLock) return;
+    const i = ORDER.indexOf(sheet.dataset.snap);
+    if(e.deltaY > 0 && i < 2){ e.preventDefault(); snap(ORDER[i+1]); wheelLock = now+400; }
+    else if(e.deltaY < 0 && body.scrollTop<=0 && i > 0){ e.preventDefault(); snap(ORDER[i-1]); wheelLock = now+400; } }, {passive:false});
 })();
 
-/* ============ КАРТА ============ */
+/* ================= КАРТА ================= */
 let map, mapOk=false; const markers=[]; const geo={};
 function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1600); }
 function pinEl(text, cls){ const d=document.createElement('div'); d.className='pin '+(cls||''); d.textContent=text; return d; }
 function addMarker(el, ll, anchor){ if(!mapOk) return null; const m=new maplibregl.Marker({element:el, anchor:anchor||'bottom'}).setLngLat(ll).addTo(map); markers.push(m); return m; }
 function clearMarkers(){ while(markers.length) markers.pop().remove(); }
 
-async function fetchRoute(profile, pts){
+function fetchRoute(profile, pts){
   const key = profile + pts.map(p=>p.join(',')).join(';');
   if(geo[key]) return geo[key];
   const base = profile==='foot' ? 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/' : 'https://routing.openstreetmap.de/routed-car/route/v1/driving/';
-  try{
-    const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 5000);
-    const r = await fetch(base + pts.map(p=>p[0].toFixed(5)+','+p[1].toFixed(5)).join(';') + '?overview=full&geometries=geojson', {signal:ctl.signal});
-    clearTimeout(to);
-    const j = await r.json(); if(j.routes && j.routes[0]) return geo[key] = j.routes[0].geometry.coordinates;
-  }catch(e){}
-  return geo[key] = pts; // запасной вариант — прямые отрезки
+  const p = (async () => {
+    const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 6000);
+    try{
+      const r = await fetch(base + pts.map(p=>p[0].toFixed(5)+','+p[1].toFixed(5)).join(';') + '?overview=full&geometries=geojson', {signal:ctl.signal});
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      if(!(j.routes && j.routes[0])) throw new Error('no route');
+      return j.routes[0].geometry.coordinates;
+    } catch(e){
+      delete geo[key];                        // запасной вариант не кэшируем — попробуем ещё раз позже
+      if(!fetchRoute.warned){ fetchRoute.warned = true; toast('Маршрут по улицам не загрузился — показываю схематично'); }
+      return pts;
+    } finally { clearTimeout(to); }
+  })();
+  return geo[key] = p;
 }
-async function legCoords(l){
-  if(l.type==='metro') return l.stations.map(s=>ST[s]);
-  const pts = [l.from].concat(l.via||[]).concat([l.to]);
-  return fetchRoute(l.type==='walk'?'foot':'car', pts);
+function metroSlice(stations){
+  const seg = BAKED.seg, near = p => seg.reduce((b,q,i)=>dist(q,p)<dist(seg[b],p)?i:b, 0);
+  const a = near(ST[stations[0]]), b = near(ST[stations[stations.length-1]]);
+  return seg.slice(Math.min(a,b), Math.max(a,b)+1);
 }
-let routeLegs = [];
-async function showRoute(k){
-  if(!mapOk) return;
+function legCoords(l){
+  if(l.geom && BAKED.routes[l.geom]) return Promise.resolve(BAKED.routes[l.geom]);
+  if(l.type==='metro') return Promise.resolve(metroSlice(l.stations));
+  if(l.type==='wait') return Promise.resolve([l.at, l.at]);
+  return fetchRoute(l.type==='walk'?'foot':'car', [l.from].concat(l.via||[]).concat([l.to]));
+}
+function prepLeg(c, l){ const seg=[]; let tot=0; for(let i=1;i<c.length;i++){ const d=dist(c[i-1],c[i]); seg.push(d); tot+=d; }
+  const L = { c, seg, tot };
+  if(l && l.type==='metro'){ // доля пути до каждой станции — чтобы «выходить через N» совпадало с картой
+    const cum=[0]; for(const d of seg) cum.push(cum[cum.length-1]+d);
+    L.stFrac = l.stations.map(n=>{ let bi=0; c.forEach((q,i)=>{ if(dist(q,ST[n])<dist(c[bi],ST[n])) bi=i; }); return tot?cum[bi]/tot:0; }); }
+  return L; }
+let routeLegs = [], routeKey = null, routeReady = Promise.resolve();
+function showRoute(k){
   const o = OPTIONS[k]; const token = showRoute.t = (showRoute.t||0)+1;
-  const legs = []; for(const l of o.legs) legs.push({ l, c: await legCoords(l) });
-  if(token!==showRoute.t) return;
-  routeLegs = legs;
-  const fc = t => ({type:'FeatureCollection', features: legs.filter(x=>x.l.type===t).map(x=>({type:'Feature',geometry:{type:'LineString',coordinates:x.c},properties:{}}))});
-  map.getSource('r-walk').setData(fc('walk')); map.getSource('r-metro').setData(fc('metro')); map.getSource('r-car').setData(fc('car'));
-  clearMarkers();
-  addMarker(pinEl('Дом','dark'), HOME);
-  if(k!=='loop') addMarker(pinEl('Ⓜ Бауманская','m3'), DEST);
-  legs.filter(x=>x.l.type==='metro').forEach(x=>x.l.stations.slice(1,-1).forEach(s=>{ const d=document.createElement('div'); d.className='st-dot'; addMarker(d, ST[s], 'center'); }));
-  if(o.pois) o.pois.forEach(p=>addMarker(pinEl(p.e+' '+p.n,'poi-pin'), p.at));
+  routeReady = Promise.all(o.legs.map(legCoords)).then(cs => {
+    if(token!==showRoute.t) return routeReady;
+    routeLegs = cs.map((c,i)=>Object.assign({ l:o.legs[i] }, prepLeg(c, o.legs[i]))); routeKey = k;
+    if(!mapOk) return;
+    const fc = t => ({type:'FeatureCollection', features: routeLegs.filter(x=>x.l.type===t).map(x=>({type:'Feature',geometry:{type:'LineString',coordinates:x.c},properties:{}}))});
+    map.getSource('r-walk').setData(fc('walk')); map.getSource('r-metro').setData(fc('metro')); map.getSource('r-car').setData(fc('car'));
+    clearMarkers();
+    addMarker(pinEl('Дом','dark'), HOME);
+    if(!o.noTarget) addMarker(pinEl('Ⓜ Бауманская','m3'), DEST);
+    routeLegs.filter(x=>x.l.type==='metro').forEach(x=>x.l.stations.slice(1,-1).forEach(s=>{ const d=document.createElement('div'); d.className='st-dot'; addMarker(d, ST[s], 'center'); }));
+    if(o.pois) o.pois.forEach(p=>addMarker(pinEl(p.e+' '+p.n,'poi-pin'), p.at));
+  });
+  return routeReady;
 }
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fitAll(){
   if(!mapOk) return; const o = OPTIONS[state.sel];
-  const pts = [HOME, DEST].concat(...o.legs.map(l=>l.type==='metro'?l.stations.map(s=>ST[s]):[l.from,l.to].concat(l.via||[])));
+  const pts = [HOME].concat(o.noTarget?[]:[DEST], ...o.legs.map(l=>l.geom?BAKED.routes[l.geom]:l.type==='metro'?l.stations.map(s=>ST[s]):l.type==='wait'?[l.at]:[l.from,l.to].concat(l.via||[])));
   const b = pts.reduce((b,p)=>b.extend(p), new maplibregl.LngLatBounds(pts[0],pts[0]));
-  const H = phone.clientHeight;
-  map.fitBounds(b, {padding:{top:110,left:40,right:40,bottom:H*0.56+20}, pitch:0, bearing:0, duration:800, maxZoom:15.5});
+  map.fitBounds(b, {padding:{top:120,left:40,right:40,bottom:(snapY||phone.clientHeight*0.56)+20}, pitch:0, bearing:0, duration:reduced?0:800, maxZoom:15.5});
 }
-function flyPoi(i){ const p = OPTIONS[state.sel].pois[i]; snap('peek'); if(mapOk) map.flyTo({center:p.at, zoom:16, pitch:45, duration:900}); toast(p.e+' '+p.n+' · '+p.extra); }
+function flyPoi(i){ const p = OPTIONS[state.sel].pois[i]; snap('peek'); if(mapOk) map.flyTo({center:p.at, zoom:16, pitch:45, duration:reduced?0:900}); toast(p.e+' '+p.n+' · '+p.extra); }
 
 function brand(){
   const layers = map.getStyle().layers;
   const set = (id,k,v) => { try{ map.setPaintProperty(id,k,v); }catch(e){} };
+  const hide = id => { try{ map.setLayoutProperty(id,'visibility','none'); }catch(e){} };
   for(const l of layers){
     const id=l.id;
     if(l.type==='background') set(id,'background-color','#6C6CF0');
     else if(l.type==='fill'){
       if(/water/.test(id)) set(id,'fill-color','#8C8DF5');
-      else if(/park|wood|grass|landcover|forest|garden/.test(id)) { set(id,'fill-color','#7A7BF3'); set(id,'fill-opacity',0.7); }
+      else if(/park|wood|grass|landcover|forest|garden/.test(id)) { set(id,'fill-color','#6464E6'); set(id,'fill-opacity',0.8); }
       else if(/building/.test(id)) set(id,'fill-color','#7B7CF2');
       else { set(id,'fill-color','#6E6EF0'); set(id,'fill-opacity',0.5); }
     }
     else if(l.type==='line'){
       if(/water|river/.test(id)) set(id,'line-color','#8C8DF5');
-      else if(/boundary|admin/.test(id)) { try{ map.setLayoutProperty(id,'visibility','none'); }catch(e){} }
-      else if(/rail|transit/.test(id)) { set(id,'line-color','#5A5AD8'); }
+      else if(/boundary|admin/.test(id)) hide(id);
+      else if(/rail|transit/.test(id)) set(id,'line-color','#5A5AD8');
       else if(/casing/.test(id)) set(id,'line-color','#5F5FE0');
       else if(/motorway|trunk|primary|secondary/.test(id)) { set(id,'line-color','#D7F26B'); set(id,'line-opacity',0.75); }
-      else if(/road|street|minor|service|path|pedestrian|tertiary|highway|bridge|tunnel/.test(id)) { set(id,'line-color','#9FA0F7'); }
+      else if(/road|street|minor|service|path|pedestrian|tertiary|highway|bridge|tunnel/.test(id)) set(id,'line-color','#9FA0F7');
     }
     else if(l.type==='fill-extrusion'){ set(id,'fill-extrusion-color','#8384F4'); set(id,'fill-extrusion-opacity',0.9); }
     else if(l.type==='symbol'){
-      if(/poi/.test(id)) { try{ map.setLayoutProperty(id,'visibility','none'); }catch(e){} }
-      else { set(id,'text-color','#FFFFFF'); set(id,'text-halo-color','#5151CF'); set(id,'text-halo-width',1.4); }
+      if(/poi/.test(id)) hide(id);
+      else { set(id,'text-color','#FFFFFF'); set(id,'text-halo-color','#3E3EB8'); set(id,'text-halo-width',1.6); }
     }
   }
 }
@@ -381,7 +474,6 @@ function addRouteLayers(){
   const empty = {type:'FeatureCollection',features:[]};
   ['r-walk','r-metro','r-car','r-me'].forEach(s=>map.addSource(s,{type:'geojson',data:empty}));
   const lay = {'line-cap':'round','line-join':'round'};
-  // «тень» маршрута — линия лежит над улицами
   map.addLayer({id:'car-shadow',type:'line',source:'r-car',layout:lay,paint:{'line-color':'#14113A','line-width':13,'line-opacity':0.35,'line-blur':6,'line-translate':[0,3]}});
   map.addLayer({id:'metro-shadow',type:'line',source:'r-metro',layout:lay,paint:{'line-color':'#14113A','line-width':13,'line-opacity':0.35,'line-blur':6,'line-translate':[0,3]}});
   map.addLayer({id:'car-case',type:'line',source:'r-car',layout:lay,paint:{'line-color':'#14113A','line-width':10}});
@@ -392,84 +484,105 @@ function addRouteLayers(){
   map.addLayer({id:'walk',type:'line',source:'r-walk',layout:lay,paint:{'line-color':'#FFFFFF','line-width':4,'line-dasharray':[0.1,2]}});
   map.addLayer({id:'passed',type:'line',source:'r-me',layout:lay,paint:{'line-color':'#D7F26B','line-width':6}});
 }
+function showFallback(){ document.getElementById('fallback').style.display='flex'; }
 function initMap(){
-  if(!window.maplibregl){ document.getElementById('fallback').style.display='flex'; return; }
-  map = new maplibregl.Map({ container:'map', style:'https://tiles.openfreemap.org/styles/liberty', center:[37.735,55.785], zoom:12.3, attributionControl:{compact:true}, pitchWithRotate:true });
-  map.on('error', e => { if(!mapOk) document.getElementById('fallback').style.display='flex'; });
+  if(!window.maplibregl){ showFallback(); return; }
+  try{
+    map = new maplibregl.Map({ container:'map', style:'https://tiles.openfreemap.org/styles/liberty', center:[37.74,55.785], zoom:12.3, attributionControl:false });
+  }catch(e){ showFallback(); return; }                 // нет WebGL
+  const loadTimer = setTimeout(()=>{ if(!mapOk) showFallback(); }, 15000);
   map.on('load', () => {
-    mapOk = true; document.getElementById('fallback').style.display='none';
+    clearTimeout(loadTimer); mapOk = true; document.getElementById('fallback').style.display='none';
     brand(); addRouteLayers();
     showRoute(state.sel).then(fitAll);
   });
 }
 
-/* ============ ВЕДЕНИЕ ============ */
+/* ================= ВЕДЕНИЕ ================= */
 const dist = (a,b) => { const R=6371000, toR=Math.PI/180, dLat=(b[1]-a[1])*toR, dLon=(b[0]-a[0])*toR; const x=Math.sin(dLat/2)**2+Math.cos(a[1]*toR)*Math.cos(b[1]*toR)*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(x)); };
 const bearing = (a,b) => { const toR=Math.PI/180, y=Math.sin((b[0]-a[0])*toR)*Math.cos(b[1]*toR), x=Math.cos(a[1]*toR)*Math.sin(b[1]*toR)-Math.sin(a[1]*toR)*Math.cos(b[1]*toR)*Math.cos((b[0]-a[0])*toR); return Math.atan2(y,x)/toR; };
-function along(c, f){ // точка на ломаной по доле длины
-  const seg=[]; let tot=0; for(let i=1;i<c.length;i++){ const d=dist(c[i-1],c[i]); seg.push(d); tot+=d; }
-  let t=f*tot; for(let i=0;i<seg.length;i++){ if(t<=seg[i]||i===seg.length-1){ const k=seg[i]?Math.min(1,t/seg[i]):0; const a=c[i], b=c[i+1];
-    return { p:[a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k], i, brg:bearing(a,b), passed:c.slice(0,i+1).concat([[a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k]]) }; } t-=seg[i]; }
-  return { p:c[c.length-1], i:c.length-2, brg:0, passed:c };
+function along(L, f){
+  const c = L.c, seg = L.seg; let t = f*L.tot;
+  for(let i=0;i<seg.length;i++){ if(t<=seg[i]||i===seg.length-1){ const k=seg[i]?Math.min(1,t/seg[i]):0; const a=c[i], b=c[i+1];
+    const p=[a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k]; return { p, brg: seg[i]?bearing(a,b):null, passed:c.slice(0,i+1).concat([p]) }; } t-=seg[i]; }
+  return { p:c[c.length-1], brg:null, passed:c };
 }
-const trip = { on:false, t:0, speed:1, raf:0, me:null, tip:null, buzzed:false, lastLeg:-1, smoothBrg:0 };
-const SIM_SECONDS_PER_MIN = 2.2; // ×1: минута пути ≈ 2 секунды
-function startTrip(){
+const trip = { on:false, t:0, speed:1, raf:0, me:null, tip:null, buzzed:false, lastLeg:-1, smoothBrg:0, lastSet:0, lastHtml:'', total:0, endAt:0 };
+const SIM_SECONDS_PER_MIN = 2.2;   // ×1: минута пути ≈ 2 секунды
+async function startTrip(){
+  if(trip.on) return;
+  trip.on = true;                                       // защита от двойного нажатия
+  const btn = document.getElementById('goBtn'); if(btn){ btn.disabled = true; btn.textContent = 'Строю маршрут…'; }
+  await routeReady;
+  if(routeKey !== state.sel) await showRoute(state.sel);
   const o = OPTIONS[state.sel];
-  if(state.sel==='taxi' || state.sel==='carshare') toast(state.sel==='taxi' ? 'Машина найдена · 4 мин' : 'Машина забронирована · 20 мин бесплатно');
-  document.getElementById('topbar').classList.add('hide');
-  snap('hidden'); document.getElementById('guide').classList.add('on');
-  trip.on=true; trip.t=0; trip.buzzed=false; trip.lastLeg=-1; trip.total = o.legs.reduce((s,l)=>s+l.min,0); trip.startAt = state.sel==='loop' ? 8*60+20 : leaveBy(o);
-  if(mapOk){ const el=document.createElement('div'); el.className='me'; trip.me = new maplibregl.Marker({element:el}).setLngLat(HOME).addTo(map); }
+  if(state.sel==='taxi' || state.sel==='carshare') toast(state.sel==='taxi' ? 'Машина найдена · подача ~5 мин' : 'Машина забронирована · 20 мин бесплатно');
+  document.getElementById('topbar').classList.add('hide'); document.getElementById('topbar').inert = true;
+  sheet.inert = true; snap('hidden'); document.getElementById('guide').classList.add('on');
+  document.getElementById('attrib').classList.add('guiding');
+  Object.assign(trip, { t:0, buzzed:false, lastLeg:-1, smoothBrg: mapOk ? map.getBearing() : 0, lastSet:0, lastHtml:'' });
+  trip.total = o.legs.reduce((s,l)=>s+legMid(l),0); trip.endAt = NOW + trip.total;
+  document.getElementById('geta').textContent = fmt(trip.endAt);
   let last = performance.now();
-  const tick = now => { if(!trip.on) return; const dt=(now-last)/1000; last=now; trip.t += dt/SIM_SECONDS_PER_MIN*trip.speed; update(); if(trip.t>=trip.total){ finish(); return; } trip.raf=requestAnimationFrame(tick); };
+  const tick = now => { if(!trip.on) return;
+    const dt = Math.min(0.1, (now-last)/1000); last = now;   // после фоновой вкладки не перескакиваем
+    trip.t += dt/SIM_SECONDS_PER_MIN*trip.speed; update(dt);
+    if(trip.t>=trip.total){ finish(); return; } trip.raf=requestAnimationFrame(tick); };
   trip.raf = requestAnimationFrame(tick);
 }
-function update(){
+function update(dt){
   const o = OPTIONS[state.sel]; let acc=0, li=0;
-  for(; li<o.legs.length-1; li++){ if(trip.t < acc+o.legs[li].min) break; acc+=o.legs[li].min; }
-  const l = o.legs[li], f = Math.min(1,(trip.t-acc)/l.min), leg = routeLegs[li];
+  for(; li<o.legs.length-1; li++){ const m = legMid(o.legs[li]); if(trip.t < acc+m) break; acc+=m; }
+  const l = o.legs[li], lm = legMid(l), f = Math.min(1,(trip.t-acc)/lm), leg = routeLegs[li];
   const left = Math.max(0, Math.ceil(trip.total-trip.t));
-  document.getElementById('clock').textContent = fmt(trip.startAt + trip.t);
-  document.getElementById('geta').textContent = fmt(trip.startAt + trip.total);
+  document.getElementById('clock').textContent = fmt(NOW + trip.t);
   document.getElementById('gleft').textContent = left ? 'ещё ' + left + ' мин' : 'почти на месте';
-  const gtop = document.getElementById('gtop');
   let html, alert=false;
   if(l.type==='metro'){
-    const n = l.stations.length-1, passed = Math.min(n, Math.floor(f*n+0.0001)), rest = n - passed;
-    const next = l.stations[Math.min(n, passed+1)], last = l.stations[n];
-    if(rest===1 && !trip.buzzed){ trip.buzzed=true; try{ navigator.vibrate && navigator.vibrate([120,80,120]); }catch(e){} phone.classList.add('shake'); setTimeout(()=>phone.classList.remove('shake'),500); }
+    const n = l.stations.length-1, fr = leg && leg.stFrac, passed = fr ? fr.filter((x,i)=>i>0 && x<=f+1e-6).length : Math.min(n, Math.floor(f*n+1e-4)), rest = n - passed;
+    const next = l.stations[Math.min(n, passed+1)], lastSt = l.stations[n];
+    if(rest<=1 && !trip.buzzed){ trip.buzzed=true; try{ navigator.vibrate && navigator.vibrate([120,80,120]); }catch(e){}
+      if(!reduced){ phone.classList.add('shake'); setTimeout(()=>phone.classList.remove('shake'),500); } say('Следующая — ' + lastSt + ', выходи'); }
     alert = rest<=1;
-    html = `<div class="k">Метро · следующая ${next}</div><div class="h">${rest<=1 ? 'Следующая — ' + last + ', выходи' : 'Выходить через ' + rest + ' ' + (rest<5?'станции':'станций')}</div>
-      <div class="stations">${Array.from({length:n},(_,i)=>`<i class="${i<passed?'f':''}"></i>`).join('')}</div>${l.lm?`<div class="lmk">📍 ${l.lm}</div>`:''}`;
+    html = `<div class="k">Метро · следующая ${next}</div><div class="h">${rest<=1 ? 'Следующая — ' + lastSt + ', выходи' : 'Выходить через ' + stops(rest)}</div>
+      <div class="stations" aria-hidden="true">${Array.from({length:n},(_,i)=>`<i class="${i<passed?'f':''}"></i>`).join('')}</div>${l.lm?`<div class="lmk">📍 ${l.lm}</div>`:''}`;
   } else {
-    const mleft = Math.max(1, Math.ceil(l.min*(1-f)));
-    html = `<div class="k">${l.type==='walk'?'Пешком':'За рулём'} · ${mleft} мин</div><div class="h">${l.label}</div>${l.lm?`<div class="lmk">📍 ${l.lm}</div>`:''}`;
+    const mleft = Math.max(1, Math.ceil(lm*(1-f)));
+    const kind = l.type==='walk'?'Пешком':l.type==='wait'?'Подожди':'В пути';
+    html = `<div class="k">${kind} · ${mleft} мин</div><div class="h">${l.label}</div>${l.lm?`<div class="lmk">📍 ${l.lm}</div>`:''}`;
   }
-  gtop.className = 'gtop' + (alert?' alert':''); gtop.innerHTML = html;
+  if(html !== trip.lastHtml){ const g = document.getElementById('gtop'); g.className = 'gtop' + (alert?' alert':''); g.innerHTML = html; trip.lastHtml = html; }
+  if(trip.lastLeg!==li){ trip.lastLeg=li; say(l.label);
+    if(mapOk){ if(trip.tip){ trip.tip.remove(); trip.tip=null; }
+      if(l.tip && leg){ const d=document.createElement('div'); d.className='tip'; d.textContent=l.tip; trip.tip = new maplibregl.Marker({element:d, anchor:'bottom', offset:[0,-14]}).setLngLat(leg.c[leg.c.length-1]).addTo(map); } } }
   if(!mapOk || !leg) return;
-  const a = along(leg.c, f);
+  if(!trip.me){ const el=document.createElement('div'); el.className='me'; trip.me = new maplibregl.Marker({element:el}).setLngLat(leg.c[0]).addTo(map); }
+  const a = along(leg, f);
   trip.me.setLngLat(a.p);
-  // пройденная часть
-  const passedCoords = routeLegs.slice(0,li).flatMap(x=>x.c).concat(a.passed);
-  map.getSource('r-me').setData({type:'Feature',geometry:{type:'LineString',coordinates:passedCoords.length>1?passedCoords:[a.p,a.p]},properties:{}});
-  // подсказка-тултип у ориентира
-  if(trip.lastLeg!==li){ trip.lastLeg=li; if(trip.tip){ trip.tip.remove(); trip.tip=null; }
-    if(l.tip){ const d=document.createElement('div'); d.className='tip'; d.textContent=l.tip; trip.tip = new maplibregl.Marker({element:d, anchor:'bottom', offset:[0,-14]}).setLngLat(leg.c[leg.c.length-1]).addTo(map); } }
-  // камера: наклон и разворот по ходу движения
-  let db = ((a.brg - trip.smoothBrg + 540) % 360) - 180; trip.smoothBrg += db*0.06;
-  map.jumpTo({ center:a.p, bearing:trip.smoothBrg, pitch: l.type==='metro'?40:62, zoom: l.type==='metro'?13.6:l.type==='car'?15.4:17 });
+  const now = performance.now();
+  if(now - trip.lastSet > 200){ trip.lastSet = now;     // пройденная линия — 5 раз в секунду
+    const passedCoords = routeLegs.slice(0,li).flatMap(x=>x.c).concat(a.passed);
+    map.getSource('r-me').setData({type:'Feature',geometry:{type:'LineString',coordinates:passedCoords.length>1?passedCoords:[a.p,a.p]},properties:{}}); }
+  if(a.brg!==null){ const db = ((a.brg - trip.smoothBrg + 540) % 360) - 180; trip.smoothBrg += db*(1-Math.exp(-dt*3)); }
+  map.jumpTo({ center:a.p, bearing:trip.smoothBrg, pitch: reduced?0:(l.type==='metro'?40:62), zoom: l.type==='metro'?13.6:l.type==='car'?15.4:17 });
 }
 function toggleSpeed(){ trip.speed = trip.speed===1 ? 5 : 1; document.getElementById('speedBtn').textContent = 'Перемотка ×' + trip.speed; }
-function stopTrip(){ trip.on=false; cancelAnimationFrame(trip.raf); if(trip.me){ trip.me.remove(); trip.me=null; } if(trip.tip){ trip.tip.remove(); trip.tip=null; }
-  document.getElementById('guide').classList.remove('on'); document.getElementById('topbar').classList.remove('hide');
-  if(mapOk) map.getSource('r-me').setData({type:'FeatureCollection',features:[]}); }
-function finish(){ stopTrip(); state.history=[]; state.view='done'; render(); snap('half'); if(mapOk) map.easeTo({pitch:30, zoom:16, duration:900}); }
+function stopTrip(){
+  trip.on=false; cancelAnimationFrame(trip.raf);
+  if(trip.me){ trip.me.remove(); trip.me=null; } if(trip.tip){ trip.tip.remove(); trip.tip=null; }
+  trip.speed = 1; trip.smoothBrg = 0; document.getElementById('speedBtn').textContent = 'Перемотка ×1';
+  document.getElementById('clock').textContent = fmt(NOW);
+  document.getElementById('guide').classList.remove('on'); document.getElementById('attrib').classList.remove('guiding');
+  const tb = document.getElementById('topbar'); tb.classList.remove('hide'); tb.inert = false; sheet.inert = false;
+  if(mapOk) map.getSource('r-me').setData({type:'FeatureCollection',features:[]});
+}
+function finish(){ stopTrip(); state.history=[]; state.view='done'; render('in'); snap('half'); if(mapOk) map.easeTo({pitch:30, zoom:16, bearing:0, duration:reduced?0:900}); }
 function endTrip(){ stopTrip(); state.view='route'; render('back'); snap('half'); fitAll(); toast('Поездка завершена'); }
 
-/* ============ СТАРТ ============ */
+/* ================= СТАРТ ================= */
 render(); requestAnimationFrame(()=>snap('half'));
-window.addEventListener('resize', ()=>snap(sheet.dataset.snap||'half'));
+let rsT; window.addEventListener('resize', ()=>{ clearTimeout(rsT); rsT = setTimeout(()=>{ if(!trip.on){ sheet.classList.remove('anim'); snapY = snaps()[sheet.dataset.snap||'half']; sheet.style.height = snapY+'px'; } }, 150); });
+showRoute(state.sel);
 initMap();
 </script>
 </body>
