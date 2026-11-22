@@ -762,11 +762,20 @@ async function kv(parent, a, b, o) {
   await TX(r, b, o.bStyle || 'bodyM', o.bColor || 'ink');
   return r;
 }
+// Горизонтальная карточка фиксированной ширины 328: текст посередине растягивается, ничего не обрезается
+function hcard(parent, name, o) {
+  const c = card(parent, name, o);
+  c.layoutMode = 'HORIZONTAL'; c.itemSpacing = 12; c.counterAxisAlignItems = 'CENTER';
+  c.primaryAxisSizingMode = 'FIXED'; c.counterAxisSizingMode = 'AUTO'; c.resize(328, c.height || 10);
+  c.layoutSizingHorizontal = 'FILL';
+  return c;
+}
+function textCol(parent) { const t = AL(parent, 'VERTICAL', { name: 'Текст', gap: 2 }); t.layoutGrow = 1; t.clipsContent = false; return t; }
 // Переключатель вкл/выкл — простые фигуры
 function toggle(parent, on) {
-  const t = figma.createFrame(); t.name = 'Переключатель: ' + (on ? 'вкл' : 'выкл'); t.resize(44, 26); t.cornerRadius = 13; t.fills = [pv(on ? 'accent' : 'line')];
+  const t = figma.createFrame(); t.name = 'Переключатель: ' + (on ? 'вкл' : 'выкл'); t.resize(44, 26); t.clipsContent = false; t.cornerRadius = 13; t.fills = [pv(on ? 'accent' : 'line')];
   EL(t, on ? 31 : 13, 13, 10, 10, { fill: 'white', name: 'Ручка' });
-  parent.appendChild(t); return t;
+  parent.appendChild(t); t.layoutSizingHorizontal = 'FIXED'; t.layoutSizingVertical = 'FIXED'; return t;
 }
 // Степпер «− 3 мин +»
 async function stepper(parent, val) {
@@ -813,11 +822,10 @@ async function k1() {
   const made = [];
   for (let i = 0; i < opts.length; i++) {
     const on = i === 1;
-    const c = card(list, 'Вариант: ' + opts[i][0], { bg: on ? 'lav' : 'white', stroke: on ? 'accent' : 'line' });
-    c.layoutMode = 'HORIZONTAL'; c.counterAxisAlignItems = 'CENTER'; c.itemSpacing = 12;
+    const c = hcard(list, 'Вариант: ' + opts[i][0], { bg: on ? 'lav' : 'white', stroke: on ? 'accent' : 'line' });
     const ic = AL(c, 'HORIZONTAL', { name: 'Иконка', pad: 8, r: 12, bg: on ? 'white' : 'soft' }); ic.appendChild(icoInst('Пешком', 'accent'));
-    const tx = AL(c, 'VERTICAL', { name: 'Текст', gap: 2 }); tx.layoutGrow = 1;
-    await TX(tx, opts[i][0], 'bodyM', 'ink'); await TX(tx, opts[i][1], 'small', 'mute');
+    const tx = textCol(c);
+    await TX(tx, opts[i][0], 'bodyM', 'ink', { fill: true }); await TX(tx, opts[i][1], 'small', 'mute', { fill: true });
     if (on) { const ok = AL(c, 'HORIZONTAL', { name: 'Выбрано', pad: 4, r: 12, bg: 'accent' }); ok.appendChild(icoInst('Галочка', 'white')); }
     made.push(c);
   }
@@ -854,9 +862,9 @@ async function k3() {
     ['Вход', 'Подъём на Бауманской', '2 мин', 'как в прогнозе — не меняю']
   ];
   for (const [ic, a, b, why] of rows) {
-    const c = card(list, a); c.layoutMode = 'HORIZONTAL'; c.itemSpacing = 12; c.counterAxisAlignItems = 'MIN';
+    const c = hcard(list, a); c.counterAxisAlignItems = 'MIN';
     const ib = AL(c, 'HORIZONTAL', { name: 'Иконка', pad: 8, r: 12, bg: 'lav' }); ib.appendChild(icoInst(ic, 'accent'));
-    const tx = AL(c, 'VERTICAL', { name: 'Текст', gap: 2 }); tx.layoutGrow = 1;
+    const tx = textCol(c);
     const top = ROW(tx, { name: 'Строка', gap: 8, justify: 'SPACE_BETWEEN' }); top.layoutSizingHorizontal = 'FILL';
     const ta = await TX(top, a, 'bodyM', 'ink'); ta.layoutGrow = 1; ta.textAutoResize = 'HEIGHT';
     await TX(top, b, 'bodyM', 'accent');
@@ -874,9 +882,9 @@ async function k4() {
   const s = phone('K4 · Мой темп', 3);
   const h = await header(s, '← Модули', 'Мой темп', 'Прогноз подстраивается под тебя. Данные — только на этом телефоне');
   const list = AL(s, 'VERTICAL', { name: 'Темп', gap: 12, w: 360, px: 16, x: 0, y: h.height + 16 });
-  const on = card(list, 'Учитывать'); on.layoutMode = 'HORIZONTAL'; on.counterAxisAlignItems = 'CENTER'; on.itemSpacing = 12;
-  const ot = AL(on, 'VERTICAL', { name: 'Текст', gap: 2 }); ot.layoutGrow = 1;
-  await TX(ot, 'Учитывать мой темп', 'bodyM', 'ink'); await TX(ot, 'По 6 поездкам', 'small', 'mute');
+  const on = hcard(list, 'Учитывать');
+  const ot = textCol(on);
+  await TX(ot, 'Учитывать мой темп', 'bodyM', 'ink', { fill: true }); await TX(ot, 'По 6 поездкам', 'small', 'mute', { fill: true });
   const tg = toggle(on, true);
   const walk = card(list, 'Пешком');
   await TX(walk, 'Пешком', 'bodyM', 'ink');
@@ -887,9 +895,9 @@ async function k4() {
   await kv(st, 'Первомайская: от двери до платформы', '1,5 мин');
   await kv(st, 'Бауманская: подъём в город', '2 мин');
   await kv(st, 'В час пик: первый поезд полный', 'часто', { bColor: 'orangeT' });
-  const pre = card(list, 'Сборы'); pre.layoutMode = 'HORIZONTAL'; pre.counterAxisAlignItems = 'CENTER'; pre.itemSpacing = 12;
-  const pt = AL(pre, 'VERTICAL', { name: 'Текст', gap: 2 }); pt.layoutGrow = 1;
-  await TX(pt, 'Запас на сборы', 'bodyM', 'ink'); await TX(pt, 'Добавлю к «выйди до»', 'small', 'mute');
+  const pre = hcard(list, 'Сборы');
+  const pt = textCol(pre);
+  await TX(pt, 'Запас на сборы', 'bodyM', 'ink', { fill: true }); await TX(pt, 'Добавлю к «выйди до»', 'small', 'mute', { fill: true });
   await stepper(pre, '3 мин');
   const reset = AL(list, 'HORIZONTAL', { name: 'Сбросить', justify: 'CENTER', fill: true, py: 4 });
   await TX(reset, 'Сбросить и начать заново', 'cap', 'accent');
