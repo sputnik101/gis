@@ -1,0 +1,9 @@
+{
+  "name": "Своя ГИС — путь: поиск → маршрут",
+  "id": "own-gis-path-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] }
+}
