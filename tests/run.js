@@ -172,6 +172,25 @@ test('модуль с ошибкой «после поездки» не лома
   await tripDone(p, 'taxi');
   return p.evaluate(() => (state.view==='done' && document.body.innerText.includes('Ты на месте')) || 'view ' + state.view);
 });
+test('новый способ по инструкции (велосипед) — без правок ядра: карточка, маршрут, поездка', async p => {
+  await p.evaluate(() => {
+    // ровно пример из docs/modules.md
+    registerModule({
+      id:'bike', group:'mode', icon:'Шаги', name:'Велосипед', desc:'Велопрокат', where:'способы', on:true,
+      options: { bike: { name:'Велосипед', ico:'Шаги', price:'≈ 150 ₽', purpose:'go', order:5, detail:'станция в 200 м',
+        legs:[
+          { type:'walk', label:'До станции проката', lo:3, hi:4, coords:[[37.8111,55.79271],[37.8090,55.7925]] },
+          { type:'wait', label:'Взять велосипед', lo:1, hi:3, at:[37.8090,55.7925], parts:[{ tri:[1,2] }, { chance:0.1, add:3 }] },
+          { type:'car', label:'На велосипеде до Бауманской', lo:28, hi:38, coords:[[37.8090,55.7925],[37.75,55.788],[37.67876,55.77235]], lm:'По выделенной полосе' } ] } } });
+    restart(); openPlace('baum'); go('compare'); pick('bike'); });
+  const route = await p.evaluate(() => state.view==='route' && document.body.innerText.includes('На велосипеде до Бауманской'));
+  await p.evaluate(() => startTrip()); await p.waitForTimeout(300); await p.evaluate(() => { trip.t = trip.total; }); await p.waitForTimeout(1200);
+  return p.evaluate(route => (route && state.view==='done' && !/NaN|undefined/.test(document.body.innerText)) || 'route ' + route + ' view ' + state.view, route);
+});
+test('«Пробки» выключены — такси и каршеринга нет (зависят от данных), метро и пешком есть', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); toggleMod('roads');
+  const ok = !OPTIONS.taxi && !OPTIONS.carshare && !!OPTIONS.metro && !!OPTIONS.walk; toggleMod('roads'); return ok || Object.keys(OPTIONS).join();
+}));
 // ---------- навигация ----------
 test('место → поиск → место: на экране место', async p => p.evaluate(() => {
   restart(); openPlace('baum'); go('find'); openPlace('baum');
