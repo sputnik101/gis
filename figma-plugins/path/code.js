@@ -802,14 +802,23 @@ function miniMap(s, o) {
 async function status(s, color) { await TX(s, '8:20', 'small', color || 'white', { x: 20, y: 10, name: 'Статус-бар' }); }
 // Плавающее поле поиска
 async function searchField(s, y, text, typed) {
-  const row = AL(s, 'HORIZONTAL', { name: 'Поиск', gap: 8, w: 328, x: 16, y, align: 'CENTER' });
+  // ROW — фиксированная ширина 328 (AL с w ужимался по содержимому и обрезал поле)
+  const row = ROW(s, { name: 'Поиск', gap: 8, w: 328, x: 16, y, align: 'CENTER' }); row.clipsContent = false;
   const f = AL(row, 'HORIZONTAL', { name: 'Поле «Куда?»', gap: 10, px: 16, py: 12, r: 22, bg: 'white', align: 'CENTER' }); f.layoutGrow = 1;
   await fx(f, 'ГИС/Уровень 1');
   f.appendChild(icoInst('Поиск', typed ? 'ink' : 'mute'));
   const t = await TX(f, text, 'body', typed ? 'ink' : 'mute'); t.layoutGrow = 1; t.textAutoResize = 'HEIGHT';
-  const b = AL(row, 'HORIZONTAL', { name: 'Модули', pad: 12, r: 22, bg: 'white', align: 'CENTER' }); b.appendChild(icoInst('Профиль', 'ink'));
+  f.clipsContent = false;
+  const b = AL(row, 'HORIZONTAL', { name: 'Модули', pad: 12, r: 22, bg: 'white', align: 'CENTER' }); b.appendChild(icoInst('Профиль', 'ink')); b.clipsContent = false;
   await fx(b, 'ГИС/Уровень 1');
   return { row, field: f };
+}
+// Чип «Погулять рядом» — белый, над картой виден
+async function walkChip(s, sf) {
+  const c = AL(s, 'HORIZONTAL', { name: 'Чип: погулять рядом', gap: 6, px: 14, py: 8, r: 18, bg: 'white', align: 'CENTER', x: 16, y: sf.row.y + sf.row.height + 12 });
+  c.clipsContent = false; await fx(c, 'ГИС/Уровень 1');
+  c.appendChild(icoInst('Пешком', 'accent')); await TX(c, 'Погулять рядом', 'cap', 'ink');
+  return c;
 }
 // Шторка снизу: от y до низа экрана
 function sheetAt(s, y, name) {
@@ -874,29 +883,27 @@ async function modeCards(parent, list) { const made = []; for (const o of list) 
 // ---------- Общие экраны ----------
 async function s0() {
   const s = phoneAt('0 · Первый запуск', 0, 0); miniMap(s); await status(s);
-  await searchField(s, 40, 'Куда?');
-  const chips = AL(s, 'HORIZONTAL', { name: 'Чипы', gap: 8, x: 16, y: 104 });
-  chips.appendChild(await pillC('Обычная', 'Погулять рядом'));
-  return { s };
+  const sf = await searchField(s, 40, 'Куда?');
+  await walkChip(s, sf);
+  return { s, search: sf.field };
 }
 async function s1() {
   const s = phoneAt('1 · Поиск: есть маршруты', 1, 0); miniMap(s); await status(s);
   const sf = await searchField(s, 40, 'Куда?');
   const sh = sheetAt(s, 430, 'Шторка: мои маршруты');
   await sectionTitle(sh, 'Мои маршруты');
-  const work = await rowItem(sh, 'Работа', 'Работа', 'Дом → м. Бауманская · к 9:00', 'выйди до\n8:23');
+  const work = await rowItem(sh, 'Работа', 'Работа', 'Дом → м.\u00a0Бауманская · к 9:00', 'выйди до\n8:23');
   await rowItem(sh, 'Дом', 'Домой', 'Работа → Дом', '~35 мин', 'ink');
   await sectionTitle(sh, 'Недавние');
   await rowItem(sh, 'Часы', 'Измайловский парк', 'вчера', null);
-  const chips = AL(s, 'HORIZONTAL', { name: 'Чипы', gap: 8, x: 16, y: 104 });
-  chips.appendChild(await pillC('Обычная', 'Погулять рядом'));
+  await walkChip(s, sf);
   return { s, work, search: sf.field };
 }
 async function s2() {
   const s = phoneAt('2 · Поиск: ввод', 2, 0); s.fills = [pv('soft')]; await status(s, 'ink');
-  await searchField(s, 40, 'Бауман', true);
-  const list = AL(s, 'VERTICAL', { name: 'Результаты', gap: 8, w: 360, px: 16, x: 0, y: 104 });
-  const r1 = await rowItem(list, 'Метро', 'м. Бауманская', 'Арбатско-Покровская линия · 8 км', null);
+  const sf = await searchField(s, 40, 'Бауман', true);
+  const list = AL(s, 'VERTICAL', { name: 'Результаты', gap: 8, w: 360, px: 16, x: 0, y: sf.row.y + sf.row.height + 16 });
+  const r1 = await rowItem(list, 'Метро', 'м.\u00a0Бауманская', 'Арбатско-Покровская линия · 8 км', null);
   await rowItem(list, 'Маршрут', 'Бауманская улица', 'Басманный район · 8 км', null);
   await rowItem(list, 'Здание', 'МГТУ им. Баумана', '2-я Бауманская ул., 5 · 8,6 км', null);
   await TX(list, 'Нажми на место — сразу увидишь, как добраться', 'small', 'mute', { fill: true });
@@ -906,9 +913,9 @@ async function s2() {
 // ---------- Вариант А: одна шторка ----------
 async function a3() {
   const s = phoneAt('А3 · Место (шторка)', 0, 1); miniMap(s, { dest: true }); await status(s);
-  await searchField(s, 40, 'м. Бауманская', true);
+  await searchField(s, 40, 'м.\u00a0Бауманская', true);
   const sh = sheetAt(s, 520, 'Шторка: место');
-  await TX(sh, 'м. Бауманская', 'title', 'ink', { fill: true });
+  await TX(sh, 'м.\u00a0Бауманская', 'title', 'ink', { fill: true });
   await TX(sh, 'Арбатско-Покровская линия · 8 км отсюда', 'cap', 'mute', { fill: true });
   await quickModes(sh);
   const b = await buttons(sh, 'Маршрут', 'Сохранить');
@@ -919,7 +926,7 @@ async function a4() {
   const sh = sheetAt(s, 150, 'Шторка: способы');
   const head = ROW(sh, { name: 'Куда', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
   const back = AL(head, 'HORIZONTAL', { name: 'Свернуть', pad: 6, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
-  const ht = await TX(head, 'м. Бауманская', 'big', 'ink'); ht.layoutGrow = 1;
+  const ht = await TX(head, 'м.\u00a0Бауманская', 'big', 'ink'); ht.layoutGrow = 1;
   const tb = await tripBar(sh, 'Выехать сейчас', false);
   const cards = await modeCards(sh, DEPART);
   return { s, time: tb.time, back, metro: cards[0] };
@@ -929,7 +936,7 @@ async function a5() {
   const sh = sheetAt(s, 150, 'Шторка: способы к 9:00');
   const head = ROW(sh, { name: 'Куда', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
   const back = AL(head, 'HORIZONTAL', { name: 'Свернуть', pad: 6, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
-  const ht = await TX(head, 'м. Бауманская', 'big', 'ink'); ht.layoutGrow = 1;
+  const ht = await TX(head, 'м.\u00a0Бауманская', 'big', 'ink'); ht.layoutGrow = 1;
   const tb = await tripBar(sh, 'Прибыть к 9:00', true);
   const cards = await modeCards(sh, ARRIVE);
   return { s, time: tb.time, back };
@@ -938,10 +945,10 @@ async function a5() {
 // ---------- Вариант Б: два экрана ----------
 async function b3() {
   const s = phoneAt('Б3 · Место на карте', 0, 2); miniMap(s, { dest: true }); await status(s);
-  await searchField(s, 40, 'м. Бауманская', true);
+  await searchField(s, 40, 'м.\u00a0Бауманская', true);
   const c = AL(s, 'VERTICAL', { name: 'Карточка места', gap: 10, w: 328, px: 16, py: 16, r: 22, bg: 'white', x: 16, y: 600 });
   await fx(c, 'ГИС/Уровень 3');
-  await TX(c, 'м. Бауманская', 'title', 'ink', { fill: true });
+  await TX(c, 'м.\u00a0Бауманская', 'title', 'ink', { fill: true });
   await TX(c, 'Арбатско-Покровская линия · 8 км отсюда', 'cap', 'mute', { fill: true });
   const b = await buttons(c, 'Как добраться', 'Сохранить');
   c.y = 800 - 24 - c.height;
@@ -952,7 +959,7 @@ async function b4(i, name, timeText, timeOn, list) {
   const top = AL(s, 'VERTICAL', { name: 'Шапка', gap: 10, w: 360, px: 16, x: 0, y: 36 });
   const head = ROW(top, { name: 'Куда', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
   const back = AL(head, 'HORIZONTAL', { name: 'Назад', pad: 6, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
-  const ht = await TX(head, 'Как добраться до м. Бауманская', 'big', 'ink'); ht.layoutGrow = 1; ht.textAutoResize = 'HEIGHT';
+  const ht = await TX(head, 'Как добраться до м.\u00a0Бауманская', 'big', 'ink'); ht.layoutGrow = 1; ht.textAutoResize = 'HEIGHT';
   const tb = await tripBar(top, timeText, timeOn);
   const listF = AL(s, 'VERTICAL', { name: 'Способы', gap: 12, w: 360, px: 16, x: 0, y: top.y + top.height + 14 });
   listF.clipsContent = false;
@@ -985,7 +992,7 @@ async function b4(i, name, timeText, timeOn, list) {
     await TX(PG, t, 'title', 'accent', { x: 3 * COLW + 20, y: row * ROWH + 360 });
   const GO = id => ({ type: 'NODE', destinationId: id, navigation: 'NAVIGATE', transition: { type: 'SMART_ANIMATE', easing: { type: 'EASE_OUT' }, duration: 0.3 }, preserveScrollPosition: false });
   const link = async (n, acts) => { if (n) await n.setReactionsAsync(acts.map(a => ({ trigger: { type: 'ON_CLICK' }, actions: [a] }))); };
-  await link(S1.search, [GO(S2.s.id)]); await link(S1.work, [GO(A5.s.id)]);
+  await link(S1.search, [GO(S2.s.id)]); await link(S0.search, [GO(S2.s.id)]); await link(S1.work, [GO(A5.s.id)]);
   await link(A3.go, [GO(A4.s.id)]); await link(A4.time, [GO(A5.s.id)]); await link(A5.time, [GO(A4.s.id)]); await link(A4.back, [GO(A3.s.id)]); await link(A5.back, [GO(A3.s.id)]);
   await link(B3.go, [GO(B4.s.id)]); await link(B4.time, [GO(B5.s.id)]); await link(B5.time, [GO(B4.s.id)]); await link(B4.back, [{ type: 'BACK' }]); await link(B5.back, [{ type: 'BACK' }]);
   await link(S2.r1, [GO(A3.s.id)]);
