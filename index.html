@@ -45,7 +45,7 @@ button{font-family:inherit}
 .sec{font-size:13px;color:var(--muted);margin:10px 2px 8px}
 .lrow{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 12px;margin-bottom:8px;font:inherit;color:inherit;text-align:left;cursor:pointer;min-height:56px}
 .lrow.muted{background:#FBFAF7}.lrow.muted b{color:var(--ink2)}
-.lrow .ico{width:40px;height:40px;background:#EDEDFD;color:var(--violet-d)}
+.lrow .ico{width:40px;height:40px}
 .lrow .tx{flex:1;min-width:0}.lrow .tx b{display:block;font-weight:600;font-size:15px}.lrow .r{text-align:right;flex:none}
 .lrow .r .m{font-size:12px}.lrow .r b{color:var(--violet-d);font-size:15px}
 .quick{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}
@@ -80,7 +80,8 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
 .row{display:flex;gap:8px;align-items:center}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
-.chip{flex:none;height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink);cursor:pointer;box-shadow:var(--s1)}
+.chip{flex:none;height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink);cursor:pointer}
+.chip.sel{background:#D7F26B;border-color:#D7F26B;color:#2B3A00;font-weight:600}   /* выбранный вариант ответа — лайм */
 .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .seg{display:flex;background:#E7E5F3;border-radius:14px;padding:3px;margin:4px 0 12px}
 .seg button{flex:1;height:42px;border:0;border-radius:11px;background:transparent;font-size:14px;color:var(--ink2);cursor:pointer;font-weight:500;transition:all .2s}
@@ -103,22 +104,23 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .card.late{background:#F6F5F9;box-shadow:none}
 .card.late .win{display:flex}
 .card .top{display:flex;align-items:center;gap:12px}
-.ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex:none}
+.ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex:none;background:#ECEBFB;color:#4B4BC8}
 .t{font-size:16px;font-weight:600}
 .m{font-size:13px;color:var(--muted)}
 .right{margin-left:auto;text-align:right;flex:none}
 .big{font-size:18px;font-weight:600;white-space:nowrap}
 .win{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
-.pill{min-height:26px;padding:3px 10px;border-radius:13px;font-size:12.5px;display:inline-flex;align-items:center;gap:5px;background:#F1F0F8;color:var(--ink2)}
-.pill.g{background:#E3F5EA;color:#1A6B40}.pill.a{background:#FDF0DA;color:#8A5610}.pill.r{background:#FBE3E1;color:#97291F}
-.pill.v{background:#EDEDFD;color:var(--violet-d)}
+/* Итоги — как в Фигме: лайм — надёжно, оранжевый — риск, розовый — опоздание, лаванда — нейтральное */
+.pill{min-height:26px;padding:3px 10px;border-radius:13px;font-size:12.5px;display:inline-flex;align-items:center;gap:5px;background:#ECEBFB;color:#4B4BC8;font-weight:500}
+.pill.g{background:#D7F26B;color:#2B3A00}.pill.a{background:#FFB27A;color:#5A2A00}.pill.r{background:#F6C1D6;color:#6B1236}
+.pill.v{background:#ECEBFB;color:#4B4BC8}
 .rel{display:inline-flex;gap:2px;margin-left:2px}.rel i{width:5px;height:10px;border-radius:2px;background:#CFCCDD}.rel i.f{background:currentColor}
 .note{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
 .btn{height:52px;border-radius:26px;border:0;font-size:16px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 2px 4px rgba(20,17,58,.18),0 6px 14px rgba(20,17,58,.14)}
-.btn.p{background:var(--violet-btn);color:#fff;background-image:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,0) 60%)}
-.btn.d{background:var(--ink);color:#fff;background-image:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,0) 60%)}
-.btn.w{background:#fff;color:var(--ink)}
-.back-btn{border:0;background:none;font-size:22px;color:var(--ink);cursor:pointer;width:44px;height:44px;margin-left:-10px;border-radius:22px}
+/* Кнопки как в Фигме: главная — плоская чернильная, вторичная — белая с рамкой, без тяжёлых теней */
+.btn.p,.btn.d{background:var(--ink);color:#fff;box-shadow:var(--s1)}
+.btn.w{background:#fff;color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+.back-btn{border:0;background:#fff;font-size:20px;color:var(--ink);cursor:pointer;width:44px;height:44px;border-radius:14px;box-shadow:var(--s1);flex:none;display:grid;place-items:center;margin-right:4px}
 .steps{position:relative;margin:8px 0 14px}
 .st{display:flex;gap:12px;padding:8px 0;position:relative}
 .st .dot{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;font-size:14px;flex:none;z-index:1;background:#fff;box-shadow:var(--s1)}
@@ -127,7 +129,7 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .st .tx{flex:1}
 .st .tx b{font-weight:600;font-size:15px}
 .lm{display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:#FFFFFF;border:1px solid #E4E2F0;color:#4A4670;border-radius:10px;padding:5px 9px;font-size:12.5px}
-.lm.w{background:#FDF0DA;border-color:#F3D9A8;color:#8A5610}   /* предупреждение: тот же оранжевый, что у «есть риск» */
+.lm.w{background:#FFB27A;border-color:#FFB27A;color:var(--ink)}   /* предупреждение: тот же оранжевый, что у «есть риск» */
 .pois{display:flex;gap:10px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
 .poi{flex:none;width:170px;background:#fff;border-radius:16px;padding:12px;box-shadow:var(--s1);cursor:pointer;border:0;text-align:left;font:inherit;color:inherit}
 .poi .e{font-size:22px}.poi b{display:block;font-size:14px;margin-top:6px}.poi span{font-size:12px;color:var(--muted)}
@@ -136,14 +138,13 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .toggle.on{background:var(--violet-btn)}.toggle.on::after{left:21px}
 .banner{background:var(--violet-btn);color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:12px;font-size:14px;box-shadow:var(--s1)}
 .banner b{font-size:16px}
-.banner.late{background:#FBE3E1;color:#6E1D16;box-shadow:none;border:1px solid #F2B8B2}
+.banner.late{background:#F6C1D6;color:#4A0E27;box-shadow:none;border:0}
 .banner.late .chip{height:40px}
 .hint{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:2px 0 10px;font-size:13px;color:var(--ink2)}
 .hint>span:nth-child(2){flex:1}
 .mlink{border:0;background:none;color:var(--violet-d);font:inherit;font-weight:600;cursor:pointer;min-height:44px;padding:0 4px}
 .best{display:inline-block;margin-bottom:8px;background:var(--ink);color:#fff;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:8px}
 .card .right .m{font-size:12px}
-.pill.r{background:#FBE3E1;color:#97291F}
 /* ведение */
 .guide{position:absolute;inset:0;z-index:26;pointer-events:none;display:none}
 .guide.on{display:block}
@@ -170,7 +171,9 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .tip::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:var(--ink)}
 .toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);background:rgba(26,22,64,.94);color:#fff;border-radius:18px;padding:16px 20px;font-size:15px;z-index:40;opacity:0;pointer-events:none;transition:all .25s;text-align:center}
 .toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
-.fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#fff;text-align:center;padding:40px;font-size:14px;z-index:5}
+.fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#fff;text-align:center;padding:40px;font-size:14px;z-index:5;
+  background:repeating-linear-gradient(8deg,transparent 0 118px,rgba(200,240,106,.28) 118px 121px),repeating-linear-gradient(96deg,transparent 0 96px,rgba(200,240,106,.28) 96px 99px),var(--violet)}
+.fallback span{background:rgba(26,22,64,.45);padding:8px 14px;border-radius:14px;margin-top:-180px}
 .shake{animation:shake .5s}
 @keyframes shake{0%,100%{transform:none}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -180,7 +183,7 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 <body>
 <div class="phone" id="phone">
   <div id="map" aria-label="Карта Москвы"></div>
-  <div class="fallback" id="fallback">Карта не загрузилась — нужен интернет и браузер с WebGL.</div>
+  <div class="fallback" id="fallback"><span>Карта появится, когда будет интернет</span></div>
   <div class="status" aria-hidden="true"><span id="clock">8:20</span><span>● ● ▮</span></div>
   <div class="attrib" id="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · маршруты OSRM</div>
 
@@ -688,13 +691,13 @@ function card(k, isBest){
   if(!v.never && !v.closed) collect('cardPills', k).forEach(t => pills.push(`<span class="pill">${esc(t)}</span>`));
   const compact = arr && v.never;
   if(v.closed) return `<div class="card late" data-k="${k}" aria-disabled="true">
-    <div class="top"><div class="ico" aria-hidden="true" style="background:${o.bg};color:${o.fg}">${o.ico}</div>
+    <div class="top"><div class="ico" aria-hidden="true">${o.ico}</div>
       <div style="flex:1;min-width:0"><div class="t">${o.name}</div><div class="m">${o.detail}</div></div>
       <div class="right">${right}</div></div>
     <div class="win">${pills.join('')}</div></div>`;   // закрытый способ — не открывается
   return `<button class="card press ${compact?'late':''}" data-k="${k}" onclick="pick('${k}')">
     ${isBest ? '<div class="best">Лучше всего</div>' : ''}
-    <div class="top"><div class="ico" aria-hidden="true" style="background:${o.bg};color:${o.fg}">${o.ico}</div>
+    <div class="top"><div class="ico" aria-hidden="true">${o.ico}</div>
       <div style="flex:1;min-width:0"><div class="t">${o.name}</div><div class="m">${o.detail}${o.noTarget?'':' · ' + o.price}</div></div>
       <div class="right">${right}</div></div>
     <div class="win">${pills.join('')}</div></button>`;
@@ -827,7 +830,7 @@ V.confirm = () => {
 function modCard(m){ const on = !!state.modules[m.id];
   const need = (m.requires || []).filter(id => !isOn(id)).map(id => (MODULES.find(x=>x.id===id) || {name:id}).name);
   return `<button class="card" role="switch" aria-checked="${on}" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)" style="display:flex;align-items:center;gap:12px;${on && !need.length?'':'box-shadow:none;background:#FBFAF7'}">
-      <div class="ico" aria-hidden="true" style="background:#EDEDFD">${esc(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div>
+      <div class="ico" aria-hidden="true">${esc(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div>
       <div class="m" style="font-size:12px">${on && need.length ? 'Не работает без: ' + need.map(esc).join(', ') : 'Где: ' + esc(m.where)}</div></div>
       <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>`; }
 V.modules = () => `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
@@ -847,7 +850,7 @@ V.done = () => {
    ${offer ? `<div class="offer"><div class="t">Ездишь сюда регулярно?</div><div class="m" style="margin:4px 0 10px">Сохрани маршрут — в следующий раз он будет в одно касание</div>
      <div class="row"><button class="chip on press" onclick="go('save')">Сохранить</button><button class="chip press" onclick="state.declined[state.dest]=1;render()">Не сейчас</button></div></div>` : ''}
    <div class="card" style="cursor:default"><div class="t">Как прошло?</div><div class="m" style="margin:4px 0 10px">Ответ уточнит прогноз для этого маршрута</div>
-   <div class="row" style="flex-wrap:wrap">${chips.map(c=>`<button class="chip press" onclick="thanks()">${c}</button>`).join('')}</div></div>
+   <div class="row" style="flex-wrap:wrap">${chips.map(c=>`<button class="chip press" onclick="this.classList.add('sel');thanks()">${c}</button>`).join('')}</div></div>
    <button class="btn w press" onclick="restart()">Готово</button>`;
 };
 
@@ -863,8 +866,8 @@ V.save = () => {
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Сохранить маршрут</h1></div>
    <div class="sub" style="margin-top:6px">Отсюда → ${PLACES[state.dest].name}</div>
    <div class="sec">Как назвать</div>
-   <div class="chips" style="flex-wrap:wrap">${['Работа','Учёба','Спорт'].map(n=>`<button class="chip press ${nm===n?'on':''}" aria-pressed="${nm===n}" onclick="state.saveName='${n}';render()">${n}</button>`).join('')}
-     <button class="chip press ${nm && !['Работа','Учёба','Спорт'].includes(nm)?'on':''}" onclick="askName()">${nm && !['Работа','Учёба','Спорт'].includes(nm) ? esc(nm) : 'Своё…'}</button></div>
+   <div class="chips" style="flex-wrap:wrap">${['Работа','Учёба','Спорт'].map(n=>`<button class="chip press ${nm===n?'sel':''}" aria-pressed="${nm===n}" onclick="state.saveName='${n}';render()">${n}</button>`).join('')}
+     <button class="chip press ${nm && !['Работа','Учёба','Спорт'].includes(nm)?'sel':''}" onclick="askName()">${nm && !['Работа','Учёба','Спорт'].includes(nm) ? esc(nm) : 'Своё…'}</button></div>
    <div class="card" style="cursor:default">
      <div class="row" style="justify-content:space-between"><span class="m">Время</span><b>${arr ? 'прибыть к ' + fmt(state.arrive) : 'без времени'}</b></div>
      <div class="row" style="justify-content:space-between;margin-top:8px"><span class="m">Способ</span><b>${OPTIONS[state.sel].name}</b></div>
