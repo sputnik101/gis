@@ -104,6 +104,18 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .card.late{background:#F6F5F9;box-shadow:none}
 .card.late .win{display:flex}
 .card .top{display:flex;align-items:center;gap:12px}
+svg.i{display:block;flex:none}
+/* «Ты на месте»: флажок на лаймовом круге и три конфетти из палитры */
+.done-art{position:relative;height:64px;width:120px;margin:6px 0 4px}
+.done-art .flag{position:absolute;left:0;top:4px;width:56px;height:56px;border-radius:28px;background:#D7F26B;color:#2B3A00;display:grid;place-items:center}
+.done-art i{position:absolute;width:10px;height:10px;border-radius:5px}
+.done-art .c1{left:64px;top:6px;background:#ECEBFB}.done-art .c2{left:78px;top:30px;width:7px;height:7px;background:#FFB27A}.done-art .c3{left:62px;top:46px;width:6px;height:6px;background:#6C6CF0}
+.search svg.i,.wchip svg.i,.savebtn svg.i,.tripbar svg.i{display:inline-block;vertical-align:middle}
+.savebtn{display:inline-flex;align-items:center;gap:6px}
+.lm svg.i,.lmk svg.i{display:inline-block;vertical-align:-3px}
+.st .dot svg.i{color:var(--ink)}.st.metro .dot svg.i{color:#fff}
+.poi .e{color:#4B4BC8}
+.round svg.i{color:var(--ink)}
 .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;flex:none;background:#ECEBFB;color:#4B4BC8}
 .t{font-size:16px;font-weight:600}
 .m{font-size:13px;color:var(--muted)}
@@ -228,13 +240,20 @@ const DEST = [37.67876,55.77235];          // Бауманская, выход �
 const YAUZA = [37.6905,55.7772], ELOKH = [37.6764,55.7731];
 const stops = n => n + ' ' + (n%10===1&&n%100!==11?'остановка':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'остановки':'остановок');
 
+/* ================= ИКОНКИ =================
+   Один набор с Фигмой: 20×20, линия 1.75, скруглённые концы (figma-plugins/icons). Модули указывают иконку по имени. */
+const ICON = {"Маршрут": ["M 5 13 C 6.1046 13 7 13.8954 7 15 C 7 16.1046 6.1046 17 5 17 C 3.8954 17 3 16.1046 3 15 C 3 13.8954 3.8954 13 5 13 Z", "M 15 3 C 16.1046 3 17 3.8954 17 5 C 17 6.1046 16.1046 7 15 7 C 13.8954 7 13 6.1046 13 5 C 13 3.8954 13.8954 3 15 3 Z", "M 5 13 L 5 10 C 5 8.5 6 7.5 7.5 7.5 L 13 7.5"], "Пешком": ["M 11 1.9 C 11.88368 1.9 12.6 2.61632 12.6 3.5 C 12.6 4.38368 11.88368 5.1 11 5.1 C 10.11632 5.1 9.4 4.38368 9.4 3.5 C 9.4 2.61632 10.11632 1.9 11 1.9 Z", "M 9.5 7 L 8 12 L 11 14 L 11 18", "M 8 12 L 6 17", "M 9.5 7 L 12.5 9 L 15 8.5"], "Автобус": ["M 6.5 3 L 13.5 3 C 14.880749999999999 3 16 4.11925 16 5.5 L 16 12.5 C 16 13.880749999999999 14.880749999999999 15 13.5 15 L 6.5 15 C 5.11925 15 4 13.880749999999999 4 12.5 L 4 5.5 C 4 4.11925 5.11925 3 6.5 3 Z", "M 4 10 L 16 10", "M 6.5 15 L 6.5 17.5", "M 13.5 15 L 13.5 17.5", "M 8 6 L 12 6"], "Метро": ["M 4 15 L 4 5 L 10 12 L 16 5 L 16 15"], "Машина": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z"], "Парковка": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 8 14 L 8 6 L 11.5 6 C 13 6 14 7 14 8.5 C 14 10 13 11 11.5 11 L 8 11"], "Дом": ["M 3 9 L 10 3 L 17 9", "M 5 7.5 L 5 17 L 15 17 L 15 7.5", "M 8.5 17 L 8.5 12 L 11.5 12 L 11.5 17"], "Работа": ["M 5 6 L 15 6 C 16.1046 6 17 6.8954 17 8 L 17 15 C 17 16.1046 16.1046 17 15 17 L 5 17 C 3.8954 17 3 16.1046 3 15 L 3 8 C 3 6.8954 3.8954 6 5 6 Z", "M 7.5 6 L 7.5 4.5 C 7.5 4 8 3.5 8.5 3.5 L 11.5 3.5 C 12 3.5 12.5 4 12.5 4.5 L 12.5 6", "M 3 11 L 17 11"], "Зал": ["M 3 8 L 3 12", "M 5.5 6 L 5.5 14", "M 14.5 6 L 14.5 14", "M 17 8 L 17 12", "M 5.5 10 L 14.5 10"], "Семья": ["M 10 16 C 6 13 3 10.5 3 7.5 C 3 5.5 4.5 4 6.5 4 C 8 4 9.3 5 10 6.2 C 10.7 5 12 4 13.5 4 C 15.5 4 17 5.5 17 7.5 C 17 10.5 14 13 10 16 Z"], "Часы": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 10 6 L 10 10 L 13 12"], "Поиск": ["M 9 3.5 C 12.03765 3.5 14.5 5.96235 14.5 9 C 14.5 12.03765 12.03765 14.5 9 14.5 C 5.96235 14.5 3.5 12.03765 3.5 9 C 3.5 5.96235 5.96235 3.5 9 3.5 Z", "M 13 13 L 17 17"], "Закладка": ["M 5 3 L 15 3 L 15 17 L 10 13 L 5 17 Z"], "Вход": ["M 5 17 L 5 3 L 13 3 L 13 17", "M 3 17 L 17 17", "M 10.5 10 L 11 10"], "Профиль": ["M 10 3.5 C 11.93305 3.5 13.5 5.06695 13.5 7 C 13.5 8.93305 11.93305 10.5 10 10.5 C 8.06695 10.5 6.5 8.93305 6.5 7 C 6.5 5.06695 8.06695 3.5 10 3.5 Z", "M 4 17 C 4 13.5 6.5 11.5 10 11.5 C 13.5 11.5 16 13.5 16 17"], "Назад": ["M 16 10 L 4 10", "M 9 5 L 4 10 L 9 15"], "Плюс": ["M 10 4 L 10 16", "M 4 10 L 16 10"], "Дождь": ["M 6 12 C 3.8 12 3 10.5 3 9.3 C 3 7.6 4.4 6.3 6 6.5 C 6.6 4.5 8.3 3 10.5 3 C 13.3 3 15.3 5.2 15.2 7.6 C 16.8 7.8 17.5 9 17.5 10 C 17.5 11.2 16.6 12 15.2 12 Z", "M 7 14.5 L 6 17", "M 10.5 14.5 L 9.5 17", "M 14 14.5 L 13 17"], "Колокол": ["M 5 14 L 5 9 C 5 6 7.2 3.8 10 3.8 C 12.8 3.8 15 6 15 9 L 15 14 L 16.5 15.5 L 3.5 15.5 Z", "M 8.5 17.5 L 11.5 17.5"], "Аптека": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 10 6.5 L 10 13.5", "M 6.5 10 L 13.5 10"], "Кофе": ["M 4 8 L 14 8 L 13 15 C 12.9 16.1 12 17 10.9 17 L 7.1 17 C 6 17 5.1 16.1 5 15 Z", "M 14 9.5 L 15.5 9.5 C 16.6 9.5 17 10.3 17 11 C 17 11.8 16.4 12.5 15.5 12.5 L 13.6 12.5", "M 8 3 L 8 5.5", "M 11 3 L 11 5.5"], "Здание": ["M 5.5 3 L 14.5 3 C 15.32845 3 16 3.67155 16 4.5 L 16 15.5 C 16 16.32845 15.32845 17 14.5 17 L 5.5 17 C 4.67155 17 4 16.32845 4 15.5 L 4 4.5 C 4 3.67155 4.67155 3 5.5 3 Z", "M 7.5 7 L 8.5 7", "M 11.5 7 L 12.5 7", "M 7.5 10.5 L 8.5 10.5", "M 11.5 10.5 L 12.5 10.5", "M 9 17 L 9 14 L 11 14 L 11 17"], "Навигатор": ["M 10 2.5 L 16 17 L 10 13.5 L 4 17 Z"], "Внимание": ["M 10 3 L 17.5 16.5 L 2.5 16.5 Z", "M 10 8 L 10 11.5", "M 10 14 L 10 14.1"], "Галочка": ["M 4 10.5 L 8 14.5 L 16 5.5"], "Шаги": ["M 6 17 C 4.5 17 4 15.5 4.2 14 C 4.5 12 5.5 11 6.5 11 C 7.5 11 8 12.2 7.8 14 C 7.6 15.8 7.2 17 6 17 Z", "M 13.5 9 C 12.3 9 11.8 7.7 12 6.2 C 12.3 4.2 13.3 3 14.3 3 C 15.3 3 15.8 4.3 15.6 6 C 15.4 7.8 14.7 9 13.5 9 Z"], "Такси": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z", "M 8 5 L 8 2.8 L 12 2.8 L 12 5"], "Каршеринг": ["M 3 14 L 3 11 L 5 7.5 C 5.3 6.9 5.9 6.5 6.6 6.5 L 13.4 6.5 C 14.1 6.5 14.7 6.9 15 7.5 L 17 11 L 17 14 Z", "M 3 11 L 17 11", "M 6.5 14.2 C 7.21799 14.2 7.8 14.78201 7.8 15.5 C 7.8 16.21799 7.21799 16.8 6.5 16.8 C 5.78201 16.8 5.2 16.21799 5.2 15.5 C 5.2 14.78201 5.78201 14.2 6.5 14.2 Z", "M 13.5 14.2 C 14.21799 14.2 14.8 14.78201 14.8 15.5 C 14.8 16.21799 14.21799 16.8 13.5 16.8 C 12.78201 16.8 12.2 16.21799 12.2 15.5 C 12.2 14.78201 12.78201 14.2 13.5 14.2 Z", "M 7.2 3.6 C 8.9 2.2 11.1 2.2 12.8 3.6"], "Лист": ["M 4 16 C 4 8.5 8.5 4 16 4 C 16 11.5 11.5 16 4 16 Z", "M 4 16 L 11.5 8.5"], "Толпа": ["M 7 3.9000000000000004 C 8.27029 3.9000000000000004 9.3 4.92971 9.3 6.2 C 9.3 7.47029 8.27029 8.5 7 8.5 C 5.72971 8.5 4.7 7.47029 4.7 6.2 C 4.7 4.92971 5.72971 3.9000000000000004 7 3.9000000000000004 Z", "M 2.5 16 C 2.5 12.5 4.5 10.8 7 10.8 C 9.5 10.8 11.5 12.5 11.5 16", "M 13.6 4.6 C 14.7046 4.6 15.6 5.4954 15.6 6.6 C 15.6 7.704599999999999 14.7046 8.6 13.6 8.6 C 12.4954 8.6 11.6 7.704599999999999 11.6 6.6 C 11.6 5.4954 12.4954 4.6 13.6 4.6 Z", "M 12.6 11 C 15.4 10.7 17.5 12.3 17.5 15.5"], "Вагон": ["M 7.5 2.5 L 12.5 2.5 C 13.880749999999999 2.5 15 3.61925 15 5 L 15 12 C 15 13.380749999999999 13.880749999999999 14.5 12.5 14.5 L 7.5 14.5 C 6.11925 14.5 5 13.380749999999999 5 12 L 5 5 C 5 3.61925 6.11925 2.5 7.5 2.5 Z", "M 5 9 L 15 9", "M 8 12 L 8.1 12", "M 11.9 12 L 12 12", "M 7.5 14.5 L 5.5 17.5", "M 12.5 14.5 L 14.5 17.5"], "Пин": ["M 10 18 C 10 18 4.5 12.2 4.5 8 C 4.5 5 7 2.5 10 2.5 C 13 2.5 15.5 5 15.5 8 C 15.5 12.2 10 18 10 18 Z", "M 10 6 C 11.1046 6 12 6.8954 12 8 C 12 9.1046 11.1046 10 10 10 C 8.8954 10 8 9.1046 8 8 C 8 6.8954 8.8954 6 10 6 Z"], "Звезда": ["M 10 2.8 L 12.2 7.4 L 17.2 8 L 13.5 11.4 L 14.5 16.4 L 10 13.9 L 5.5 16.4 L 6.5 11.4 L 2.8 8 L 7.8 7.4 Z"], "Шестерёнка": ["M 10 4.4 C 13.092880000000001 4.4 15.6 6.90712 15.6 10 C 15.6 13.092880000000001 13.092880000000001 15.6 10 15.6 C 6.90712 15.6 4.4 13.092880000000001 4.4 10 C 4.4 6.90712 6.90712 4.4 10 4.4 Z", "M 10 7.8 C 11.21506 7.8 12.2 8.78494 12.2 10 C 12.2 11.21506 11.21506 12.2 10 12.2 C 8.78494 12.2 7.8 11.21506 7.8 10 C 7.8 8.78494 8.78494 7.8 10 7.8 Z", "M 10.00 4.40 L 10.00 2.40", "M 14.85 7.20 L 16.58 6.20", "M 14.85 12.80 L 16.58 13.80", "M 10.00 15.60 L 10.00 17.60", "M 5.15 12.80 L 3.42 13.80", "M 5.15 7.20 L 3.42 6.20"], "Песочные часы": ["M 5.5 3 L 14.5 3", "M 5.5 17 L 14.5 17", "M 7 3 C 7 7 13 7 13 10 C 13 13 7 13 7 17", "M 13 3 C 13 7 7 7 7 10 C 7 13 13 13 13 17"], "Эскалатор": ["M 2.5 16 L 6.5 16 L 13.5 5 L 17.5 5", "M 8.5 7 L 8.5 7.1", "M 6.5 10.5 L 11 10.5"], "Готово": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 6.8 10.2 L 9 12.4 L 13.4 7.8"], "История": ["M 4.2 6.8 C 5.4 4.5 7.6 3 10 3 C 13.9 3 17 6.1 17 10 C 17 13.9 13.9 17 10 17 C 6.6 17 3.8 14.6 3.2 11.4", "M 3.2 3.6 L 4.2 6.8 L 7.4 6", "M 10 6.5 L 10 10 L 12.5 11.5"], "Флаг": ["M 5 18 L 5 3", "M 5 3.5 L 15 3.5 L 12.5 7 L 15 10.5 L 5 10.5"]};
+const ic = (name, size) => `<svg class="i" viewBox="0 0 20 20" width="${size||20}" height="${size||20}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name].map(d => `<path d="${d}"/>`).join('')}</svg>`;
+// иконка по имени из набора; иначе — текст (экранированный): модуль не может вставить разметку
+const icn = (v, size) => ICON[v] ? ic(v, size) : esc(v);
+
 const state = { arrive: 9*60, mode:'hurry', sel:null, modules:{}, view:'home', history:[], timeMode:'depart', depart:NOW,
   dest:null, templates:[], recents:[], visits:{}, declined:{} };   // первый запуск: ни шаблонов, ни истории
 // Места поиска. Маршруты в прототипе есть только до м. Бауманская.
 const PLACES = {
-  baum: { name:'м.\u00a0Бауманская', sub:'Арбатско-Покровская линия', km:'8 км', ico:'Ⓜ', ok:true },
-  baumst: { name:'Бауманская улица', sub:'Басманный район', km:'8 км', ico:'📍' },
-  mgtu: { name:'МГТУ им. Баумана', sub:'2-я Бауманская ул., 5', km:'8,6 км', ico:'🏛' } };
+  baum: { name:'м.\u00a0Бауманская', sub:'Арбатско-Покровская линия', km:'8 км', ico:'Метро', ok:true },
+  baumst: { name:'Бауманская улица', sub:'Басманный район', km:'8 км', ico:'Пин' },
+  mgtu: { name:'МГТУ им. Баумана', sub:'2-я Бауманская ул., 5', km:'8,6 км', ico:'Здание' } };
 
 /* ===== КОНТЕКСТ ПОЕЗДКИ =====
    Одно время для всего: каждый модуль (способ передвижения или подсказки) готовит свои данные на время T.
@@ -366,7 +385,7 @@ const SHAPE = {
   banners:   x => x && x.title ? { icon: String(x.icon || '•'), title: String(x.title), text: String(x.text || '') } : null,
   stepHints: x => x && x.text ? { icon: String(x.icon || '•'), text: String(x.text), warn: !!x.warn } : null,
   cardPills: x => typeof x === 'string' && x ? x : null,
-  pois:      x => x && x.n && Array.isArray(x.at) && x.at.length === 2 && x.at.every(Number.isFinite) ? { e: String(x.e || '📍'), n: String(x.n), d: String(x.d || ''), at: x.at, extra: String(x.extra || '') } : null };
+  pois:      x => x && x.n && Array.isArray(x.at) && x.at.length === 2 && x.at.every(Number.isFinite) ? { e: String(x.e || 'Пин'), n: String(x.n), d: String(x.d || ''), at: x.at, extra: String(x.extra || '') } : null };
 const LIMIT = { banners: 2, stepHints: 2, cardPills: 2, pois: 6 };   // модули не могут завалить экран
 function collect(hook, ...args){ const out = [];
   for(const m of activeModules()) if(typeof m[hook] === 'function'){
@@ -406,23 +425,23 @@ registerModule((() => {
   const cap = t => t[0].toUpperCase() + t.slice(1);
   const common = { verb:'Выходи', riskWord:'есть риск', varyWord:'бывает дольше', delayWhy:'если поезд задержится', tail:TAIL };
   const options = {
-    metro: Object.assign({ name:'Метро', ico:'Ⓜ', bg:'#E3EBFD', fg:'#2E6FE6', price:'≈ 70 ₽', purpose:'go', order:1,
+    metro: Object.assign({ name:'Метро', ico:'Метро', bg:'#E3EBFD', fg:'#2E6FE6', price:'≈ 70 ₽', purpose:'go', order:1,
       detail: stops(5) + ' без пересадок',
       legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы, ближе к дому', tip:'Вход №3'},
            {type:'wait', kind:'Подожди', model:'board', station:'Первомайская', at:ENTRY3, lo:1, hi:4, label:'Вход, платформа и поезд', lm:''},
            {type:'metro', model:'ride', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'В сторону центра. Перед выходом — вибрация'},
            {type:'wait', kind:'Подъём', model:'exit', station:'Бауманская', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'', tip:'Ты на месте'} ] }, common),
     // «Погулять рядом»: метро + прогулка — нужен и модуль «Пешком»
-    stroll: Object.assign({ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', purpose:'walk', order:2, requires:['walk'], cta:'Начать прогулку',
+    stroll: Object.assign({ name:'Метро + прогулка у Яузы', ico:'Лист', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', purpose:'walk', order:2, requires:['walk'], cta:'Начать прогулку',
       detail:'метро + 2,5 км пешком',
-      pois:[            {e:'🌊', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
-           {e:'⛪', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
+      pois:[            {e:'Лист', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
+           {e:'Здание', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
       legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы', tip:'Вход №3'},
            {type:'wait', kind:'Подожди', model:'board', station:'Первомайская', at:ENTRY3, lo:1, hi:4, label:'Вход, платформа и поезд', lm:''},
            {type:'metro', model:'ride', stations:LINE3.slice(0,5), lo:9, hi:11, label:'Метро до Электрозаводской · ' + stops(4), lm:'Выходи на Электрозаводской — дальше пешком'},
            {type:'wait', kind:'Подъём', model:'exit', station:'Электрозаводская', at:[37.70386,55.78161], lo:2, hi:3, label:'Подъём в город', lm:''},
            {type:'walk', geom:'strollWalk', lo:29, hi:36, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Ты на месте'} ] }, common, { delayWhy:'если задержишься' }) };
-  return { id:'metro', group:'mode', icon:'Ⓜ', name:'Метро', desc:'Сколько ждать поезд и спускаться к платформе', where:'способы, маршрут, ведение', on:true,
+  return { id:'metro', group:'mode', icon:'Метро', name:'Метро', desc:'Сколько ждать поезд и спускаться к платформе', where:'способы, маршрут, ведение', on:true,
     options,
     context(T){ return { period: period(T).key }; },   // смена периода (пик, день, ночь) — пересчёт
     prepare(T){
@@ -443,30 +462,30 @@ registerModule((() => {
         } } } };
 })());
 // ---- Пешком
-registerModule({ id:'walk', group:'mode', icon:'🚶', name:'Пешком', desc:'Пешие маршруты и прогулки', where:'способы, «Погулять рядом»', on:true,
+registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешком', desc:'Пешие маршруты и прогулки', where:'способы, «Погулять рядом»', on:true,
   options: {
-    walk: { name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0], purpose:'go', order:4, verb:'Выходи', delayWhy:'если задержишься',
+    walk: { name:'Пешком', ico:'Пешком', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0], purpose:'go', order:4, verb:'Выходи', delayWhy:'если задержишься',
       detail:'≈ 10 км',
       legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
-    loop: { name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true, purpose:'walk', order:1, verb:'Выходи', cta:'Начать прогулку',
+    loop: { name:'Просто погулять', ico:'Лист', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true, purpose:'walk', order:1, verb:'Выходи', cta:'Начать прогулку',
       detail:'кольцо вдоль Измайловского лесопарка',
-      pois:[ {e:'🌳', n:'Опушка леса', d:'тихий участок', at:[37.8115,55.78878], extra:'по пути'},
-             {e:'🪑', n:'Скамейки', d:'можно передохнуть', at:[37.82262,55.78883], extra:'по пути'} ],
+      pois:[ {e:'Лист', n:'Опушка леса', d:'тихий участок', at:[37.8115,55.78878], extra:'по пути'},
+             {e:'Пин', n:'Скамейки', d:'можно передохнуть', at:[37.82262,55.78883], extra:'по пути'} ],
       legs:[ {type:'walk', geom:'loop', lo:30, hi:38, label:'Кольцо 2,6 км и обратно домой', lm:'Можно сократить в любой момент', tip:'Почти дома'} ] } } });
 // ---- Такси и каршеринг: время за рулём — из общих данных о пробках (TRAFFIC)
 function carPrepare(o){ return T => { const t = TRAFFIC[trafficAt(T)]; o.tail = t.tail;
   for(const l of o.legs) if(l.type === 'car'){ l.lo = t.lo; l.hi = t.hi; l.lm = t.lm; l.warn = t.warn; } }; }
-registerModule((() => { const o = { name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.10,5,15], purpose:'go', order:2,
-    verb:'Вызывай', cta:'Вызвать такси', riskWord:'риск из-за пробок', varyWord:'зависит от пробок', delayWhy:'в пробку', legIco:'🚕',
+registerModule((() => { const o = { name:'Такси', ico:'Такси', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.10,5,15], purpose:'go', order:2,
+    verb:'Вызывай', cta:'Вызвать такси', riskWord:'риск из-за пробок', varyWord:'зависит от пробок', delayWhy:'в пробку', legIco:'Такси',
     startToast:'Такси вызвано · подача ~5 мин',
     confirm:{ crumb:'Вызов такси', title:'Вызвать такси?', rows:[['Тариф','Эконом'],['Цена','≈ 650 ₽'],['Подача','3–9 мин']], note:'Оформим в приложении такси — точная цена там. В прототипе это имитация.', btn:'Вызвать' },
     detail:'подача 3–9 мин',
     legs:[ {type:'wait', kind:'Подача', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
            {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'', tip:'Ты на месте'} ] };
-  return { id:'taxi', group:'mode', icon:'🚕', name:'Такси', desc:'Подача и поездка с учётом пробок', where:'способы, подтверждение перед вызовом', on:true,
+  return { id:'taxi', group:'mode', icon:'Такси', name:'Такси', desc:'Подача и поездка с учётом пробок', where:'способы, подтверждение перед вызовом', on:true,
     options:{ taxi:o }, context(T){ return { traffic: trafficAt(T) }; }, prepare: carPrepare(o) }; })());
-registerModule((() => { const o = { name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500 ₽', tail:[0.10,5,15], purpose:'go', order:3,
-    verb:'Выходи', cta:'Забронировать машину', riskWord:'риск из-за пробок', varyWord:'зависит от пробок', delayWhy:'в пробку', legIco:'🚗',
+registerModule((() => { const o = { name:'Каршеринг', ico:'Каршеринг', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500 ₽', tail:[0.10,5,15], purpose:'go', order:3,
+    verb:'Выходи', cta:'Забронировать машину', riskWord:'риск из-за пробок', varyWord:'зависит от пробок', delayWhy:'в пробку', legIco:'Каршеринг',
     startToast:'Машина забронирована · 20 мин бесплатно',
     confirm:{ crumb:'Бронь машины', title:'Забронировать машину?', rows:[['Машина','ближайшая, 360 м'],['Цена','≈ 300–500 ₽'],['Бесплатное ожидание','20 мин']], note:'Оформим в приложении каршеринга — точная цена там. В прототипе это имитация.', btn:'Забронировать' },
     detail:'машина в 360 м',
@@ -474,14 +493,14 @@ registerModule((() => { const o = { name:'Каршеринг', ico:'🚗', bg:'#
            {type:'wait', kind:'Подготовка', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
            {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:''},
            {type:'wait', kind:'Парковка', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', warn:true, tip:'Ты на месте'} ] };
-  return { id:'carshare', group:'mode', icon:'🚗', name:'Каршеринг', desc:'Ближайшая машина, поездка с учётом пробок', where:'способы, подтверждение перед бронью', on:true,
+  return { id:'carshare', group:'mode', icon:'Каршеринг', name:'Каршеринг', desc:'Ближайшая машина, поездка с учётом пробок', where:'способы, подтверждение перед бронью', on:true,
     options:{ carshare:o }, context(T){ return { traffic: trafficAt(T) }; }, prepare: carPrepare(o) }; })());
 
 /* ---------- Подсказки ---------- */
 // ---- Вагон для выхода. Данные — data/metro-cars.json (часть поезда, а не номер вагона; пока расчёт по карте).
 // Есть запись — подсказка; нет записи — модуль молчит. Работает только с метро.
 registerModule({
-  id:'cars', requires:['metro'], icon:'🚃', name:'Вагон для выхода', desc:'В какой части поезда садиться, чтобы выход был рядом', where:'в шагах метро', on:true,
+  id:'cars', requires:['metro'], icon:'Вагон', name:'Вагон для выхода', desc:'В какой части поезда садиться, чтобы выход был рядом', where:'в шагах метро', on:true,
   // station, line, direction, action, via, part — как в data/metro-cars.json (выдержка для прототипа)
   records:[
     { station:'Первомайская', direction:'в центр', action:'вход', via:'вход №3', part:'голова' },
@@ -498,28 +517,28 @@ registerModule({
     const at = { 'голова':'у головы поезда', 'середина':'в середине', 'хвост':'в хвосте поезда' }[r.part];
     const on = exit.replace(/ая$/, 'ой');   // Бауманская → на Бауманской
     const enter = this.find(l.stations[0], dir, 'вход');
-    return [{ icon:'🚃', text:`Садись в ${where}: на ${on} выход ${at}` + (enter && enter.part === r.part ? `. ${enter.via[0].toUpperCase() + enter.via.slice(1)} — там же, идти недалеко` : '') }];
+    return [{ icon:'Вагон', text:`Садись в ${where}: на ${on} выход ${at}` + (enter && enter.part === r.part ? `. ${enter.via[0].toUpperCase() + enter.via.slice(1)} — там же, идти недалеко` : '') }];
   }
 });
 // ---- Погода в пути. В приложении данные — из погодного сервиса; в прототипе: дождь сегодня 8:40–13:00
 registerModule({
-  id:'weather', icon:'☔', name:'Погода в пути', desc:'Дождь и гололёд — в прогнозе и подсказках', where:'на экране способов и в прогнозе пешком', on:true,
+  id:'weather', icon:'Дождь', name:'Погода в пути', desc:'Дождь и гололёд — в прогнозе и подсказках', where:'на экране способов и в прогнозе пешком', on:true,
   data:{ rain:[8*60+40, 13*60] },
   context(T){ const [a, b] = this.data.rain; return { rain: T + 25 > a && T - 12 < b, from:a }; },   // поездка ~[T−12; T+25] задевает дождь
   legFactor(l, f){ return f.rain && l.type==='walk' ? 1.06 : 1; },                                       // пешком на 6% дольше
-  banners(f){ return f.rain && isOn('walk') ? [{ icon:'☔', title:'Дождь с ' + fmt(f.from), text:'пешком чуть дольше, это уже в прогнозе' }] : []; },
+  banners(f){ return f.rain && isOn('walk') ? [{ icon:'Дождь', title:'Дождь с ' + fmt(f.from), text:'пешком чуть дольше, это уже в прогнозе' }] : []; },
   cardPills(k, f){ return f.rain && k==='walk' ? ['нужен зонт'] : []; }
 });
 // ---- Загруженность вагонов. В приложении — данные о загрузке поездов; в прототипе: утром в 8:30–8:50 полные
 registerModule({
-  id:'crowd', requires:['metro'], icon:'👥', name:'Загруженность вагонов', desc:'Когда в поездах свободнее', where:'в шаге метро', on:true,
-  stepHints(l, t){ return l.type==='metro' && t >= 8*60+25 && t < 8*60+55 ? [{ icon:'👥', text:'в 8:30–8:50 вагоны полные — в первые вагоны свободнее не будет' }] : []; }
+  id:'crowd', requires:['metro'], icon:'Толпа', name:'Загруженность вагонов', desc:'Когда в поездах свободнее', where:'в шаге метро', on:true,
+  stepHints(l, t){ return l.type==='metro' && t >= 8*60+25 && t < 8*60+55 ? [{ icon:'Толпа', text:'в 8:30–8:50 вагоны полные — в первые вагоны свободнее не будет' }] : []; }
 });
 // ---- Кофе по пути. В приложении — кофейни из поиска мест; в прототипе — две точки
 registerModule({
-  id:'coffee', requires:['walk'], icon:'☕', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'«По пути» на маршруте прогулки', on:false,
-  places:{ stroll:[{e:'☕', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'}],
-           loop:[{e:'☕', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'}] },
+  id:'coffee', requires:['walk'], icon:'Кофе', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'«По пути» на маршруте прогулки', on:false,
+  places:{ stroll:[{e:'Кофе', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'}],
+           loop:[{e:'Кофе', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'}] },
   pois(k){ return this.places[k] || []; }
 });
 
@@ -601,7 +620,7 @@ const ARR_CHIPS = [8*60+30, 9*60, 9*60+30, 10*60], DEP_CHIPS = [NOW, 8*60+30, 8*
 function timeBtn(){
   const arr = arriveMode();
   const label = arr ? 'Прибыть к ' + fmtD(state.arrive) : (state.depart===NOW ? (state.mode==='walk' ? 'Выйти сейчас' : 'Выехать сейчас') : 'Выехать в ' + fmtD(state.depart));
-  return `<button class="when tbtn-like ${arr || state.depart!==NOW ? 'on' : ''} press" aria-label="Изменить время: ${label}" onclick="go('time')"><span aria-hidden="true">🕘</span>${label} <span aria-hidden="true">▾</span></button>`;
+  return `<button class="when tbtn-like ${arr || state.depart!==NOW ? 'on' : ''} press" aria-label="Изменить время: ${label}" onclick="go('time')">${ic('Часы', 18)}${label} <span aria-hidden="true">▾</span></button>`;
 }
 function modsLink(){ return `<button class="mlink" onclick="go('modules')">Модули</button>`; }
 const destName = () => state.mode==='walk' ? 'Погулять рядом' : state.dest ? PLACES[state.dest].name : '';
@@ -620,16 +639,16 @@ function tplTime(t){   // «выйди до 8:23» для шаблона — с�
 }
 V.home = () => {
   if(!state.templates.length && !state.recents.length) return `<h1 class="sr" tabindex="-1">Куда едем?</h1>`;
-  const T = state.templates.map((t,i) => `<button class="lrow press${t.reverse ? ' muted' : ''}" onclick="useTemplate(${i})"><div class="ico" aria-hidden="true">${t.name==='Работа'?'💼':t.reverse?'🏠':'⭐'}</div>
+  const T = state.templates.map((t,i) => `<button class="lrow press${t.reverse ? ' muted' : ''}" onclick="useTemplate(${i})"><div class="ico" aria-hidden="true">${ic(t.name==='Работа'?'Работа':t.reverse?'Дом':'Звезда')}</div>
       <div class="tx"><b>${t.name}</b><div class="m">${t.reverse ? PLACES[t.dest].name + ' → сюда · строится позже' : 'Отсюда → ' + PLACES[t.dest].name}${t.arrive!=null ? ' · к ' + fmt(t.arrive) : ''}</div></div>
       <div class="r">${t.reverse ? '' : tplTime(t)}</div></button>`).join('');
-  const R = state.recents.map(k => `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">🕘</div><div class="tx"><b>${PLACES[k].name}</b><div class="m">${PLACES[k].sub}</div></div></button>`).join('');
+  const R = state.recents.map(k => `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">${ic('История')}</div><div class="tx"><b>${PLACES[k].name}</b><div class="m">${PLACES[k].sub}</div></div></button>`).join('');
   return `<h1 class="sr" tabindex="-1">Куда едем?</h1>
     ${T ? `<div class="sec">Мои маршруты</div>${T}` : ''}${R ? `<div class="sec">Недавние</div>${R}` : ''}`;
 };
 /* ----- Поиск: ввод ----- */
 V.find = () => `<h1 class="sr" tabindex="-1">Поиск места</h1>
-  <div class="row" style="margin-top:2px"><button class="back-btn" aria-label="Назад" onclick="back()">←</button>
+  <div class="row" style="margin-top:2px"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button>
     <input id="q" class="q" type="search" placeholder="Куда?" autocomplete="off" aria-label="Куда едем" value="${esc(state.q)}" oninput="state.q=this.value;findList()"></div>
   <div id="res" aria-live="polite" style="margin-top:12px">${findHtml()}</div>`;
 function findHtml(){
@@ -639,7 +658,7 @@ function findHtml(){
   return `<div class="m" style="margin:12px 4px">Ничего не нашлось. В прототипе есть маршруты до м.&nbsp;Бауманская — попробуй «Бауман»</div>`;
 }
 function placeRow(k){ const p = PLACES[k];
-  return `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">${p.ico}</div><div class="tx"><b>${p.name}</b><div class="m">${p.sub} · ${p.km}</div></div></button>`; }
+  return `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">${icn(p.ico)}</div><div class="tx"><b>${p.name}</b><div class="m">${p.sub} · ${p.km}</div></div></button>`; }
 function findList(){ const r = document.getElementById('res'); if(r) r.innerHTML = glue(findHtml()); }
 /* ----- Место: шторка с коротким «как добраться» ----- */
 V.place = () => {
@@ -660,8 +679,8 @@ V.compare = () => {
     late = `<div class="banner late" role="alert"><b>К ${fmtD(state.arrive)} уже не успеть</b><br>Быстрее всего — ${OPTIONS[fk].name.toLowerCase()}, будешь около ${fmt(NOW+f.mid)}
       <div class="row" style="flex-wrap:wrap;margin-top:10px"><button class="chip press" onclick="setTime(${nextT})">Показать к ${fmt(nextT)}</button><button class="chip press" onclick="pick('${fk}')">Самый быстрый</button><button class="chip press" onclick="lateMsg('${fk}')">Предупредить, что опоздаю</button></div></div>`;
   }
-  const w = collect('banners').map((b,i) => `<div class="hint"><span aria-hidden="true">${esc(b.icon)}</span> <span><b>${esc(b.title)}</b>${b.text ? ' — ' + esc(b.text) : ''}</span>${i===0 ? modsLink() : ''}</div>`).join('');
-  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">${destName()}</h1></div>
+  const w = collect('banners').map((b,i) => `<div class="hint"><span aria-hidden="true">${icn(b.icon)}</span> <span><b>${esc(b.title)}</b>${b.text ? ' — ' + esc(b.text) : ''}</span>${i===0 ? modsLink() : ''}</div>`).join('');
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">${destName()}</h1></div>
   <div class="tripbar"><span class="from"><i aria-hidden="true"></i>Отсюда</span>${timeBtn()}</div>
   ${late}
   ${keys.length ? keys.map(k=>card(k, k===best && !allLate)).join('') : `<div class="offer"><div class="t">Нет включённых способов</div><div class="m" style="margin:4px 0 10px">${walkMode ? 'Для прогулок нужен модуль «Пешком»' : 'Включи хотя бы один способ передвижения'}</div>${walkMode ? `<button class="chip on press" onclick="toggleMod('walk')">Включить «Пешком»</button>` : `<button class="chip on press" onclick="go('modules')">Модули</button>`}</div>`}
@@ -691,13 +710,13 @@ function card(k, isBest){
   if(!v.never && !v.closed) collect('cardPills', k).forEach(t => pills.push(`<span class="pill">${esc(t)}</span>`));
   const compact = arr && v.never;
   if(v.closed) return `<div class="card late" data-k="${k}" aria-disabled="true">
-    <div class="top"><div class="ico" aria-hidden="true">${o.ico}</div>
+    <div class="top"><div class="ico" aria-hidden="true">${icn(o.ico)}</div>
       <div style="flex:1;min-width:0"><div class="t">${o.name}</div><div class="m">${o.detail}</div></div>
       <div class="right">${right}</div></div>
     <div class="win">${pills.join('')}</div></div>`;   // закрытый способ — не открывается
   return `<button class="card press ${compact?'late':''}" data-k="${k}" onclick="pick('${k}')">
     ${isBest ? '<div class="best">Лучше всего</div>' : ''}
-    <div class="top"><div class="ico" aria-hidden="true">${o.ico}</div>
+    <div class="top"><div class="ico" aria-hidden="true">${icn(o.ico)}</div>
       <div style="flex:1;min-width:0"><div class="t">${o.name}</div><div class="m">${o.detail}${o.noTarget?'':' · ' + o.price}</div></div>
       <div class="right">${right}</div></div>
     <div class="win">${pills.join('')}</div></button>`;
@@ -711,7 +730,7 @@ function lateMsg(k){ const f = forecast(k), late = NOW + f.mid - state.arrive;
 V.time = () => {
   const dr = state.draft, arr = dr.mode==='arrive', cur = dr.t;
   const H = Array.from({length:24},(_,i)=>i), M = Array.from({length:12},(_,i)=>i*5);
-  return `<div class="row"><button class="back-btn" aria-label="Назад без изменений" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Когда?</h1></div>
+  return `<div class="row"><button class="back-btn" aria-label="Назад без изменений" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Когда?</h1></div>
    ${state.mode!=='hurry' ? '' : `<div class="seg sm" role="group" aria-label="Что выбираем" style="margin-top:10px">
       <button aria-pressed="${arr}" class="${arr?'on':''}" onclick="setTimeMode('arrive')">Прибыть к</button>
       <button aria-pressed="${!arr}" class="${!arr?'on':''}" onclick="setTimeMode('depart')">Выйти в</button></div>`}
@@ -780,11 +799,11 @@ V.route = () => {
   const k = state.sel, o = OPTIONS[k], f = forecast(k), v = verdict(k), arr = arriveMode() && !o.noTarget;
   const start = arr ? (v.plan==='until' ? v.L : NOW) : dep();
   let t = start;
-  const icon = l => l.type==='walk' ? '🚶' : l.type==='metro' ? 'Ⓜ' : l.type==='wait' ? '⏱' : o.legIco || '🚗';
+  const icon = l => ic(l.type==='walk' ? 'Пешком' : l.type==='metro' ? 'Метро' : l.type==='wait' ? (l.model==='exit' ? 'Эскалатор' : 'Песочные часы') : ICON[o.legIco] ? o.legIco : 'Машина', 16);
   const steps = o.legs.map((l,i) => { const mid = legMin(k,i); const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" aria-hidden="true" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
-     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div> ${collect('stepHints', legView(k, l), t).map(h => `<div class="lm${h.warn?' w':''}"><span aria-hidden="true">${esc(h.icon)}</span> ${esc(h.text)}</div>`).join('')}${l.lm?`<div class="lm${l.warn?' w':''}"><span aria-hidden="true">${l.warn?'⚠️':'📍'}</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
+     <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div> ${collect('stepHints', legView(k, l), t).map(h => `<div class="lm${h.warn?' w':''}"><span aria-hidden="true">${icn(h.icon, 16)}</span> ${esc(h.text)}</div>`).join('')}${l.lm?`<div class="lm${l.warn?' w':''}"><span aria-hidden="true">${ic(l.warn?'Внимание':'Пин', 16)}</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
   const vp = visiblePois(k);
-  const pois = vp.length ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${vp.map((p,i)=>`<button class="poi press" onclick="flyPoi(${i})"><div class="e" aria-hidden="true">${esc(p.e)}</div><b>${esc(p.n)}</b><span>${esc(p.d)}${p.extra ? ' · ' + esc(p.extra) : ''}</span></button>`).join('')}</div>` : '';
+  const pois = vp.length ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${vp.map((p,i)=>`<button class="poi press" onclick="flyPoi(${i})"><div class="e" aria-hidden="true">${icn(p.e, 22)}</div><b>${esc(p.n)}</b><span>${esc(p.d)}${p.extra ? ' · ' + esc(p.extra) : ''}</span></button>`).join('')}</div>` : '';
   let head;
   if(v.closed){ const c = o.closedInfo || {}; head = `<h1 tabindex="-1">${c.head || o.name + ' сейчас не работает'}</h1><div class="sub">${c.sub || ''}</div>`; }
   else if(o.noTarget) head = `<h1 tabindex="-1">${o.name}</h1><div class="sub">~${f.mid} мин · ${o.price} · можно сократить в любой момент</div>`;
@@ -802,8 +821,8 @@ V.route = () => {
   const goBtn = far
     ? `<button class="btn p press" id="remindBtn" onclick="remind(${remindAt})">Напомнить в ${fmtD(remindAt)}</button><button class="btn w press" id="goBtn" style="margin-top:8px" onclick="startTrip(true)">Демо: проиграть поездку</button>`
     : `<button class="btn ${arr && v.never ? 'w' : 'p'} press" id="goBtn" onclick="${o.confirm ? "go('confirm')" : 'startTrip()'}">${cta}</button>`;
-  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">Маршрут с ориентирами</div></div>
-    ${head}${!o.noTarget && state.dest && !isSaved() && !v.closed ? `<div><button class="savebtn" onclick="go('save')">☆ Сохранить маршрут</button></div>` : ''}${v.closed ? closedAlt(k) : `<div class="steps">${steps}</div>${pois}`}
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><div class="m">Маршрут с ориентирами</div></div>
+    ${head}${!o.noTarget && state.dest && !isSaved() && !v.closed ? `<div><button class="savebtn" onclick="go('save')">${ic('Звезда', 18)} Сохранить маршрут</button></div>` : ''}${v.closed ? closedAlt(k) : `<div class="steps">${steps}</div>${pois}`}
     ${v.closed ? '' : `<div class="gobar">${goBtn}</div>`}`;
 };
 // Способ сейчас не работает — сразу предложить работающие
@@ -818,7 +837,7 @@ function visiblePois(k){ return (OPTIONS[k].pois||[]).concat(collect('pois', k))
 // Подтверждение перед платным действием
 V.confirm = () => {
   const o = OPTIONS[state.sel], c = o && o.confirm; if(!o){ lostMode(); return V.compare(); } if(!c){ state.view = 'route'; return V.route(); }
-  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">${c.crumb}</div></div>
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><div class="m">${c.crumb}</div></div>
    <h1 tabindex="-1">${c.title}</h1>
    <div class="card" style="cursor:default">
      ${c.rows.map((r,i)=>`<div class="row" style="justify-content:space-between${i?';margin-top:8px':''}"><span class="m">${r[0]}</span><b>${r[1]}</b></div>`).join('')}
@@ -830,10 +849,10 @@ V.confirm = () => {
 function modCard(m){ const on = !!state.modules[m.id];
   const need = (m.requires || []).filter(id => !isOn(id)).map(id => (MODULES.find(x=>x.id===id) || {name:id}).name);
   return `<button class="card" role="switch" aria-checked="${on}" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)" style="display:flex;align-items:center;gap:12px;${on && !need.length?'':'box-shadow:none;background:#FBFAF7'}">
-      <div class="ico" aria-hidden="true">${esc(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div>
+      <div class="ico" aria-hidden="true">${icn(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div>
       <div class="m" style="font-size:12px">${on && need.length ? 'Не работает без: ' + need.map(esc).join(', ') : 'Где: ' + esc(m.where)}</div></div>
       <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>`; }
-V.modules = () => `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
+V.modules = () => `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
    <div class="sub" style="margin-top:6px">Всё, кроме поиска и маршрута, — модули. Включай только нужное.</div>
    <div class="sec">Способы передвижения</div>${MODULES.filter(m=>m.group==='mode').map(modCard).join('')}
    <div class="sec">Подсказки</div>${MODULES.filter(m=>m.group!=='mode').map(modCard).join('')}
@@ -845,7 +864,8 @@ V.done = () => {
   const chips = o.noTarget ? ['Было приятно','Слишком долго','Хочу другой маршрут'] : ['Всё по плану','Была задержка','Сложно найти'];
   // Предложить сохранить: путь похож на рутинный (задано «к …» или второй раз сюда), ещё не сохранён и не отказывались
   const offer = !o.noTarget && state.dest && !isSaved() && !state.declined[state.dest] && (hurry || (state.visits[state.dest]||0) >= 2);
-  return `<h1 tabindex="-1">${o.noTarget ? 'Прогулка позади' : 'Ты на месте в ' + fmt(at)}</h1>
+  return `<div class="done-art" aria-hidden="true"><i class="c1"></i><i class="c2"></i><i class="c3"></i><div class="flag">${ic(o.noTarget ? 'Лист' : 'Флаг', 28)}</div></div>
+   <h1 tabindex="-1">${o.noTarget ? 'Прогулка позади' : 'Ты на месте в ' + fmt(at)}</h1>
    <div class="sub">${sub}</div>
    ${offer ? `<div class="offer"><div class="t">Ездишь сюда регулярно?</div><div class="m" style="margin:4px 0 10px">Сохрани маршрут — в следующий раз он будет в одно касание</div>
      <div class="row"><button class="chip on press" onclick="go('save')">Сохранить</button><button class="chip press" onclick="state.declined[state.dest]=1;render()">Не сейчас</button></div></div>` : ''}
@@ -856,14 +876,14 @@ V.done = () => {
 
 /* ----- Сохранение маршрута ----- */
 V.save = () => {
-  if(!OPTIONS[state.sel]) return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Сохранить маршрут</h1></div>
+  if(!OPTIONS[state.sel]) return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Сохранить маршрут</h1></div>
    <div class="sub" style="margin-top:6px">Сначала выбери способ — сохраним маршрут вместе с ним</div>`;
   if(state.justSaved) return `<h1 tabindex="-1">Сохранено: ${state.justSaved}</h1>
     <div class="sub">Найдёшь его под поиском — в одно касание</div>
     <div class="offer"><div class="t">Добавить обратный путь?</div><div class="m" style="margin:4px 0 10px">${PLACES[state.dest].name} → сюда</div>
     <div class="row"><button class="chip on press" onclick="saveReverse(true)">Добавить</button><button class="chip press" onclick="saveReverse(false)">Не нужно</button></div></div>`;
   const arr = arriveMode(), nm = state.saveName || null;   // название выбирает человек
-  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Сохранить маршрут</h1></div>
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Сохранить маршрут</h1></div>
    <div class="sub" style="margin-top:6px">Отсюда → ${PLACES[state.dest].name}</div>
    <div class="sec">Как назвать</div>
    <div class="chips" style="flex-wrap:wrap">${['Работа','Учёба','Спорт'].map(n=>`<button class="chip press ${nm===n?'sel':''}" aria-pressed="${nm===n}" onclick="state.saveName='${n}';render()">${n}</button>`).join('')}
@@ -912,9 +932,9 @@ function renderTop(){
   document.getElementById('attrib').classList.toggle('low', v==='home');
   if(!show) return;
   const label = v==='place' && state.dest ? `<b>${PLACES[state.dest].name}</b>` : `<span class="ph">Куда?</span>`;
-  tb.innerHTML = `<button class="search press" onclick="go('find')" aria-label="Поиск: куда едем"><span aria-hidden="true">🔍</span>${label}</button>
-    <button class="round press" aria-label="Модули" onclick="go('modules')">⚙︎</button>
-    ${v==='home' && walkKeys().length ? `<div class="brk"></div><button class="wchip press" onclick="walkNearby()"><span aria-hidden="true">🚶</span>Погулять рядом</button>` : ''}`;
+  tb.innerHTML = `<button class="search press" onclick="go('find')" aria-label="Поиск: куда едем">${ic('Поиск')}${label}</button>
+    <button class="round press" aria-label="Модули" onclick="go('modules')">${ic('Шестерёнка', 22)}</button>
+    ${v==='home' && walkKeys().length ? `<div class="brk"></div><button class="wchip press" onclick="walkNearby()">${ic('Пешком', 18)}Погулять рядом</button>` : ''}`;
 }
 const glue = h => h.replace(/(\d) (мин|ч|₽|км|м)(?=[\s<.,·)]|$)/g, '$1&nbsp;$2').replace(/≈ /g, '≈&nbsp;');
 // Короткая блокировка кликов после смены экрана: второй тап двойного клика не попадает в новую кнопку
@@ -1054,9 +1074,9 @@ function showRoute(k){
     map.getSource('r-walk').setData(fc('walk')); map.getSource('r-metro').setData(fc('metro')); map.getSource('r-car').setData(fc('car'));
     clearMarkers();
     addMarker(pinEl('Дом','dark'), HOME);
-    if(!o.noTarget) addMarker(pinEl('Ⓜ Бауманская','m3'), DEST);
+    if(!o.noTarget) addMarker(pinEl('М Бауманская','m3'), DEST);
     routeLegs.filter(x=>x.l.type==='metro').forEach(x=>x.l.stations.slice(1,-1).forEach(s=>{ const d=document.createElement('div'); d.className='st-dot'; addMarker(d, ST[s], 'center'); }));
-    visiblePois(k).forEach(p=>addMarker(pinEl(p.e+' '+p.n,'poi-pin'), p.at));
+    visiblePois(k).forEach(p=>addMarker(pinEl(p.n,'poi-pin'), p.at));
   });
   return routeReady;
 }
@@ -1064,7 +1084,7 @@ function showRoute(k){
 function clearRoute(){ showRoute.t = (showRoute.t||0)+1; routeKey = null; if(!mapOk) return;
   const e = {type:'FeatureCollection',features:[]}; ['r-walk','r-metro','r-car'].forEach(id=>map.getSource(id).setData(e)); clearMarkers(); }
 function showHome(){ clearRoute(); if(!mapOk) return; addMarker(pinEl('Ты здесь','dark'), HOME); map.flyTo({center:HOME, zoom:13.6, pitch:0, bearing:0, duration:reduced?0:800}); }
-function showPlace(){ clearRoute(); if(!mapOk) return; addMarker(pinEl('Ты здесь','dark'), HOME); addMarker(pinEl('Ⓜ Бауманская','m3'), DEST);
+function showPlace(){ clearRoute(); if(!mapOk) return; addMarker(pinEl('Ты здесь','dark'), HOME); addMarker(pinEl('М Бауманская','m3'), DEST);
   map.fitBounds(new maplibregl.LngLatBounds(HOME, HOME).extend(DEST), {padding:{top:120,left:50,right:50,bottom:300}, pitch:0, bearing:0, duration:reduced?0:800}); }
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fitAll(){
@@ -1073,7 +1093,7 @@ function fitAll(){
   const b = pts.reduce((b,p)=>b.extend(p), new maplibregl.LngLatBounds(pts[0],pts[0]));
   map.fitBounds(b, {padding:{top:120,left:40,right:40,bottom:(snapY||phone.clientHeight*0.56)+20}, pitch:0, bearing:0, duration:reduced?0:800, maxZoom:15.5});
 }
-function flyPoi(i){ const p = visiblePois(state.sel)[i]; snap('peek'); if(mapOk) map.flyTo({center:p.at, zoom:16, pitch:45, duration:reduced?0:900}); toast(p.e+' '+p.n+' · '+p.extra); }
+function flyPoi(i){ const p = visiblePois(state.sel)[i]; snap('peek'); if(mapOk) map.flyTo({center:p.at, zoom:16, pitch:45, duration:reduced?0:900}); toast(p.n + (p.extra ? ' · ' + p.extra : '')); }
 
 function brand(){
   const layers = map.getStyle().layers;
@@ -1180,7 +1200,7 @@ async function startTrip(demo){
   trip.raf = requestAnimationFrame(tick);
 }
 const KIND = { walk:'Пешком', car:'В пути', metro:'Метро' };
-const modHints = li => (trip.hints && trip.hints[li] || []).map(h => `<div class="lmk"><span aria-hidden="true">${esc(h.icon)}</span> ${esc(h.text)}</div>`).join('');
+const modHints = li => (trip.hints && trip.hints[li] || []).map(h => `<div class="lmk"><span aria-hidden="true">${icn(h.icon, 16)}</span> ${esc(h.text)}</div>`).join('');
 function update(dt){
   const o = trip.o; let acc=0, li=0;
   for(; li<o.legs.length-1; li++){ const m = trip.legs[li]; if(trip.t < acc+m) break; acc+=m; }
@@ -1196,11 +1216,11 @@ function update(dt){
       if(!reduced){ phone.classList.add('shake'); setTimeout(()=>phone.classList.remove('shake'),500); } say('Следующая — ' + lastSt + ', выходи'); }
     alert = rest<=1;
     html = `<div class="k">Метро · следующая ${next}</div><div class="h">${rest<=1 ? 'Следующая — ' + lastSt + ', выходи' : 'Выходить через ' + stops(rest)}</div>
-      <div class="stations" aria-hidden="true">${Array.from({length:n},(_,i)=>`<i class="${i<passed?'f':''}"></i>`).join('')}</div>${l.lm?`<div class="lmk"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}${modHints(li)}`;
+      <div class="stations" aria-hidden="true">${Array.from({length:n},(_,i)=>`<i class="${i<passed?'f':''}"></i>`).join('')}</div>${l.lm?`<div class="lmk"><span aria-hidden="true">${ic(l.warn?'Внимание':'Пин', 16)}</span> ${l.lm}</div>`:''}${modHints(li)}`;
   } else {
     const mleft = Math.max(1, Math.ceil(lm*(1-f)));
     const kind = l.kind || KIND[l.type] || 'Шаг';
-    html = `<div class="k">${kind} · ${mleft}&nbsp;мин</div><div class="h">${l.label}</div>${l.lm?`<div class="lmk"><span aria-hidden="true">📍</span> ${l.lm}</div>`:''}${modHints(li)}`;
+    html = `<div class="k">${kind} · ${mleft}&nbsp;мин</div><div class="h">${l.label}</div>${l.lm?`<div class="lmk"><span aria-hidden="true">${ic(l.warn?'Внимание':'Пин', 16)}</span> ${l.lm}</div>`:''}${modHints(li)}`;
   }
   if(html !== trip.lastHtml){ const g = document.getElementById('gtop'); g.className = 'gtop' + (alert?' alert':''); g.innerHTML = html; trip.lastHtml = html; }
   if(trip.lastLeg!==li){ trip.lastLeg=li; say(l.label);

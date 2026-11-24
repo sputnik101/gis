@@ -916,11 +916,11 @@ async function s2() {
 async function a3() {
   const s = phoneAt('А3 · Место (шторка)', 0, 1); miniMap(s, { dest: true }); await status(s);
   await searchField(s, 40, 'м.\u00a0Бауманская', true);
-  const sh = sheetAt(s, 520, 'Шторка: место');
+  const sh = sheetAt(s, 600, 'Шторка: место');
   await TX(sh, 'м.\u00a0Бауманская', 'title', 'ink', { fill: true });
   await TX(sh, 'Арбатско-Покровская линия · 8 км отсюда', 'cap', 'mute', { fill: true });
-  await quickModes(sh);
-  const b = await buttons(sh, 'Маршрут', 'Сохранить');
+  // проверка 5: без чипов способов и без «Сохранить» — только место и «Маршрут»
+  const b = await buttons(sh, 'Маршрут');
   return { s, go: b.a };
 }
 async function a4() {
