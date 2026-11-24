@@ -475,9 +475,8 @@ function placeRow(k){ const p = PLACES[k];
 function findList(){ const r = document.getElementById('res'); if(r) r.innerHTML = glue(findHtml()); }
 /* ----- Место: шторка с коротким «как добраться» ----- */
 V.place = () => {
-  const p = PLACES[state.dest], q = k => forecast(k).mid;
-  return `<h1 tabindex="-1">${p.name}</h1><div class="sub" style="margin-bottom:0">${p.sub} · ${p.km} отсюда</div>
-   <div class="quick"><span>Ⓜ ${dur(q('metro'))}</span><span>🚕 ${dur(q('taxi'))}</span><span>🚶 ${dur(q('walk'))}</span></div>
+  const p = PLACES[state.dest];   // только место и решение «едем?» — способы со временем на следующем шаге
+  return `<h1 tabindex="-1">${p.name}</h1><div class="sub" style="margin-bottom:16px">${p.sub} · ${p.km} отсюда</div>
    <div class="btns"><button class="btn p press" onclick="go('compare')">Маршрут</button>${isSaved() ? '' : `<button class="btn w press" onclick="go('save')">Сохранить</button>`}</div>`;
 };
 /* ----- Способы: та же шторка раскрыта ----- */
