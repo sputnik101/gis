@@ -139,6 +139,39 @@ test('без «Пешком» нет подсказки о дожде и чип�
   toggleMod('walk'); restart(); const chip = !!document.querySelector('.wchip'); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render();
   const rain = document.body.innerText.includes('Дождь'); toggleMod('walk'); return (!chip && !rain) || JSON.stringify({chip, rain});
 }));
+// ---------- калибровка «Мой темп» ----------
+const tripDone = async (p, k) => { await p.evaluate(k => { restart(); openPlace('baum'); go('compare'); pick(k); return startTrip(true); }, k); await p.waitForTimeout(300);
+  await p.evaluate(() => { trip.t = trip.total; }); await p.waitForTimeout(1200); };
+test('после первой поездки — «Как ты обычно ходишь?»; «Быстро» ускоряет пешие шаги', async p => {
+  const before = await p.evaluate(() => { openPlace('baum'); go('compare'); return forecast('walk').mid; });
+  await tripDone(p, 'metro');
+  return p.evaluate(before => { const q = document.body.innerText.includes('Как ты обычно ходишь?');
+    document.querySelector('[data-c=fast]').click(); const res = document.body.innerText.includes('Учёл');
+    const after = forecast('walk').mid; return (q && res && after < before) || JSON.stringify({q, res, before, after}); }, before);
+});
+test('дальше — «Что-то задержало?»: несколько причин, «Всё как обычно» исключает остальные', async p => {
+  await tripDone(p, 'metro'); await p.evaluate(() => document.querySelector('[data-c=usual]').click());
+  await tripDone(p, 'metro');
+  return p.evaluate(() => { const q = document.body.innerText.includes('Что-то задержало?');
+    document.querySelector('[data-c=wait]').click(); document.querySelector('[data-c=escal]').click();
+    const two = state.modAns.pace.sel.length === 2; document.querySelector('[data-c=ok]').click(); const only = state.modAns.pace.sel.join() === 'ok';
+    document.querySelector('[data-c=ok]').click(); document.querySelector('[data-c=wait]').click();
+    const m0 = forecast('metro').mid; sendAns('pace'); const m1 = forecast('metro').mid;
+    return (q && two && only && m1 > m0) || JSON.stringify({q, two, only, m0, m1}); });
+});
+test('«Мой темп» выключен — вопроса нет, прогноз общий; настройки и сброс работают', async p => {
+  await tripDone(p, 'metro'); await p.evaluate(() => document.querySelector('[data-c=slow]').click());
+  return p.evaluate(() => { openPlace('baum'); go('compare'); const tuned = forecast('walk').mid;
+    toggleMod('pace'); const plain = forecast('walk').mid; toggleMod('pace');
+    go('modules'); openModSet('pace'); const set = document.body.innerText.includes('Пешком') && document.body.innerText.includes('+15%');
+    resetMod('pace'); const reset = forecast('walk').mid === plain;
+    return (tuned > plain && set && reset) || JSON.stringify({tuned, plain, set, reset}); });
+});
+test('модуль с ошибкой «после поездки» не ломает экран «Ты на месте»', async p => {
+  await p.evaluate(() => registerModule({ id:'badq', icon:'?', name:'Плохой вопрос', desc:'', where:'', on:true, afterTrip(){ throw new Error('x'); } }));
+  await tripDone(p, 'taxi');
+  return p.evaluate(() => (state.view==='done' && document.body.innerText.includes('Ты на месте')) || 'view ' + state.view);
+});
 // ---------- навигация ----------
 test('место → поиск → место: на экране место', async p => p.evaluate(() => {
   restart(); openPlace('baum'); go('find'); openPlace('baum');

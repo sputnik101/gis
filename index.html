@@ -112,7 +112,7 @@ svg.i{display:block;flex:none}
 .done-art .c1{left:64px;top:6px;background:#ECEBFB}.done-art .c2{left:78px;top:30px;width:7px;height:7px;background:#FFB27A}.done-art .c3{left:62px;top:46px;width:6px;height:6px;background:#6C6CF0}
 .search svg.i,.wchip svg.i,.savebtn svg.i,.tripbar svg.i{display:inline-block;vertical-align:middle}
 .savebtn{display:inline-flex;align-items:center;gap:6px}
-.lm svg.i,.lmk svg.i{display:inline-block;vertical-align:-3px}
+.lm svg.i,.lmk svg.i,.m svg.i{display:inline-block;vertical-align:-3px}
 .st .dot svg.i{color:var(--ink)}.st.metro .dot svg.i{color:#fff}
 .poi .e{color:#4B4BC8}
 .round svg.i{color:var(--ink)}
@@ -248,7 +248,7 @@ const ic = (name, size) => `<svg class="i" viewBox="0 0 20 20" width="${size||20
 const icn = (v, size) => ICON[v] ? ic(v, size) : esc(v);
 
 const state = { arrive: 9*60, mode:'hurry', sel:null, modules:{}, view:'home', history:[], timeMode:'depart', depart:NOW,
-  dest:null, templates:[], recents:[], visits:{}, declined:{} };   // первый запуск: ни шаблонов, ни истории
+  dest:null, templates:[], recents:[], visits:{}, declined:{}, modAns:{} };   // первый запуск: ни шаблонов, ни истории
 // Места поиска. Маршруты в прототипе есть только до м. Бауманская.
 const PLACES = {
   baum: { name:'м.\u00a0Бауманская', sub:'Арбатско-Покровская линия', km:'8 км', ico:'Метро', ok:true },
@@ -356,6 +356,10 @@ const goKeys = () => keysFor('go'), walkKeys = () => keysFor('walk');
    3. Способы:    banners(f)             → [{icon, title, text}] — подсказки на экране способов
                   cardPills(k, f)        → ['текст'] — пилюли в карточке способа k
    4. Карта:      pois(k, f)             → [{e, n, d, at, extra}] — точки «По пути» и метки на карте
+   5. После поездки: afterTrip(info, f)  → {title, text, choices:[{id, label, only}], multi} — вопрос на «Ты на месте»
+                  answer(ids, info, f)   → {title, lines:[…], foot} — что модуль учёл (показывается вместо вопроса)
+   Настройки:     settings(f)            → {rows:[[название, значение]], note, reset} — экран модуля из «Модулей»
+   Хранилище:     this.store.get() / set(v) / clear() — своё у каждого модуля, только на этом телефоне
    leg — копия шага: type, label, station (вход/выход метро), stations (поездка), k (способ: metro, taxi…).
    f — факты этого модуля из context() (или {}), всегда последний аргумент.
    Шлюз: ответы проверяются, текст экранируется, лишнее отбрасывается; модуль с ошибкой отключается до конца сеанса.
@@ -363,8 +367,15 @@ const goKeys = () => keysFor('go'), walkKeys = () => keysFor('walk');
 const MODULES = [];
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Регистрация: тот же id — замена, а не второй экземпляр
+// Своё хранилище у модуля: только на этом телефоне (localStorage), ключ «gis.mod.<id>»
+const STORE_MEM = {};
+function storeFor(id){ const key = 'gis.mod.' + id;
+  return { get(){ try{ const v = localStorage.getItem(key); if(v) return JSON.parse(v); }catch(e){} return STORE_MEM[key] ? JSON.parse(STORE_MEM[key]) : null; },
+           set(v){ const t = JSON.stringify(v); STORE_MEM[key] = t; try{ localStorage.setItem(key, t); }catch(e){} },
+           clear(){ delete STORE_MEM[key]; try{ localStorage.removeItem(key); }catch(e){} } }; }
 function registerModule(m){
   if(!m || !/^[a-z][a-z0-9_-]*$/.test(m.id || '')){ console.warn('модуль без корректного id — пропущен'); return; }
+  if(!m.store) m.store = storeFor(m.id);
   const i = MODULES.findIndex(x => x.id === m.id); if(i >= 0) MODULES[i] = m; else MODULES.push(m);
   if(!(m.id in state.modules)) state.modules[m.id] = !!m.on;
   refreshModules(); }
@@ -519,6 +530,37 @@ registerModule({
     const enter = this.find(l.stations[0], dir, 'вход');
     return [{ icon:'Вагон', text:`Садись в ${where}: на ${on} выход ${at}` + (enter && enter.part === r.part ? `. ${enter.via[0].toUpperCase() + enter.via.slice(1)} — там же, идти недалеко` : '') }];
   }
+});
+// ---- Мой темп (калибровка): после поездки — один короткий вопрос; ответы подстраивают прогноз под человека.
+// Первая поездка — «Как ты обычно ходишь?», дальше — «Что-то задержало?». Всё хранится только на телефоне.
+registerModule({
+  id:'pace', icon:'Пешком', name:'Мой темп', desc:'Прогноз подстраивается под тебя по ответам после поездок', where:'после поездки, во всех прогнозах', on:true,
+  data(){ return Object.assign({ asked:false, n:0, walkK:1, boardK:1, exitK:1 }, this.store.get() || {}); },
+  legFactor(l){ const d = this.data(); return l.type==='walk' ? d.walkK : l.model==='board' ? d.boardK : l.model==='exit' ? d.exitK : 1; },
+  cardPills(k){ const d = this.data(), o = OPTIONS[k]; if(!o || (d.walkK===1 && d.boardK===1 && d.exitK===1)) return [];
+    return o.legs.some(l => l.type==='walk' || l.model) ? ['по твоему темпу'] : []; },
+  afterTrip(info){ const d = this.data(); if(info.noTarget) return null;
+    if(!d.asked) return { title:'Как ты обычно ходишь?', text:'Один вопрос — и пешие отрезки станут точнее', multi:false,
+      choices:[{ id:'slow', label:'Не спеша' }, { id:'usual', label:'Как все' }, { id:'fast', label:'Быстро' }] };
+    const ch = [];
+    if(info.types.includes('walk')) ch.push({ id:'walk', label:'Долго шёл' });
+    if(info.types.includes('board')) ch.push({ id:'wait', label:'Ждал поезд' }, { id:'full', label:'Не влез в вагон' });
+    if(info.types.includes('exit')) ch.push({ id:'escal', label:'Очередь на эскалатор' });
+    ch.push({ id:'ok', label:'Всё как обычно', only:true });
+    return { title:'Что-то задержало?', text:'Отметь, если было — прогноз станет точнее', multi:true, choices:ch }; },
+  answer(ids){ const d = this.data(), lines = [], pct = k => Math.round(Math.abs(k-1)*100);
+    if(!d.asked){ d.walkK = ids.includes('slow') ? 1.15 : ids.includes('fast') ? 0.88 : 1; d.asked = true;
+      lines.push(d.walkK===1 ? 'Пешком — как у всех' : 'Пешком — на ' + pct(d.walkK) + '% ' + (d.walkK>1 ? 'дольше' : 'быстрее')); }
+    else { d.n++;
+      if(ids.includes('ok')){ for(const k of ['walkK','boardK','exitK']) d[k] = Math.round((d[k] + (1 - d[k]) * 0.2) * 100) / 100; lines.push('Прогноз оставляю — он совпал с поездкой'); }
+      if(ids.includes('walk')){ d.walkK = Math.min(1.4, Math.round(d.walkK * 1.05 * 100) / 100); lines.push('Пешком закладываю чуть больше времени'); }
+      if(ids.includes('wait') || ids.includes('full')){ d.boardK = Math.min(2, Math.round(d.boardK * 1.15 * 100) / 100); lines.push('Ожидание поезда — с запасом'); }
+      if(ids.includes('escal')){ d.exitK = Math.min(2, Math.round(d.exitK * 1.2 * 100) / 100); lines.push('Подъём из метро — с запасом на очередь'); } }
+    this.store.set(d);
+    return { title:'Учёл — прогноз точнее', lines, foot: d.n ? 'Учтено поездок: ' + d.n : 'Дальше спрошу коротко после поездок' }; },
+  settings(){ const d = this.data(), f = k => k===1 ? 'как в прогнозе' : (k>1 ? '+' : '−') + Math.round(Math.abs(k-1)*100) + '%';
+    return { rows:[['Пешком', f(d.walkK)], ['Ожидание поезда', f(d.boardK)], ['Подъём из метро', f(d.exitK)], ['Учтено поездок', String(d.n)]],
+      note:'Данные — только на этом телефоне. Выключишь модуль — прогноз станет общим, данные останутся.', reset:true }; }
 });
 // ---- Погода в пути. В приложении данные — из погодного сервиса; в прототипе: дождь сегодня 8:40–13:00
 registerModule({
@@ -851,7 +893,7 @@ function modCard(m){ const on = !!state.modules[m.id];
   return `<button class="card" role="switch" aria-checked="${on}" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)" style="display:flex;align-items:center;gap:12px;${on && !need.length?'':'box-shadow:none;background:#FBFAF7'}">
       <div class="ico" aria-hidden="true">${icn(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div>
       <div class="m" style="font-size:12px">${on && need.length ? 'Не работает без: ' + need.map(esc).join(', ') : 'Где: ' + esc(m.where)}</div></div>
-      <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>`; }
+      <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>${typeof m.settings === 'function' && on ? `<button class="mlink" style="margin:-6px 0 8px 4px" data-mod="${esc(m.id)}" onclick="openModSet(this.dataset.mod)">Подробнее: ${esc(m.name)} ›</button>` : ''}`; }
 V.modules = () => `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
    <div class="sub" style="margin-top:6px">Всё, кроме поиска и маршрута, — модули. Включай только нужное.</div>
    <div class="sec">Способы передвижения</div>${MODULES.filter(m=>m.group==='mode').map(modCard).join('')}
@@ -869,7 +911,8 @@ V.done = () => {
    <div class="sub">${sub}</div>
    ${offer ? `<div class="offer"><div class="t">Ездишь сюда регулярно?</div><div class="m" style="margin:4px 0 10px">Сохрани маршрут — в следующий раз он будет в одно касание</div>
      <div class="row"><button class="chip on press" onclick="go('save')">Сохранить</button><button class="chip press" onclick="state.declined[state.dest]=1;render()">Не сейчас</button></div></div>` : ''}
-   <div class="card" style="cursor:default"><div class="t">Как прошло?</div><div class="m" style="margin:4px 0 10px">Ответ уточнит прогноз для этого маршрута</div>
+   ${afterTripCards()}
+   <div hidden><div class="t">Как прошло?</div><div class="m" style="margin:4px 0 10px">Ответ уточнит прогноз для этого маршрута</div>
    <div class="row" style="flex-wrap:wrap">${chips.map(c=>`<button class="chip press" onclick="this.classList.add('sel');thanks()">${c}</button>`).join('')}</div></div>
    <button class="btn w press" onclick="restart()">Готово</button>`;
 };
@@ -924,7 +967,8 @@ function openPlace(k){
   go('place'); showPlace(); }
 function walkNearby(){ state.mode = 'walk'; state.dest = null; state.timeMode = 'depart'; state.depart = NOW; syncCtx(); state.sel = walkKeys()[0] || null;
   if(state.sel){ showRoute(state.sel); fitAll(); } go('compare'); }
-function resetDemo(){ Object.assign(state, { templates:[], recents:[], visits:{}, declined:{}, dest:null, saveName:null, q:'', justSaved:null, mode:'hurry', timeMode:'depart', depart:NOW, arrive:9*60, sel:null }); restart(); toast('Демо сброшено: первый запуск'); }
+function resetDemo(){ MODULES.forEach(m => m.store && m.store.clear());
+  Object.assign(state, { templates:[], recents:[], visits:{}, declined:{}, modAns:{}, dest:null, saveName:null, q:'', justSaved:null, mode:'hurry', timeMode:'depart', depart:NOW, arrive:9*60, sel:null }); restart(); toast('Демо сброшено: первый запуск'); }
 // Верхняя панель: поиск («Куда?» или выбранное место) и модули; на главном — «Погулять рядом»
 function renderTop(){
   const tb = document.getElementById('topbar'), v = state.view, show = (v==='home' || v==='place') && !trip.on;
@@ -971,6 +1015,39 @@ function pick(k){ state.sel = k; showRoute(k); go('route'); fitAll(); }
 function toggleMod(k){ state.modules[k] = !state.modules[k]; render(); say((state.modules[k]?'Включено':'Выключено'));
   if(routeKey) showRoute(state.sel); }   // точки модулей на карте
 function thanks(){ toast('Спасибо! Учту в прогнозе'); }
+/* После поездки: вопросы модулей (afterTrip) и их ответы (answer). Ядро только рисует и передаёт выбор. */
+const tripInfo = () => ({ k: trip.k, types: (trip.o ? trip.o.legs : []).map(l => l.model || l.type), total: trip.total, noTarget: !!(trip.o && trip.o.noTarget) });
+function afterTripCards(){
+  return activeModules().filter(m => typeof m.afterTrip === 'function').map(m => {
+    const a = state.modAns[m.id] || (state.modAns[m.id] = { sel:[] });
+    if(a.res) return `<div class="card" style="cursor:default"><div class="t">${esc(a.res.title)}</div>${(a.res.lines||[]).map(t => `<div class="m" style="margin-top:6px">${ic('Готово', 16)} ${esc(t)}</div>`).join('')}${a.res.foot ? `<div class="m" style="margin-top:8px;font-size:12px">${esc(a.res.foot)}</div>` : ''}</div>`;
+    const q = call(m, 'afterTrip', [tripInfo()]);
+    if(!q || typeof q.title !== 'string' || !Array.isArray(q.choices)) return '';
+    const ch = q.choices.filter(c => c && /^[a-z0-9_-]+$/.test(c.id || '') && typeof c.label === 'string').slice(0, 6);
+    return `<div class="card" style="cursor:default"><div class="t">${esc(q.title)}</div>${q.text ? `<div class="m" style="margin:4px 0 10px">${esc(q.text)}</div>` : ''}
+      <div class="row" style="flex-wrap:wrap">${ch.map(c => `<button class="chip press ${a.sel.includes(c.id)?'sel':''}" aria-pressed="${a.sel.includes(c.id)}" data-mod="${esc(m.id)}" data-c="${c.id}" data-only="${c.only?1:''}" data-multi="${q.multi?1:''}" onclick="pickAns(this)">${esc(c.label)}</button>`).join('')}</div>
+      ${q.multi ? `<button class="chip on press" style="margin-top:10px" ${a.sel.length ? '' : 'disabled aria-disabled="true"'} data-mod="${esc(m.id)}" onclick="sendAns(this.dataset.mod)">Отправить</button>` : ''}</div>`;
+  }).join('');
+}
+function pickAns(b){ const id = b.dataset.mod, c = b.dataset.c, a = state.modAns[id];
+  if(!b.dataset.multi){ a.sel = [c]; sendAns(id); return; }
+  if(b.dataset.only) a.sel = a.sel.includes(c) ? [] : [c];                  // «Всё как обычно» — исключает остальное
+  else { a.sel = a.sel.filter(x => x !== c && !document.querySelector(`[data-mod="${id}"][data-c="${x}"][data-only="1"]`)); if(!b.classList.contains('sel')) a.sel.push(c); }
+  render(); }
+function sendAns(id){ const m = MODULES.find(x => x.id === id), a = state.modAns[id]; if(!m || !a || !a.sel.length) return;
+  const r = call(m, 'answer', [a.sel.slice(), tripInfo()]);
+  a.res = r && typeof r.title === 'string' ? { title:r.title, lines:(Array.isArray(r.lines) ? r.lines : []).map(String).slice(0,4), foot: r.foot ? String(r.foot) : '' } : { title:'Спасибо', lines:[] };
+  refreshModules(); say(a.res.title); }
+/* Экран настроек модуля (settings) */
+V.modset = () => { const m = MODULES.find(x => x.id === state.modset), st = m && call(m, 'settings', []);
+  if(!st) return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Модуль</h1></div>`;
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">${esc(m.name)}</h1></div>
+   <div class="sub" style="margin-top:6px">${esc(m.desc)}</div>
+   <div class="card" style="cursor:default">${(st.rows||[]).slice(0,8).map((r,i) => `<div class="row" style="justify-content:space-between${i?';margin-top:8px':''}"><span class="m">${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}
+   ${st.note ? `<div class="m" style="margin-top:10px">${esc(st.note)}</div>` : ''}</div>
+   ${st.reset ? `<button class="btn w press" onclick="resetMod('${esc(m.id)}')">Сбросить и начать заново</button>` : ''}`; };
+function openModSet(id){ state.modset = id; go('modset'); }
+function resetMod(id){ const m = MODULES.find(x => x.id === id); if(m && m.store) m.store.clear(); refreshModules(); toast('Сброшено'); }
 function restart(){ state.view='home'; state.history=[]; state.mode='hurry'; state.timeMode='depart'; state.depart=NOW; render('back'); snapFor('home'); showHome(); }
 function say(t){ document.getElementById('live').textContent = t; }
 
@@ -1176,7 +1253,7 @@ async function startTrip(demo){
   if(routeKey !== k) await showRoute(k);
   if(state.sel !== k || state.view !== view0){ trip.on = false; render(); return; }   // ушёл с экрана — поездку не начинаем (и такси без подтверждения не вызываем)
   const o = JSON.parse(JSON.stringify(OPTIONS[k]));      // поездка идёт на своей копии: выключение модуля её не ломает
-  trip.k = k; trip.o = o;
+  trip.k = k; trip.o = o; state.modAns = {};
   if(!demo && o.startToast) toast(o.startToast);
   document.getElementById('topbar').classList.add('hide'); document.getElementById('topbar').inert = true;
   sheet.inert = true; snap('hidden'); document.getElementById('guide').classList.add('on');
