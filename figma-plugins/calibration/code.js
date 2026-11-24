@@ -932,7 +932,7 @@ async function k1v2() {
 }
 async function k2v2() {
   const s = phoneAt('K2 · Дальше: что-то задержало?', 1, 0); miniMap(s); await status(s);
-  const sh = sheetAt(s, 300, 'Шторка: ты на месте');
+  const sh = sheetAt(s, 110, 'Шторка: ты на месте');   // причин много — шторка выше, «Готово» не обрезается
   await doneHead(sh, '8:57', 'на 2 мин дольше прогноза — но к 9:00 успел');
   const c = card(sh, 'Вопрос модуля «Мой темп»');
   await TX(c, 'Что-то задержало?', 'bodyM', 'ink', { fill: true });
@@ -971,7 +971,7 @@ async function k4v2() {
 }
 async function k5v2() {
   const s = phoneAt('K5 · Маршрут по твоему темпу', 4, 0); miniMap(s, { dest: true, route: true }); await status(s);
-  const sh = sheetAt(s, 260, 'Шторка: маршрут');
+  const sh = sheetAt(s, 290, 'Шторка: маршрут');   // точка «ты здесь» (y≈250) видна целиком
   const head = ROW(sh, { name: 'Назад', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
   const back = AL(head, 'HORIZONTAL', { name: 'Назад', pad: 12, r: 14, bg: 'white', align: 'CENTER' }); back.appendChild(icoInst('Назад', 'ink'));
   await TX(head, 'Маршрут с ориентирами', 'cap', 'mute');
