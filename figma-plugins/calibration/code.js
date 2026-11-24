@@ -746,11 +746,6 @@ async function route(i, name, small, title, sub, pills, steps, cta) {
   const go = await pillC('Тёмная', cta); s.appendChild(go); go.resize(328, 44); go.x = 16; go.y = 800 - 24 - 44;
   return { s, go, back: h };
 }
-
-// ================= Калибровка «под тебя» (этап 2, п.3, 22.11) =================
-// Прогноз подстраивается под человека: темп ходьбы, путь от двери до платформы, запас на сборы.
-// Источники: замер поездки (что получилось на самом деле) + короткий вопрос «Как прошло?». Всё хранится только на телефоне.
-
 function card(parent, name, o) {
   const c = AL(parent, 'VERTICAL', Object.assign({ name, gap: 10, px: 16, py: 14, r: 16, bg: 'white', stroke: 'line', fill: true }, o || {}));
   return c;
@@ -772,149 +767,236 @@ function hcard(parent, name, o) {
 }
 function textCol(parent) { const t = AL(parent, 'VERTICAL', { name: 'Текст', gap: 2 }); t.layoutGrow = 1; t.clipsContent = false; return t; }
 // Переключатель вкл/выкл — простые фигуры
-function toggle(parent, on) {
-  const t = figma.createFrame(); t.name = 'Переключатель: ' + (on ? 'вкл' : 'выкл'); t.resize(44, 26); t.clipsContent = false; t.cornerRadius = 13; t.fills = [pv(on ? 'accent' : 'line')];
-  EL(t, on ? 31 : 13, 13, 10, 10, { fill: 'white', name: 'Ручка' });
-  parent.appendChild(t); t.layoutSizingHorizontal = 'FIXED'; t.layoutSizingVertical = 'FIXED'; return t;
+// Новые иконки (проверка 5, художник): 20×20, линия 1.75, скруглённые концы
+function gearPath(){ const pts = []; for(let i=0;i<6;i++){ const a = i*Math.PI/3 - Math.PI/2; const c = Math.cos(a), s = Math.sin(a);
+  pts.push(`M ${(10+5.6*c).toFixed(2)} ${(10+5.6*s).toFixed(2)} L ${(10+7.6*c).toFixed(2)} ${(10+7.6*s).toFixed(2)}`); } return pts; }
+Object.assign(ICONS, {
+  'Такси': ['M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z', 'M 3 10 L 17 10', circ(6.5, 14.5, 1.5), circ(13.5, 14.5, 1.5), 'M 8 5 L 8 2.8 L 12 2.8 L 12 5'],
+  'Каршеринг': ['M 3 14 L 3 11 L 5 7.5 C 5.3 6.9 5.9 6.5 6.6 6.5 L 13.4 6.5 C 14.1 6.5 14.7 6.9 15 7.5 L 17 11 L 17 14 Z', 'M 3 11 L 17 11', circ(6.5, 15.5, 1.3), circ(13.5, 15.5, 1.3), 'M 7.2 3.6 C 8.9 2.2 11.1 2.2 12.8 3.6'],
+  'Лист': ['M 4 16 C 4 8.5 8.5 4 16 4 C 16 11.5 11.5 16 4 16 Z', 'M 4 16 L 11.5 8.5'],
+  'Толпа': [circ(7, 6.2, 2.3), 'M 2.5 16 C 2.5 12.5 4.5 10.8 7 10.8 C 9.5 10.8 11.5 12.5 11.5 16', circ(13.6, 6.6, 2), 'M 12.6 11 C 15.4 10.7 17.5 12.3 17.5 15.5'],
+  'Вагон': [rrect(5, 2.5, 10, 12, 2.5), 'M 5 9 L 15 9', 'M 8 12 L 8.1 12', 'M 11.9 12 L 12 12', 'M 7.5 14.5 L 5.5 17.5', 'M 12.5 14.5 L 14.5 17.5'],
+  'Пин': ['M 10 18 C 10 18 4.5 12.2 4.5 8 C 4.5 5 7 2.5 10 2.5 C 13 2.5 15.5 5 15.5 8 C 15.5 12.2 10 18 10 18 Z', circ(10, 8, 2)],
+  'Звезда': ['M 10 2.8 L 12.2 7.4 L 17.2 8 L 13.5 11.4 L 14.5 16.4 L 10 13.9 L 5.5 16.4 L 6.5 11.4 L 2.8 8 L 7.8 7.4 Z'],
+  'Шестерёнка': [circ(10, 10, 5.6), circ(10, 10, 2.2)].concat(gearPath()),
+  'Песочные часы': ['M 5.5 3 L 14.5 3', 'M 5.5 17 L 14.5 17', 'M 7 3 C 7 7 13 7 13 10 C 13 13 7 13 7 17', 'M 13 3 C 13 7 7 7 7 10 C 7 13 13 13 13 17'],
+  'Эскалатор': ['M 2.5 16 L 6.5 16 L 13.5 5 L 17.5 5', 'M 8.5 7 L 8.5 7.1', 'M 6.5 10.5 L 11 10.5'],
+  'Готово': [circ(10, 10, 7), 'M 6.8 10.2 L 9 12.4 L 13.4 7.8'],
+  'История': ['M 4.2 6.8 C 5.4 4.5 7.6 3 10 3 C 13.9 3 17 6.1 17 10 C 17 13.9 13.9 17 10 17 C 6.6 17 3.8 14.6 3.2 11.4', 'M 3.2 3.6 L 4.2 6.8 L 7.4 6', 'M 10 6.5 L 10 10 L 12.5 11.5'],
+  'Флаг': ['M 5 18 L 5 3', 'M 5 3.5 L 15 3.5 L 12.5 7 L 15 10.5 L 5 10.5']
+});
+const COLW = 440, ROWH = 1000;
+function phoneAt(name, col, row) {
+  const s = figma.createFrame();
+  s.name = name; s.resize(360, 800); s.cornerRadius = 28; s.clipsContent = true; s.fills = [pv('bg')];
+  PG.appendChild(s); s.x = col * COLW; s.y = row * ROWH;
+  return s;
 }
-// Степпер «− 3 мин +»
-async function stepper(parent, val) {
-  const r = AL(parent, 'HORIZONTAL', { name: 'Степпер', gap: 0, r: 12, bg: 'lav', align: 'CENTER' });
-  for (const [txt, nm] of [['−', 'Меньше'], [val, 'Значение'], ['+', 'Больше']]) {
-    const b = AL(r, 'HORIZONTAL', { name: nm, px: nm === 'Значение' ? 6 : 12, py: 8, align: 'CENTER', justify: 'CENTER' });
-    await TX(b, txt, nm === 'Значение' ? 'bodyM' : 'big', nm === 'Значение' ? 'ink' : 'accent');
+// Карта-фон: дороги, река, «ты здесь»; опционально — точка назначения и линия маршрута
+const ME = [262, 250], DST = [92, 470];
+function miniMap(s, o) {
+  o = o || {};
+  const m = figma.createFrame(); m.name = 'Карта'; m.resize(360, 800); m.fills = []; m.clipsContent = true; s.appendChild(m); m.x = 0; m.y = 0;
+  for (const p of [[[0, 120], [360, 90]], [[0, 330], [360, 300]], [[0, 560], [360, 600]], [[60, 0], [40, 800]], [[200, 0], [230, 800]], [[320, 0], [300, 800]], [[0, 700], [360, 420]]])
+    L(m, p, 'lime', 3, { op: 0.28, name: 'Улица' });
+  L(m, [[0, 420], [140, 400], [250, 440], [360, 380]], 'river', 18, { op: 0.45, name: 'Река' });
+  if (o.route) {
+    L(m, [ME, [230, 300], [200, 360], [140, 420], DST], 'white', 9, { name: 'Маршрут: подложка' });
+    L(m, [ME, [230, 300], [200, 360], [140, 420], DST], 'accent', 5, { name: 'Маршрут' });
+  }
+  if (o.dest) {
+    EL(m, DST[0], DST[1], 14, 14, { fill: 'white', name: 'Место: подложка' });
+    EL(m, DST[0], DST[1], 9, 9, { fill: 'pink', name: 'Место' });
+  }
+  EL(m, ME[0], ME[1], 16, 16, { fill: 'white', op: 0.35, name: 'Ты здесь: ореол' });
+  EL(m, ME[0], ME[1], 8, 8, { fill: 'accent', stroke: 'white', sw: 3, name: 'Ты здесь' });
+  return m;
+}
+async function status(s, color) { await TX(s, '8:20', 'small', color || 'white', { x: 20, y: 10, name: 'Статус-бар' }); }
+// Плавающее поле поиска
+async function searchField(s, y, text, typed) {
+  // ROW — фиксированная ширина 328 (AL с w ужимался по содержимому и обрезал поле)
+  const row = ROW(s, { name: 'Поиск', gap: 8, w: 328, x: 16, y, align: 'CENTER' }); row.clipsContent = false;
+  const f = AL(row, 'HORIZONTAL', { name: 'Поле «Куда?»', gap: 10, px: 16, py: 12, r: 22, bg: 'white', align: 'CENTER' }); f.layoutGrow = 1;
+  await fx(f, 'ГИС/Уровень 1');
+  f.appendChild(icoInst('Поиск', typed ? 'ink' : 'mute'));
+  const t = await TX(f, text, 'body', typed ? 'ink' : 'mute'); t.layoutGrow = 1; t.textAutoResize = 'HEIGHT';
+  f.clipsContent = false;
+  const b = AL(row, 'HORIZONTAL', { name: 'Модули', pad: 12, r: 22, bg: 'white', align: 'CENTER' }); b.appendChild(icoInst('Шестерёнка', 'ink')); b.clipsContent = false;
+  await fx(b, 'ГИС/Уровень 1');
+  return { row, field: f };
+}
+// Чип «Погулять рядом» — белый, над картой виден
+async function walkChip(s, sf) {
+  const c = AL(s, 'HORIZONTAL', { name: 'Чип: погулять рядом', gap: 6, px: 14, py: 8, r: 18, bg: 'white', align: 'CENTER', x: 16, y: sf.row.y + sf.row.height + 12 });
+  c.clipsContent = false; await fx(c, 'ГИС/Уровень 1');
+  c.appendChild(icoInst('Пешком', 'accent')); await TX(c, 'Погулять рядом', 'cap', 'ink');
+  return c;
+}
+// Шторка снизу: от y до низа экрана
+function sheetAt(s, y, name) {
+  const sh = AL(s, 'VERTICAL', { name: name || 'Шторка', gap: 12, w: 360, px: 16, bg: 'soft', x: 0, y });
+  sh.paddingTop = 10; sh.paddingBottom = 24; sh.topLeftRadius = 24; sh.topRightRadius = 24;
+  sh.primaryAxisSizingMode = 'FIXED'; sh.resize(360, 800 - y); sh.clipsContent = true;
+  const hw = AL(sh, 'HORIZONTAL', { name: 'Ручка', justify: 'CENTER', fill: true });
+  const h = figma.createRectangle(); h.name = 'Ручка'; h.resize(40, 4); h.cornerRadius = 2; h.fills = [pv('dash')]; hw.appendChild(h);
+  return sh;
+}
+async function sectionTitle(parent, t) { return TX(parent, t, 'cap', 'mute', { fill: true, name: 'Раздел: ' + t }); }
+async function rowItem(parent, ic, title, sub, right, rightColor) {
+  const c = hcard(parent, title); c.paddingTop = c.paddingBottom = 12;
+  const ib = AL(c, 'HORIZONTAL', { name: 'Иконка', pad: 8, r: 12, bg: 'lav' }); ib.appendChild(icoInst(ic, 'accent'));
+  const tx = textCol(c);
+  await TX(tx, title, 'bodyM', 'ink', { fill: true }); if (sub) await TX(tx, sub, 'small', 'mute', { fill: true });
+  if (right) { const r = AL(c, 'VERTICAL', { name: 'Справа', gap: 0, align: 'MAX' });
+    for (const [i, line] of right.split('\n').entries()) await TX(r, line, i === 1 ? 'bodyM' : 'small', i === 1 ? (rightColor || 'accent') : 'mute'); }
+  return c;
+}
+// Строка «Откуда / время»
+async function tripBar(parent, timeText, timeOn) {
+  const r = ROW(parent, { name: 'Откуда и когда', gap: 8, align: 'CENTER' }); r.layoutSizingHorizontal = 'FILL';
+  // высота 40 и скругление 20 — как у остальных кнопок (пилюль)
+  const h40 = f => { f.counterAxisSizingMode = 'FIXED'; f.resize(f.width || 10, 40); f.counterAxisAlignItems = 'CENTER'; };
+  const from = AL(r, 'HORIZONTAL', { name: 'Откуда', gap: 8, px: 4, align: 'CENTER' }); from.layoutGrow = 1; h40(from);   // как в прототипе: текст, не поле
+  EL(from, 0, 0, 5, 5, { fill: 'accent', name: 'Точка' });
+  const ft = await TX(from, 'Отсюда', 'cap', 'ink'); ft.layoutGrow = 1;
+  const t = AL(r, 'HORIZONTAL', { name: 'Время', gap: 6, px: 14, r: 20, bg: timeOn ? 'accent' : 'lav', align: 'CENTER' }); h40(t);
+  t.appendChild(icoInst('Часы', timeOn ? 'white' : 'accent'));
+  await TX(t, timeText + ' ▾', 'cap', timeOn ? 'white' : 'lavT');
+  return { r, time: t };
+}
+// Короткая строка способов на карточке места
+async function quickModes(parent) {
+  const r = AL(parent, 'HORIZONTAL', { name: 'Как добраться: коротко', gap: 6, wrap: true }); r.layoutSizingHorizontal = 'FILL'; r.primaryAxisSizingMode = 'FIXED';
+  for (const [ic, t] of [['Метро', '33 мин'], ['Машина', 'такси 34 мин'], ['Пешком', '2 ч 11 мин']]) {
+    const c = AL(r, 'HORIZONTAL', { name: t, gap: 6, px: 10, py: 6, r: 12, bg: 'white', stroke: 'line', align: 'CENTER' });
+    c.appendChild(icoInst(ic, 'accent')); await TX(c, t, 'cap', 'ink');
   }
   return r;
 }
-// Чип-выбор: выбран — тёмный, нет — обычная пилюля
-async function chips(parent, list, on, name) {
-  const w = AL(parent, 'HORIZONTAL', { name: name || 'Варианты', gap: 8, wrap: true }); w.layoutSizingHorizontal = 'FILL'; w.primaryAxisSizingMode = 'FIXED';
+async function buttons(parent, main, second, mainIc) {
+  const r = ROW(parent, { name: 'Кнопки', gap: 8 }); r.layoutSizingHorizontal = 'FILL';
+  const a = await pillC('Тёмная', main); r.appendChild(a); a.layoutGrow = 1;
+  let b = null; if (second) { b = await pillC('Кнопка', second); r.appendChild(b); }
+  return { a, b };
+}
+// Карточки способов — компонент «Карточка варианта · v2»
+// проверка 5: иконки как в прототипе — такси и каршеринг свои, модули — шестерёнка
+D.taxi.ic = 'Такси'; D.carshare.ic = 'Каршеринг';
+const DEPART = [
+  C('metro', { top: 'будешь в', main: '8:53', bottom: 'самое позднее 8:57', v: 'Стабильно', best: true }),
+  C('taxi', { top: 'будешь в', main: '8:54', bottom: 'самое позднее 9:04', v: 'Зависит от пробок' }),
+  C('carshare', { top: 'будешь в', main: '9:02', bottom: 'самое позднее 9:12', v: 'Зависит от пробок' }),
+  C('walk', { top: 'будешь в', main: '10:31', bottom: 'самое позднее 10:37', v: 'Стабильно' })
+];
+const ARRIVE = [
+  C('metro', { top: 'выйди до', main: '8:23', bottom: 'ещё 3 мин', v: 'Надёжно', p2: ['n', 'в пути ~33 мин'], best: true }),
+  C('taxi', { top: 'вызывай', main: 'сейчас', bottom: 'будешь ~8:54', v: 'Риск из-за пробок', p2: ['n', 'в пробку — опоздаешь на 4 мин'] }),
+  C('carshare', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~9:02', v: 'Скорее опоздаешь' }),
+  C('walk', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~10:31', v: 'Не успеешь' })
+];
+async function modeCards(parent, list) { const made = []; for (const o of list) made.push(await card2(parent, o)); return made; }
+
+
+// ================= Калибровка «Мой темп» v2 (24.11) — как модуль в прототипе =================
+// Вопрос живёт на «Ты на месте»: после первой поездки — «Как ты обычно ходишь?», дальше — «Что-то задержало?».
+// Настройки — экран модуля из «Модулей». Маршрут — в шторке над картой, как в прототипе.
+async function doneHead(sh, time, sub) {
+  const art = AL(sh, 'HORIZONTAL', { name: 'Флажок', gap: 10, align: 'CENTER' });
+  const f = AL(art, 'HORIZONTAL', { name: 'Круг', pad: 14, r: 28, bg: 'limeP', align: 'CENTER', justify: 'CENTER' }); f.appendChild(icoInst('Флаг', 'limeT'));
+  for (const c of ['lav', 'orange', 'bg']) EL(art, 0, 0, 4, 4, { fill: c, name: 'Конфетти' });
+  await TX(sh, 'Ты на месте в ' + time, 'title', 'ink', { fill: true });
+  await TX(sh, sub, 'cap', 'mute', { fill: true });
+}
+async function choiceRow(parent, labels, sel) {
+  const w = AL(parent, 'HORIZONTAL', { name: 'Варианты', gap: 8, wrap: true }); w.layoutSizingHorizontal = 'FILL'; w.primaryAxisSizingMode = 'FIXED';
   const made = [];
-  for (const l of list) { const p = await pillC(on.includes(l) ? 'Активная' : 'Обычная', l); w.appendChild(p); made.push(p); }
+  for (const l of labels) {
+    const on = sel.includes(l);
+    const c = AL(w, 'HORIZONTAL', { name: l, px: 16, r: 22, bg: on ? 'limeP' : 'white', stroke: on ? null : 'line', align: 'CENTER' });
+    c.counterAxisSizingMode = 'FIXED'; c.resize(10, 44); c.primaryAxisSizingMode = 'AUTO';
+    await TX(c, l, on ? 'bodyM' : 'body', on ? 'limeT' : 'ink'); made.push(c);
+  }
   return made;
 }
-// Полоска «у других — у тебя»
-async function compareBar(parent, label, other, mine, max) {
-  const box = AL(parent, 'VERTICAL', { name: 'Сравнение: ' + label, gap: 6, fill: true });
-  await kv(box, label, mine + ' мин', { bColor: 'accent' });
-  for (const [who, v, col] of [['у других', other, 'line'], ['у тебя', mine, 'accent']]) {
-    const r = ROW(box, { name: who, gap: 8, align: 'CENTER' }); r.layoutSizingHorizontal = 'FILL';
-    const t = await TX(r, who, 'small', 'mute'); t.resize(64, t.height); t.textAutoResize = 'HEIGHT';
-    const bar = figma.createRectangle(); bar.name = 'Полоса'; bar.resize(Math.round(220 * v / max), 8); bar.cornerRadius = 4; bar.fills = [pv(col)]; r.appendChild(bar);
-    await TX(r, v + '', 'small', who === 'у тебя' ? 'accent' : 'mute');
+async function k1v2() {
+  const s = phoneAt('K1 · Первая поездка: как ты ходишь?', 0, 0); miniMap(s); await status(s);
+  const sh = sheetAt(s, 300, 'Шторка: ты на месте');
+  await doneHead(sh, '8:56', 'на 4 мин раньше, чем нужно');
+  const c = card(sh, 'Вопрос модуля «Мой темп»');
+  await TX(c, 'Как ты обычно ходишь?', 'bodyM', 'ink', { fill: true });
+  await TX(c, 'Один вопрос — и пешие отрезки станут точнее', 'cap', 'mute', { fill: true });
+  const ch = await choiceRow(c, ['Не спеша', 'Как все', 'Быстро'], []);
+  const b = await buttons(sh, 'Готово');
+  return { s, fast: ch[2] };
+}
+async function k2v2() {
+  const s = phoneAt('K2 · Дальше: что-то задержало?', 1, 0); miniMap(s); await status(s);
+  const sh = sheetAt(s, 300, 'Шторка: ты на месте');
+  await doneHead(sh, '8:57', 'на 2 мин дольше прогноза — но к 9:00 успел');
+  const c = card(sh, 'Вопрос модуля «Мой темп»');
+  await TX(c, 'Что-то задержало?', 'bodyM', 'ink', { fill: true });
+  await TX(c, 'Отметь, если было — прогноз станет точнее. «Всё как обычно» снимает остальные', 'cap', 'mute', { fill: true });
+  await choiceRow(c, ['Долго шёл', 'Ждал поезд', 'Не влез в вагон', 'Очередь на эскалатор', 'Всё как обычно'], ['Ждал поезд', 'Не влез в вагон']);
+  const send = await pillC('Тёмная', 'Отправить'); c.appendChild(send);
+  await buttons(sh, 'Готово');
+  return { s, send };
+}
+async function k3v2() {
+  const s = phoneAt('K3 · Учёл', 2, 0); miniMap(s); await status(s);
+  const sh = sheetAt(s, 300, 'Шторка: ты на месте');
+  await doneHead(sh, '8:57', 'на 2 мин дольше прогноза — но к 9:00 успел');
+  const c = card(sh, 'Ответ модуля «Мой темп»');
+  await TX(c, 'Учёл — прогноз точнее', 'bodyM', 'ink', { fill: true });
+  for (const t of ['Ожидание поезда — с запасом']) {
+    const r = ROW(c, { name: t, gap: 8, align: 'CENTER' }); r.layoutSizingHorizontal = 'FILL'; r.appendChild(icoInst('Готово', 'accent'));
+    const tt = await TX(r, t, 'cap', 'ink'); tt.layoutGrow = 1; tt.textAutoResize = 'HEIGHT';
   }
-  return box;
+  await TX(c, 'Учтено поездок: 6 · подробнее — в «Модули → Мой темп»', 'small', 'mute', { fill: true });
+  await buttons(sh, 'Готово');
+  return { s };
 }
-function bottomButtons(s, main, second) { return (async () => {
-  const box = AL(s, 'VERTICAL', { name: 'Кнопки', gap: 8, w: 328, x: 16, y: 0 });
-  const a = await pillC('Тёмная', main); box.appendChild(a); a.layoutSizingHorizontal = 'FILL';
-  let b = null; if (second) { b = await pillC('Кнопка', second); box.appendChild(b); b.layoutSizingHorizontal = 'FILL'; }
-  box.y = 800 - 24 - box.height;
-  return { a, b };
-})(); }
-
-// K1 — первый запуск: стартовая оценка темпа, пока нет поездок
-async function k1() {
-  const s = phone('K1 · Как ты обычно ходишь?', 0);
-  const h = await header(s, 'Настройка · 1 вопрос', 'Как ты обычно ходишь?', 'От этого зависят все пешие отрезки. Потом поправлю по твоим поездкам');
-  const list = AL(s, 'VERTICAL', { name: 'Темп', gap: 10, w: 360, px: 16, x: 0, y: h.height + 16 });
-  const opts = [['Не спеша', '≈ 4 км/ч · до метро ~14 мин'], ['Как все', '≈ 5 км/ч · до метро ~12 мин'], ['Быстро', '≈ 6 км/ч · до метро ~10 мин']];
-  const made = [];
-  for (let i = 0; i < opts.length; i++) {
-    const on = i === 1;
-    const c = hcard(list, 'Вариант: ' + opts[i][0], { bg: on ? 'lav' : 'white', stroke: on ? 'accent' : 'line' });
-    const ic = AL(c, 'HORIZONTAL', { name: 'Иконка', pad: 8, r: 12, bg: on ? 'white' : 'soft' }); ic.appendChild(icoInst('Пешком', 'accent'));
-    const tx = textCol(c);
-    await TX(tx, opts[i][0], 'bodyM', 'ink', { fill: true }); await TX(tx, opts[i][1], 'small', 'mute', { fill: true });
-    if (on) { const ok = AL(c, 'HORIZONTAL', { name: 'Выбрано', pad: 4, r: 12, bg: 'accent' }); ok.appendChild(icoInst('Галочка', 'white')); }
-    made.push(c);
-  }
-  await TX(list, 'Можно пропустить — тогда начну со «Как все».', 'small', 'mute', { fill: true });
-  const btn = await bottomButtons(s, 'Дальше', 'Пропустить');
-  return { s, next: btn.a, skip: btn.b };
+async function k4v2() {
+  const s = phoneAt('K4 · Модули → Мой темп', 3, 0); miniMap(s); await status(s);
+  const sh = sheetAt(s, 150, 'Шторка: Мой темп');
+  const head = ROW(sh, { name: 'Заголовок', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
+  const back = AL(head, 'HORIZONTAL', { name: 'Назад', pad: 12, r: 14, bg: 'white', align: 'CENTER' }); back.appendChild(icoInst('Назад', 'ink'));
+  const ht = await TX(head, 'Мой темп', 'big', 'ink'); ht.layoutGrow = 1;
+  await TX(sh, 'Прогноз подстраивается под тебя по ответам после поездок', 'cap', 'mute', { fill: true });
+  const c = card(sh, 'Что учтено');
+  for (const [a, v] of [['Пешком', '−12%'], ['Ожидание поезда', '+15%'], ['Подъём из метро', 'как в прогнозе'], ['Учтено поездок', '6']]) await kv(c, a, v);
+  await TX(c, 'Данные — только на этом телефоне. Выключишь модуль — прогноз станет общим, данные останутся.', 'small', 'mute', { fill: true });
+  const reset = await pillC('Кнопка', 'Сбросить и начать заново'); sh.appendChild(reset); reset.layoutSizingHorizontal = 'FILL';
+  return { s, back };
 }
-
-// K2 — конец поездки: сравнение с прогнозом и один вопрос
-async function k2() {
-  const s = phone('K2 · Ты на месте — как прошло?', 1);
-  const h = await header(s, 'Метро · м. Бауманская', 'Ты на месте · 8:55', 'Успел к 9:00 с запасом 5 мин');
-  const list = AL(s, 'VERTICAL', { name: 'Итог поездки', gap: 12, w: 360, px: 16, x: 0, y: h.height + 16 });
-  const c = card(list, 'Прогноз и факт'); await fx(c, 'ГИС/Карточка на светлом');
-  await kv(c, 'Дорога заняла', '35 мин', { bStyle: 'big' });
-  await kv(c, 'Прогноз был', '~33 мин');
-  const pr = AL(c, 'HORIZONTAL', { name: 'Итог', gap: 6 }); pr.appendChild(await pillC('Обычная', 'на 2 мин дольше обычного'));
-  await TX(list, 'Что-то задержало?', 'bodyM', 'ink', { fill: true });
-  await TX(list, 'Отметь, если было. Это займёт секунду — и прогноз станет точнее.', 'cap', 'mute', { fill: true });
-  const ch = await chips(list, ['Долго шёл до метро', 'Ждал поезд', 'Не влез в вагон', 'Очередь на эскалатор', 'Всё как обычно'], ['Не влез в вагон'], 'Причины');
-  await TX(list, 'Можно выбрать несколько', 'small', 'mute', { fill: true });
-  const btn = await bottomButtons(s, 'Готово', 'Пропустить');
-  return { s, done: btn.a, skip: btn.b };
-}
-
-// K3 — «Учту»: что поменялось в прогнозе
-async function k3() {
-  const s = phone('K3 · Учту', 2);
-  const h = await header(s, 'Спасибо', 'Учёл — прогноз точнее', 'По 6 поездкам. Чем больше поездок, тем точнее');
-  const list = AL(s, 'VERTICAL', { name: 'Изменения', gap: 12, w: 360, px: 16, x: 0, y: h.height + 16 });
-  const rows = [
-    ['Пешком', 'Пешком до Первомайской', '12 → 11 мин', 'ты ходишь чуть быстрее'],
-    ['Часы', 'В час пик', '+2 мин', 'в 8:30–8:50 часто не влезаешь в первый поезд'],
-    ['Вход', 'Подъём на Бауманской', '2 мин', 'как в прогнозе — не меняю']
+async function k5v2() {
+  const s = phoneAt('K5 · Маршрут по твоему темпу', 4, 0); miniMap(s, { dest: true, route: true }); await status(s);
+  const sh = sheetAt(s, 260, 'Шторка: маршрут');
+  const head = ROW(sh, { name: 'Назад', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
+  const back = AL(head, 'HORIZONTAL', { name: 'Назад', pad: 12, r: 14, bg: 'white', align: 'CENTER' }); back.appendChild(icoInst('Назад', 'ink'));
+  await TX(head, 'Маршрут с ориентирами', 'cap', 'mute');
+  await TX(sh, 'Выходи до 8:22', 'title', 'ink', { fill: true });
+  await TX(sh, 'Ещё 2 мин на сборы. В пути ~34 мин — будешь около 8:56, самое позднее 9:00', 'cap', 'mute', { fill: true });
+  const pr = AL(sh, 'HORIZONTAL', { name: 'Итог', gap: 6 });
+  for (const [cls, t] of [['g', 'надёжно'], ['n', 'по твоему темпу']]) { const p = AL(pr, 'HORIZONTAL', { name: 'Пилюля', px: 10, py: 4, r: 12, bg: PILLC[cls][0] }); await TX(p, t, 'small', PILLC[cls][1]); }
+  const steps = [
+    ['Пешком', 'Пешком до м. Первомайская', '8:22 · ~11 мин (у тебя обычно 9–12)', [['Пин', 'Вход №3 — на южной стороне улицы, ближе к дому', 0]]],
+    ['Песочные часы', 'Вход, платформа и поезд', '8:33 · ~5 мин (обычно 1–6)', [['Пин', 'Поезда в час пик — раз в 2 мин. Мелкая станция — по лестнице', 0], ['Толпа', 'В 8:30–8:50 вагоны полные', 0]]],
+    ['Метро', 'Метро до Бауманской · 5 остановок', '8:38 · ~16 мин (обычно 15–17)', [['Вагон', 'Садись в первые вагоны: на Бауманской выход у головы поезда', 0]]]
   ];
-  for (const [ic, a, b, why] of rows) {
-    const c = hcard(list, a); c.counterAxisAlignItems = 'MIN';
-    const ib = AL(c, 'HORIZONTAL', { name: 'Иконка', pad: 8, r: 12, bg: 'lav' }); ib.appendChild(icoInst(ic, 'accent'));
-    const tx = textCol(c);
-    const top = ROW(tx, { name: 'Строка', gap: 8, justify: 'SPACE_BETWEEN' }); top.layoutSizingHorizontal = 'FILL';
-    const ta = await TX(top, a, 'bodyM', 'ink'); ta.layoutGrow = 1; ta.textAutoResize = 'HEIGHT';
-    await TX(top, b, 'bodyM', 'accent');
-    await TX(tx, why, 'small', 'mute', { fill: true });
+  for (const [ic, t, m, chips] of steps) {
+    const row = ROW(sh, { name: t, gap: 12 }); row.layoutSizingHorizontal = 'FILL';
+    const dot = AL(row, 'HORIZONTAL', { name: 'Точка', pad: 6, r: 15, bg: ic === 'Метро' ? 'accent' : 'white', align: 'CENTER' }); dot.appendChild(icoInst(ic, ic === 'Метро' ? 'white' : 'ink'));
+    const col = AL(row, 'VERTICAL', { name: 'Текст', gap: 4 }); col.layoutGrow = 1;
+    await TX(col, t, 'bodyM', 'ink', { fill: true }); await TX(col, m, 'small', 'mute', { fill: true });
+    for (const [ci, ct, w] of chips) {
+      const ch = AL(col, 'HORIZONTAL', { name: 'Ориентир', gap: 6, px: 10, py: 6, r: 10, bg: w ? 'orange' : 'white', stroke: w ? null : 'line', align: 'CENTER' });
+      ch.appendChild(icoInst(ci, 'accent')); const tx = await TX(ch, ct, 'small', 'lavT');
+      if (ch.width > 260) { ch.primaryAxisSizingMode = 'FIXED'; ch.resize(260, ch.height); tx.layoutGrow = 1; tx.textAutoResize = 'HEIGHT'; }
+    }
   }
-  const note = AL(list, 'HORIZONTAL', { name: 'Итог', gap: 8, px: 12, py: 10, r: 14, bg: 'limeP', fill: true, align: 'CENTER' });
-  note.appendChild(icoInst('Галочка', 'limeT'));
-  const nt = await TX(note, 'К 9:00 теперь «выйди до 8:22» вместо 8:23', 'cap', 'limeT'); nt.layoutGrow = 1; nt.textAutoResize = 'HEIGHT';
-  const btn = await bottomButtons(s, 'Хорошо', 'Мой темп');
-  return { s, ok: btn.a, pace: btn.b };
-}
-
-// K4 — «Мой темп»: что приложение знает о тебе, и управление этим
-async function k4() {
-  const s = phone('K4 · Мой темп', 3);
-  const h = await header(s, '← Модули', 'Мой темп', 'Прогноз подстраивается под тебя. Данные — только на этом телефоне');
-  const list = AL(s, 'VERTICAL', { name: 'Темп', gap: 12, w: 360, px: 16, x: 0, y: h.height + 16 });
-  const on = hcard(list, 'Учитывать');
-  const ot = textCol(on);
-  await TX(ot, 'Учитывать мой темп', 'bodyM', 'ink', { fill: true }); await TX(ot, 'По 6 поездкам', 'small', 'mute', { fill: true });
-  const tg = toggle(on, true);
-  const walk = card(list, 'Пешком');
-  await TX(walk, 'Пешком', 'bodyM', 'ink');
-  await compareBar(walk, 'До метро Первомайская', 12, 11, 14);
-  await TX(walk, 'Ты ходишь на 8% быстрее среднего — ≈ 5,4 км/ч', 'small', 'mute', { fill: true });
-  const st = card(list, 'Станции');
-  await TX(st, 'Станции', 'bodyM', 'ink');
-  await kv(st, 'Первомайская: от двери до платформы', '1,5 мин');
-  await kv(st, 'Бауманская: подъём в город', '2 мин');
-  await kv(st, 'В час пик: первый поезд полный', 'часто', { bColor: 'orangeT' });
-  const pre = hcard(list, 'Сборы');
-  const pt = textCol(pre);
-  await TX(pt, 'Запас на сборы', 'bodyM', 'ink', { fill: true }); await TX(pt, 'Добавлю к «выйди до»', 'small', 'mute', { fill: true });
-  await stepper(pre, '3 мин');
-  const reset = AL(list, 'HORIZONTAL', { name: 'Сбросить', justify: 'CENTER', fill: true, py: 4 });
-  await TX(reset, 'Сбросить и начать заново', 'cap', 'accent');
-  scrollable(s, list);
-  return { s, back: h, toggle: tg };
-}
-
-// K5 — маршрут с учётом темпа: где видно, что прогноз «твой»
-async function k5() {
-  const r = await route(4, 'K5 · Маршрут: по твоему темпу', 'Метро · прибыть к 9:00', 'Выходи до 8:22', 'Ещё 2 мин на сборы. В пути ~34 мин — будешь около 8:56, самое позднее 9:00', [['g', 'надёжно'], ['n', 'по твоему темпу']], [
-    { c: 'dash', dash: true, t: 'Пешком до м. Первомайская', m: '8:22 · ~11 мин (у тебя обычно 9–12)', ic: 'Вход', l: 'Вход №3 — на южной стороне, ближе к дому' },
-    { c: 'bg', t: 'Вход, платформа и поезд', m: '8:33 · ~5 мин (обычно 1–6)', ic: 'Внимание', l: 'В 8:30–8:50 ты часто не влезаешь в первый поезд', w: true },
-    { c: 'bg', t: 'Метро до Бауманской · 5 остановок', m: '8:38 · ~16 мин (обычно 15–17)', ic: 'Колокол', l: 'В сторону центра. Перед выходом — вибрация' },
-    { c: 'dash', dash: true, t: 'Подъём в город', m: '8:54 · ~2 мин (обычно 2–4)', ic: 'Внимание', l: 'В час пик у эскалатора бывает очередь', w: true }
-  ], 'Поехали');
-  const tx = r.s.findOne(n => n.type === 'TEXT' && n.name === 'по твоему темпу'), pill = tx ? tx.parent : null;
-  return { s: r.s, pace: pill, back: r.back };
+  const go = await pillC('Тёмная', 'Поехали'); s.appendChild(go); go.resize(328, 44); go.x = 16; go.y = 800 - 24 - 44;
+  return { s, back };
 }
 
 (async () => {
@@ -926,21 +1008,18 @@ async function k5() {
   if (!holder) holder = AL(CP, 'HORIZONTAL', { name: 'Иконки', gap: 16, pad: 20, r: 16, bg: 'white', align: 'CENTER', x: 0, y: bottom0 + 48 });
   buildIcons(holder);
   await repairSet(LIB['Пилюля']);
-
-  const base = 'ГИС · Калибровка';
+  const base = 'ГИС · Калибровка v2';
   let name = base, k = 2; while (figma.root.children.some(p => p.name === name)) name = base + ' (' + (k++) + ')';
   PG = figma.createPage(); PG.name = name;
   await figma.setCurrentPageAsync(PG);
-  const A = await k1(), B = await k2(), C3 = await k3(), D4 = await k4(), E = await k5();
+  const A = await k1v2(), B = await k2v2(), C3 = await k3v2(), D4 = await k4v2(), E = await k5v2();
   const all = [A.s, B.s, C3.s, D4.s, E.s];
-  for (const f of all) await TX(PG, f.name, 'big', 'ink', { x: f.x, y: -36 });
+  for (const f of all) await TX(PG, f.name, 'big', 'ink', { x: f.x, y: f.y - 36 });
   const GO = id => ({ type: 'NODE', destinationId: id, navigation: 'NAVIGATE', transition: { type: 'SMART_ANIMATE', easing: { type: 'EASE_OUT' }, duration: 0.3 }, preserveScrollPosition: false });
   const link = async (n, a) => { if (n) await n.setReactionsAsync([{ trigger: { type: 'ON_CLICK' }, actions: [a] }]); };
-  await link(A.next, GO(E.s.id)); await link(A.skip, GO(E.s.id));
-  await link(B.done, GO(C3.s.id)); await link(C3.pace, GO(D4.s.id)); await link(C3.ok, GO(E.s.id));
-  await link(E.pace, GO(D4.s.id)); await link(D4.back, { type: 'BACK' }); await link(E.back, { type: 'BACK' });
-  PG.flowStartingPoints = [{ nodeId: A.s.id, name: 'Первый запуск' }, { nodeId: B.s.id, name: 'После поездки' }];
+  await link(B.send, GO(C3.s.id)); await link(D4.back, { type: 'BACK' }); await link(E.back, { type: 'BACK' });
+  PG.flowStartingPoints = [{ nodeId: A.s.id, name: 'Первая поездка' }, { nodeId: B.s.id, name: 'Следующие поездки' }];
   figma.viewport.scrollAndZoomIntoView(all);
   const warn = SET_ISSUES.size ? ' · ⚠ ' + [...SET_ISSUES].slice(0, 2).join('; ') : '';
-  figma.closePlugin('Готово: «' + name + '» — 5 экранов калибровки' + warn);
+  figma.closePlugin('Готово: «' + name + '» — 5 экранов калибровки в стиле прототипа' + warn);
 })().catch(e => figma.closePlugin('Ошибка: ' + (e && e.message ? e.message : e)));
