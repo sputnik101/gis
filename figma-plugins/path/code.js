@@ -767,6 +767,24 @@ function hcard(parent, name, o) {
 }
 function textCol(parent) { const t = AL(parent, 'VERTICAL', { name: 'Текст', gap: 2 }); t.layoutGrow = 1; t.clipsContent = false; return t; }
 // Переключатель вкл/выкл — простые фигуры
+// Новые иконки (проверка 5, художник): 20×20, линия 1.75, скруглённые концы
+function gearPath(){ const pts = []; for(let i=0;i<6;i++){ const a = i*Math.PI/3 - Math.PI/2; const c = Math.cos(a), s = Math.sin(a);
+  pts.push(`M ${(10+5.6*c).toFixed(2)} ${(10+5.6*s).toFixed(2)} L ${(10+7.6*c).toFixed(2)} ${(10+7.6*s).toFixed(2)}`); } return pts; }
+Object.assign(ICONS, {
+  'Такси': ['M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z', 'M 3 10 L 17 10', circ(6.5, 14.5, 1.5), circ(13.5, 14.5, 1.5), 'M 8 5 L 8 2.8 L 12 2.8 L 12 5'],
+  'Каршеринг': ['M 3 14 L 3 11 L 5 7.5 C 5.3 6.9 5.9 6.5 6.6 6.5 L 13.4 6.5 C 14.1 6.5 14.7 6.9 15 7.5 L 17 11 L 17 14 Z', 'M 3 11 L 17 11', circ(6.5, 15.5, 1.3), circ(13.5, 15.5, 1.3), 'M 7.2 3.6 C 8.9 2.2 11.1 2.2 12.8 3.6'],
+  'Лист': ['M 4 16 C 4 8.5 8.5 4 16 4 C 16 11.5 11.5 16 4 16 Z', 'M 4 16 L 11.5 8.5'],
+  'Толпа': [circ(7, 6.2, 2.3), 'M 2.5 16 C 2.5 12.5 4.5 10.8 7 10.8 C 9.5 10.8 11.5 12.5 11.5 16', circ(13.6, 6.6, 2), 'M 12.6 11 C 15.4 10.7 17.5 12.3 17.5 15.5'],
+  'Вагон': [rrect(5, 2.5, 10, 12, 2.5), 'M 5 9 L 15 9', 'M 8 12 L 8.1 12', 'M 11.9 12 L 12 12', 'M 7.5 14.5 L 5.5 17.5', 'M 12.5 14.5 L 14.5 17.5'],
+  'Пин': ['M 10 18 C 10 18 4.5 12.2 4.5 8 C 4.5 5 7 2.5 10 2.5 C 13 2.5 15.5 5 15.5 8 C 15.5 12.2 10 18 10 18 Z', circ(10, 8, 2)],
+  'Звезда': ['M 10 2.8 L 12.2 7.4 L 17.2 8 L 13.5 11.4 L 14.5 16.4 L 10 13.9 L 5.5 16.4 L 6.5 11.4 L 2.8 8 L 7.8 7.4 Z'],
+  'Шестерёнка': [circ(10, 10, 5.6), circ(10, 10, 2.2)].concat(gearPath()),
+  'Песочные часы': ['M 5.5 3 L 14.5 3', 'M 5.5 17 L 14.5 17', 'M 7 3 C 7 7 13 7 13 10 C 13 13 7 13 7 17', 'M 13 3 C 13 7 7 7 7 10 C 7 13 13 13 13 17'],
+  'Эскалатор': ['M 2.5 16 L 6.5 16 L 13.5 5 L 17.5 5', 'M 8.5 7 L 8.5 7.1', 'M 6.5 10.5 L 11 10.5'],
+  'Готово': [circ(10, 10, 7), 'M 6.8 10.2 L 9 12.4 L 13.4 7.8'],
+  'История': ['M 4.2 6.8 C 5.4 4.5 7.6 3 10 3 C 13.9 3 17 6.1 17 10 C 17 13.9 13.9 17 10 17 C 6.6 17 3.8 14.6 3.2 11.4', 'M 3.2 3.6 L 4.2 6.8 L 7.4 6', 'M 10 6.5 L 10 10 L 12.5 11.5'],
+  'Флаг': ['M 5 18 L 5 3', 'M 5 3.5 L 15 3.5 L 12.5 7 L 15 10.5 L 5 10.5']
+});
 
 // ================= Путь: поиск → место → способы → время (24.11) =================
 // Решения: первый экран — поиск «Куда?»; время «к …» — опционально, но на виду; шаблоны — ускоритель внутри поиска;
@@ -809,7 +827,7 @@ async function searchField(s, y, text, typed) {
   f.appendChild(icoInst('Поиск', typed ? 'ink' : 'mute'));
   const t = await TX(f, text, 'body', typed ? 'ink' : 'mute'); t.layoutGrow = 1; t.textAutoResize = 'HEIGHT';
   f.clipsContent = false;
-  const b = AL(row, 'HORIZONTAL', { name: 'Модули', pad: 12, r: 22, bg: 'white', align: 'CENTER' }); b.appendChild(icoInst('Профиль', 'ink')); b.clipsContent = false;
+  const b = AL(row, 'HORIZONTAL', { name: 'Модули', pad: 12, r: 22, bg: 'white', align: 'CENTER' }); b.appendChild(icoInst('Шестерёнка', 'ink')); b.clipsContent = false;
   await fx(b, 'ГИС/Уровень 1');
   return { row, field: f };
 }
@@ -844,7 +862,7 @@ async function tripBar(parent, timeText, timeOn) {
   const r = ROW(parent, { name: 'Откуда и когда', gap: 8, align: 'CENTER' }); r.layoutSizingHorizontal = 'FILL';
   // высота 40 и скругление 20 — как у остальных кнопок (пилюль)
   const h40 = f => { f.counterAxisSizingMode = 'FIXED'; f.resize(f.width || 10, 40); f.counterAxisAlignItems = 'CENTER'; };
-  const from = AL(r, 'HORIZONTAL', { name: 'Откуда', gap: 6, px: 14, r: 20, bg: 'white', stroke: 'line', align: 'CENTER' }); from.layoutGrow = 1; h40(from);
+  const from = AL(r, 'HORIZONTAL', { name: 'Откуда', gap: 8, px: 4, align: 'CENTER' }); from.layoutGrow = 1; h40(from);   // как в прототипе: текст, не поле
   EL(from, 0, 0, 5, 5, { fill: 'accent', name: 'Точка' });
   const ft = await TX(from, 'Отсюда', 'cap', 'ink'); ft.layoutGrow = 1;
   const t = AL(r, 'HORIZONTAL', { name: 'Время', gap: 6, px: 14, r: 20, bg: timeOn ? 'accent' : 'lav', align: 'CENTER' }); h40(t);
@@ -868,6 +886,8 @@ async function buttons(parent, main, second, mainIc) {
   return { a, b };
 }
 // Карточки способов — компонент «Карточка варианта · v2»
+// проверка 5: иконки как в прототипе — такси и каршеринг свои, модули — шестерёнка
+D.taxi.ic = 'Такси'; D.carshare.ic = 'Каршеринг';
 const DEPART = [
   C('metro', { top: 'будешь в', main: '8:53', bottom: 'самое позднее 8:57', v: 'Стабильно', best: true }),
   C('taxi', { top: 'будешь в', main: '8:54', bottom: 'самое позднее 9:04', v: 'Зависит от пробок' }),
@@ -921,6 +941,7 @@ async function a3() {
   await TX(sh, 'Арбатско-Покровская линия · 8 км отсюда', 'cap', 'mute', { fill: true });
   // проверка 5: без чипов способов и без «Сохранить» — только место и «Маршрут»
   const b = await buttons(sh, 'Маршрут');
+  sh.primaryAxisSizingMode = 'AUTO'; sh.y = 800 - sh.height;   // шторка по содержимому, как в прототипе
   return { s, go: b.a };
 }
 async function a4() {
