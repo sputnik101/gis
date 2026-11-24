@@ -842,10 +842,12 @@ async function rowItem(parent, ic, title, sub, right, rightColor) {
 // Строка «Откуда / время»
 async function tripBar(parent, timeText, timeOn) {
   const r = ROW(parent, { name: 'Откуда и когда', gap: 8, align: 'CENTER' }); r.layoutSizingHorizontal = 'FILL';
-  const from = AL(r, 'HORIZONTAL', { name: 'Откуда', gap: 6, px: 12, py: 8, r: 12, bg: 'white', stroke: 'line', align: 'CENTER' }); from.layoutGrow = 1;
+  // высота 40 и скругление 20 — как у остальных кнопок (пилюль)
+  const h40 = f => { f.counterAxisSizingMode = 'FIXED'; f.resize(f.width || 10, 40); f.counterAxisAlignItems = 'CENTER'; };
+  const from = AL(r, 'HORIZONTAL', { name: 'Откуда', gap: 6, px: 14, r: 20, bg: 'white', stroke: 'line', align: 'CENTER' }); from.layoutGrow = 1; h40(from);
   EL(from, 0, 0, 5, 5, { fill: 'accent', name: 'Точка' });
   const ft = await TX(from, 'Отсюда', 'cap', 'ink'); ft.layoutGrow = 1;
-  const t = AL(r, 'HORIZONTAL', { name: 'Время', gap: 6, px: 12, py: 8, r: 12, bg: timeOn ? 'accent' : 'lav', align: 'CENTER' });
+  const t = AL(r, 'HORIZONTAL', { name: 'Время', gap: 6, px: 14, r: 20, bg: timeOn ? 'accent' : 'lav', align: 'CENTER' }); h40(t);
   t.appendChild(icoInst('Часы', timeOn ? 'white' : 'accent'));
   await TX(t, timeText + ' ▾', 'cap', timeOn ? 'white' : 'lavT');
   return { r, time: t };
