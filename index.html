@@ -379,7 +379,7 @@ registerModule((() => {
       detail: stops(5) + ' без пересадок',
       legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы, ближе к дому', tip:'Вход №3'},
            {type:'wait', kind:'Подожди', model:'board', station:'Первомайская', at:ENTRY3, lo:1, hi:4, label:'Вход, платформа и поезд', lm:''},
-           {type:'metro', model:'ride', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'Садись в первые вагоны: на Бауманской выход у головы поезда. Перед выходом — вибрация', src:'data/metro-cars.json · расчёт по карте'},
+           {type:'metro', model:'ride', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'В сторону центра. Перед выходом — вибрация'},
            {type:'wait', kind:'Подъём', model:'exit', station:'Бауманская', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'', tip:'Ты на месте'} ] }, common),
     // «Погулять рядом»: метро + прогулка — нужен и модуль «Пешком»
     stroll: Object.assign({ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', purpose:'walk', order:2, requires:['walk'],
@@ -447,6 +447,29 @@ registerModule((() => { const o = { name:'Каршеринг', ico:'🚗', bg:'#
     options:{ carshare:o }, context(T){ return { traffic: trafficAt(T) }; }, prepare: carPrepare(o) }; })());
 
 /* ---------- Подсказки ---------- */
+// ---- Вагон для выхода. Данные — data/metro-cars.json (часть поезда, а не номер вагона; пока расчёт по карте).
+// Есть запись — подсказка; нет записи — модуль молчит. Работает только с метро.
+registerModule({
+  id:'cars', requires:['metro'], icon:'🚃', name:'Вагон для выхода', desc:'В какой части поезда садиться, чтобы выход был рядом', where:'в шагах метро', on:true,
+  // station, line, direction, action, via, part — как в data/metro-cars.json (выдержка для прототипа)
+  records:[
+    { station:'Первомайская', direction:'в центр', action:'вход', via:'вход №3', part:'голова' },
+    { station:'Бауманская',   direction:'в центр', action:'выход', via:'единственный выход', part:'голова' },
+    { station:'Бауманская',   direction:'из центра', action:'вход', via:'единственный вход', part:'хвост' },
+    { station:'Первомайская', direction:'из центра', action:'выход', via:'выход №3–4, ближе к дому', part:'хвост' } ],
+  find(station, direction, action){ return this.records.find(r => r.station===station && r.direction===direction && r.action===action); },
+  stepHints(l){
+    if(l.type !== 'metro' || !l.stations) return [];
+    const a = LINE3.indexOf(l.stations[0]), b = LINE3.indexOf(l.stations[l.stations.length-1]);
+    const dir = b > a ? 'в центр' : 'из центра', exit = l.stations[l.stations.length-1];
+    const r = this.find(exit, dir, 'выход'); if(!r) return [];
+    const where = { 'голова':'первые вагоны', 'середина':'середину поезда', 'хвост':'последние вагоны' }[r.part];
+    const at = { 'голова':'у головы поезда', 'середина':'в середине', 'хвост':'в хвосте поезда' }[r.part];
+    const on = exit.replace(/ая$/, 'ой');   // Бауманская → на Бауманской
+    const enter = this.find(l.stations[0], dir, 'вход');
+    return [{ icon:'🚃', text:`Садись в ${where}: на ${on} выход ${at}` + (enter && enter.part === r.part ? `. ${enter.via[0].toUpperCase() + enter.via.slice(1)} — там же, идти недалеко` : '') }];
+  }
+});
 // ---- Погода в пути. В приложении данные — из погодного сервиса; в прототипе: дождь сегодня 8:40–13:00
 registerModule({
   id:'weather', icon:'☔', name:'Погода в пути', desc:'Дождь и гололёд — в прогнозе и подсказках', where:'на экране способов и в прогнозе пешком', on:true,

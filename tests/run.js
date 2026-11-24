@@ -77,6 +77,14 @@ test('шаблон с выключенным способом не ломает 
   resetDemo(); state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro' }); toggleMod('metro'); restart();
   const ok = document.body.innerText.includes('выключен'); toggleMod('metro'); return ok || 'нет пометки';
 }));
+test('«Вагон для выхода»: подсказка есть, выключил — пропала, без метро — не работает', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); pick('metro');
+  const on = document.body.innerText.includes('Садись в первые вагоны');
+  toggleMod('cars'); const off = !document.body.innerText.includes('Садись в первые вагоны'); toggleMod('cars');
+  toggleMod('metro'); const dep = !activeModules().some(m => m.id==='cars'); toggleMod('metro');
+  walkNearby(); pick('stroll'); const silent = !document.body.innerText.includes('Садись в');   // до Электрозаводской данных нет — молчит
+  return (on && off && dep && silent) || JSON.stringify({on, off, dep, silent});
+}));
 // ---------- навигация ----------
 test('место → поиск → место: на экране место', async p => p.evaluate(() => {
   restart(); openPlace('baum'); go('find'); openPlace('baum');
