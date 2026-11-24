@@ -258,6 +258,7 @@ function setCtx(T){
   for(const x in FC) delete FC[x];
   // способы передвижения готовят свои варианты (интервалы, пробки…) на это время
   for(const m of activeModules()) if(typeof m.prepare === 'function'){ try{ m.prepare(T, mods[m.id] || {}); }catch(e){ broke(m, 'prepare', e); } }
+  for(const k in OPTIONS){ const bad = optionProblem(k, OPTIONS[k]); if(bad){ const m = MODULES.find(x => x.options && x.options[k]); if(m) broke(m, 'prepare', { message: bad }); delete OPTIONS[k]; } }
 }
 // Контекст для текущего выбора времени. Кэш по ключу выбора — считаем один раз на изменение.
 let SYNC_KEY = null;
@@ -283,12 +284,36 @@ function syncCtx(){
 // Каждый шаг — диапазон lo–hi минут. Прогноз = сумма шагов, считается симуляцией (см. forecast).
 const OPTIONS = {};
 const isOn = id => activeModules().some(m => m.id === id);
+// Шлюз для вариантов способов: ключ, форма шагов, цвета; текст без разметки. Плохой вариант — модуль отключается.
+const LEG_TYPES = ['walk', 'metro', 'car', 'wait'], HEX = /^#[0-9a-f]{3,8}$/i;
+function optionProblem(k, o){
+  if(!/^[a-z][a-z0-9_-]*$/.test(k)) return 'ключ «' + k + '»';
+  if(!o || typeof o.name !== 'string' || !['go','walk'].includes(o.purpose)) return 'нет name или purpose';
+  if(!Array.isArray(o.legs) || !o.legs.length) return 'нет шагов';
+  for(const l of o.legs){
+    if(!l || !LEG_TYPES.includes(l.type)) return 'шаг неизвестного типа';
+    if(![l.lo, l.hi].every(Number.isFinite) || l.hi < l.lo) return 'у шага нет времени';
+    if(l.model === 'board' && l.plo != null && ![l.plo, l.phi, l.iv].every(Number.isFinite)) return 'у посадки нет интервала';
+    if(!l.geom && !l.stations && !l.at && !(l.from && l.to)) return 'у шага нет места на карте'; }
+  if(/[<>]|\\"/.test(JSON.stringify(o))) return 'разметка в тексте';
+  return null;
+}
 function rebuildOptions(){
   for(const k in OPTIONS) delete OPTIONS[k];
-  for(const m of activeModules()) if(m.options) for(const [k, o] of Object.entries(m.options))
-    if((o.requires || []).every(isOn)) OPTIONS[k] = o;
-  if(state.sel && !OPTIONS[state.sel]) state.sel = goKeys()[0] || walkKeys()[0] || null;
+  for(const m of activeModules()) if(m.options) for(const [k, o] of Object.entries(m.options)){
+    if(!(o.requires || []).every(isOn)) continue;
+    if(OPTIONS[k]){ console.warn('вариант «' + k + '» уже есть у другого модуля — ' + m.id + ' пропущен'); continue; }
+    const bad = optionProblem(k, o); if(bad){ broke(m, 'options', { message: bad }); continue; }
+    if(!Array.isArray(o.tail)) o.tail = [0, 0, 0];
+    if(!HEX.test(o.bg || '')) o.bg = '#ECEBFB'; if(!HEX.test(o.fg || '')) o.fg = '#4B4BC8';
+    OPTIONS[k] = o; }
+  // выбранный способ не подменяем: если он пропал, экраны сами скажут об этом (lostMode)
 }
+// Способ, на котором стоял человек, выключили: честно сказать и вернуть к способам
+function lostMode(){
+  toast('Этот способ выключен — выбери другой');
+  while(state.history.length && ['route','confirm','compare'].includes(state.history[state.history.length-1])) state.history.pop();
+  state.view = 'compare'; state.sel = null; }
 const keysFor = purpose => Object.keys(OPTIONS).filter(k => OPTIONS[k].purpose === purpose).sort((a,b) => (OPTIONS[a].order||9) - (OPTIONS[b].order||9));
 const goKeys = () => keysFor('go'), walkKeys = () => keysFor('walk');
 
@@ -511,7 +536,7 @@ function simulate(k){
   for(let i=0;i<N;i++){
     const day = r(); let t = 0;                       // общий для всех шагов «характер дня»
     for(let j = 0; j < o.legs.length; j++){ const l = o.legs[j], u = 0.5*day + 0.5*r();
-      if(l.model === 'board'){ t += (triQ(u, l.plo, l.phi) + r()*l.iv + (r() < l.skip ? l.iv : 0)) * K[j]; continue; }   // ожидание — равномерно от 0 до интервала; в пик иногда пропускаешь полный поезд
+      if(l.model === 'board' && l.plo != null){ t += (triQ(u, l.plo, l.phi) + r()*l.iv + (r() < l.skip ? l.iv : 0)) * K[j]; continue; }   // ожидание — равномерно от 0 до интервала; в пик иногда пропускаешь полный поезд
       t += triQ(u, l.lo, l.hi) * K[j]; }
     if(o.tail[0] && r() < o.tail[0]) t += o.tail[1] + r()*(o.tail[2]-o.tail[1]);
     s[i] = t;
@@ -519,7 +544,7 @@ function simulate(k){
   s.sort(); const q = p => s[Math.min(N-1, Math.floor(p*N))];
   const mid = Math.round(q(0.5));
   // минуты шагов: базовая оценка, масштаб к медиане, остаток раздаём самым длинным шагам
-  const base = o.legs.map((l,j) => (l.model === 'board' ? (l.plo + 0.4*(l.phi-l.plo)) + l.iv*(0.5 + l.skip) : (l.lo + 0.4*(l.hi-l.lo))) * K[j]), sb = base.reduce((a,b)=>a+b,0);
+  const base = o.legs.map((l,j) => (l.model === 'board' && l.plo != null ? (l.plo + 0.4*(l.phi-l.plo)) + l.iv*(0.5 + l.skip) : (l.lo + 0.4*(l.hi-l.lo))) * K[j]), sb = base.reduce((a,b)=>a+b,0);
   const legMins = base.map(b => Math.max(1, Math.floor(b*mid/sb)));
   let rest = mid - legMins.reduce((a,b)=>a+b,0);
   const order = base.map((b,i)=>i).sort((a,b)=>base[b]-base[a]);
@@ -581,10 +606,10 @@ function tplTime(t){   // «выйди до 8:23» для шаблона — с�
   const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode };
   Object.assign(state, { dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
   syncCtx();
-  if(!OPTIONS[t.mode]){ Object.assign(state, keep); return `<div class="m">способ</div><b>выключен</b>`; }
+  if(!OPTIONS[t.mode]){ Object.assign(state, keep); SYNC_KEY = null; syncCtx(); return `<div class="m">способ</div><b>выключен</b>`; }
   const f = forecast(t.mode), v = verdict(t.mode);
   const out = t.arrive==null ? `<div class="m">в пути</div><b>~${dur(f.mid)}</b>` : v.closed ? `<div class="m">${OPTIONS[t.mode].name.toLowerCase()}</div><b>закрыто</b>` : v.plan==='until' ? `<div class="m">выйди до</div><b>${fmtD(v.L)}</b>` : `<div class="m">${goVerb(t.mode).toLowerCase()}</div><b>сейчас</b>`;
-  Object.assign(state, keep);
+  Object.assign(state, keep); SYNC_KEY = null; syncCtx();   // вернуть контекст текущего выбора
   return out;
 }
 V.home = () => {
@@ -620,7 +645,7 @@ V.place = () => {
 /* ----- Способы: та же шторка раскрыта ----- */
 V.compare = () => {
   const walkMode = state.mode==='walk', arr = arriveMode();
-  const keys = walkMode ? walkKeys() : goKeys();
+  const keys = (walkMode ? walkKeys() : goKeys()).sort((a,b) => !!verdict(a).closed - !!verdict(b).closed);   // закрытые — в конец
   const best = walkMode ? null : bestOption(keys);
   const allLate = arr && keys.length && keys.every(k=>verdict(k).cls==='r');
   let late = '';
@@ -659,6 +684,11 @@ function card(k, isBest){
   }
   if(!v.never && !v.closed) collect('cardPills', k).forEach(t => pills.push(`<span class="pill">${esc(t)}</span>`));
   const compact = arr && v.never;
+  if(v.closed) return `<div class="card late" data-k="${k}" aria-disabled="true">
+    <div class="top"><div class="ico" aria-hidden="true" style="background:${o.bg};color:${o.fg}">${o.ico}</div>
+      <div style="flex:1;min-width:0"><div class="t">${o.name}</div><div class="m">${o.detail}</div></div>
+      <div class="right">${right}</div></div>
+    <div class="win">${pills.join('')}</div></div>`;   // закрытый способ — не открывается
   return `<button class="card press ${compact?'late':''}" data-k="${k}" onclick="pick('${k}')">
     ${isBest ? '<div class="best">Лучше всего</div>' : ''}
     <div class="top"><div class="ico" aria-hidden="true" style="background:${o.bg};color:${o.fg}">${o.ico}</div>
@@ -740,7 +770,7 @@ function setTimeMode(m){ const dr = state.draft; if(dr.mode===m) return; const t
 function setTime(t){ if(arriveMode()) state.arrive = t; else state.depart = t; render(); }
 
 V.route = () => {
-  if(!OPTIONS[state.sel]){ state.view = 'compare'; return V.compare(); }   // способ выключили — к способам
+  if(!OPTIONS[state.sel] || (state.mode==='walk') !== (OPTIONS[state.sel].purpose==='walk')){ lostMode(); return V.compare(); }   // способ выключили — к способам
   const k = state.sel, o = OPTIONS[k], f = forecast(k), v = verdict(k), arr = arriveMode() && !o.noTarget;
   const start = arr ? (v.plan==='until' ? v.L : NOW) : dep();
   let t = start;
@@ -767,9 +797,12 @@ V.route = () => {
     ? `<button class="btn p press" id="remindBtn" onclick="remind(${remindAt})">Напомнить в ${fmtD(remindAt)}</button><button class="btn w press" id="goBtn" style="margin-top:8px" onclick="startTrip(true)">Демо: проиграть поездку</button>`
     : `<button class="btn ${arr && v.never ? 'w' : 'p'} press" id="goBtn" onclick="${o.confirm ? "go('confirm')" : 'startTrip()'}">${cta}</button>`;
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">Маршрут с ориентирами</div></div>
-    ${head}${!o.noTarget && state.dest && !isSaved() ? `<div><button class="savebtn" onclick="go('save')">☆ Сохранить маршрут</button></div>` : ''}${v.closed ? '' : `<div class="steps">${steps}</div>${pois}`}
+    ${head}${!o.noTarget && state.dest && !isSaved() && !v.closed ? `<div><button class="savebtn" onclick="go('save')">☆ Сохранить маршрут</button></div>` : ''}${v.closed ? closedAlt(k) : `<div class="steps">${steps}</div>${pois}`}
     ${v.closed ? '' : goBtn}`;
 };
+// Способ сейчас не работает — сразу предложить работающие
+function closedAlt(k){ const alt = (state.mode==='walk' ? walkKeys() : goKeys()).filter(x => x !== k && !verdict(x).closed);
+  return alt.length ? `<div class="sec">Сейчас можно так</div>` + alt.map(x => card(x, false)).join('') : `<div class="m" style="margin:10px 0">Других способов сейчас нет — включи их в <button class="mlink" onclick="go('modules')">Модулях</button></div>`; }
 function remind(m){ toast('Напомню в ' + fmtD(m) + ' — за 10 мин до выхода'); say('Напоминание на ' + fmtD(m)); }
 // Когда начинается поездка: тот же расчёт, что показывает маршрут
 function tripStart(k){ const o = OPTIONS[k], v = verdict(k);
@@ -778,7 +811,7 @@ function tripStart(k){ const o = OPTIONS[k], v = verdict(k);
 function visiblePois(k){ return (OPTIONS[k].pois||[]).concat(collect('pois', k)); }
 // Подтверждение перед платным действием
 V.confirm = () => {
-  const o = OPTIONS[state.sel], c = o && o.confirm; if(!c){ state.view = 'route'; return V.route(); }
+  const o = OPTIONS[state.sel], c = o && o.confirm; if(!o){ lostMode(); return V.compare(); } if(!c){ state.view = 'route'; return V.route(); }
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">${c.crumb}</div></div>
    <h1 tabindex="-1">${c.title}</h1>
    <div class="card" style="cursor:default">
@@ -800,7 +833,7 @@ V.modules = () => `<div class="row"><button class="back-btn" aria-label="Наз�
    <div class="sec">Подсказки</div>${MODULES.filter(m=>m.group!=='mode').map(modCard).join('')}
    <button class="btn w press" style="margin-top:8px" onclick="resetDemo()">Демо: начать с первого запуска</button>`;
 V.done = () => {
-  const o = OPTIONS[state.sel], at = trip.endAt;
+  const o = trip.o || OPTIONS[state.sel], at = trip.endAt;
   const diff = state.arrive - at, hurry = arriveMode() && !o.noTarget;
   const sub = o.noTarget ? `${trip.total} мин · ${o.price}` : hurry ? (diff>0 ? `на ${dur(diff)} раньше, чем нужно` : diff===0 ? 'ровно вовремя' : `опоздание ${dur(-diff)}`) : `${trip.total} мин в пути`;
   const chips = o.noTarget ? ['Было приятно','Слишком долго','Хочу другой маршрут'] : ['Всё по плану','Была задержка','Сложно найти'];
@@ -817,6 +850,8 @@ V.done = () => {
 
 /* ----- Сохранение маршрута ----- */
 V.save = () => {
+  if(!OPTIONS[state.sel]) return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Сохранить маршрут</h1></div>
+   <div class="sub" style="margin-top:6px">Сначала выбери способ — сохраним маршрут вместе с ним</div>`;
   if(state.justSaved) return `<h1 tabindex="-1">Сохранено: ${state.justSaved}</h1>
     <div class="sub">Найдёшь его под поиском — в одно касание</div>
     <div class="offer"><div class="t">Добавить обратный путь?</div><div class="m" style="margin:4px 0 10px">${PLACES[state.dest].name} → сюда</div>
@@ -1110,7 +1145,8 @@ async function startTrip(demo){
   await routeReady;
   if(routeKey !== k) await showRoute(k);
   if(state.sel !== k || state.view !== view0){ trip.on = false; render(); return; }   // ушёл с экрана — поездку не начинаем (и такси без подтверждения не вызываем)
-  const o = OPTIONS[k];
+  const o = JSON.parse(JSON.stringify(OPTIONS[k]));      // поездка идёт на своей копии: выключение модуля её не ломает
+  trip.k = k; trip.o = o;
   if(!demo && o.startToast) toast(o.startToast);
   document.getElementById('topbar').classList.add('hide'); document.getElementById('topbar').inert = true;
   sheet.inert = true; snap('hidden'); document.getElementById('guide').classList.add('on');
@@ -1136,7 +1172,7 @@ async function startTrip(demo){
 const KIND = { walk:'Пешком', car:'В пути', metro:'Метро' };
 const modHints = li => (trip.hints && trip.hints[li] || []).map(h => `<div class="lmk"><span aria-hidden="true">${esc(h.icon)}</span> ${esc(h.text)}</div>`).join('');
 function update(dt){
-  const o = OPTIONS[state.sel]; let acc=0, li=0;
+  const o = trip.o; let acc=0, li=0;
   for(; li<o.legs.length-1; li++){ const m = trip.legs[li]; if(trip.t < acc+m) break; acc+=m; }
   const l = o.legs[li], lm = trip.legs[li], f = Math.min(1,(trip.t-acc)/lm), leg = routeLegs[li];
   const left = Math.max(0, Math.ceil(trip.total-trip.t));

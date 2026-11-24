@@ -85,6 +85,49 @@ test('«Вагон для выхода»: подсказка есть, выкл�
   walkNearby(); pick('stroll'); const silent = !document.body.innerText.includes('Садись в');   // до Электрозаводской данных нет — молчит
   return (on && off && dep && silent) || JSON.stringify({on, off, dep, silent});
 }));
+test('такси выключили на маршруте — честно возвращаем к способам, без подмены', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); pick('taxi'); go('modules'); toggleMod('taxi'); back();
+  const ok = state.view==='compare' && !document.body.innerText.includes('Такси до Бауманской'); toggleMod('taxi');
+  back(); return (ok && state.view==='place') || 'view ' + state.view + ' hist ' + state.history;
+}));
+test('такси выключили на подтверждении — к способам, «назад» один раз', async p => p.evaluate(() => {
+  restart(); openPlace('baum'); go('compare'); pick('taxi'); go('confirm'); go('modules'); toggleMod('taxi'); back();
+  const ok = state.view==='compare'; back(); toggleMod('taxi'); return (ok && state.view==='place') || 'view ' + state.view;
+}));
+test('способ пропал во время поездки — поездка идёт до конца на своей копии', async p => {
+  await p.evaluate(() => { restart(); openPlace('baum'); go('compare'); pick('taxi'); return startTrip(true); });
+  await p.waitForTimeout(300);
+  return p.evaluate(() => { unregisterModule('taxi'); trip.t = 10; update(0); const mid = document.getElementById('gtop').innerText;
+    const ok = /Такси|Подача|В пути/.test(mid) && !/NaN/.test(document.body.innerText); return ok || mid; });
+});
+test('«Пешком» выключили на маршруте прогулки — к способам', async p => p.evaluate(() => {
+  restart(); walkNearby(); pick('stroll'); toggleMod('walk'); render();
+  const ok = state.view==='compare'; toggleMod('walk'); return ok || 'view ' + state.view;
+}));
+test('вариант способа с мусором или разметкой не попадает в приложение', async p => p.evaluate(() => {
+  window.__x = 0;
+  registerModule({ id:'junkmode', group:'mode', icon:'?', name:'Мусор', desc:'', where:'', on:true, options:{ junk:{ name:'J', purpose:'go', legs:[{}] } } });
+  registerModule({ id:'xssmode', group:'mode', icon:'?', name:'XSS', desc:'', where:'', on:true,
+    options:{ xss:{ name:'<img src=x onerror="window.__x=1">', purpose:'go', legs:[{type:'walk', geom:'walkAll', lo:1, hi:2, label:'x'}] } } });
+  openPlace('baum'); go('compare');
+  const ok = !OPTIONS.junk && !OPTIONS.xss && document.querySelectorAll('.card').length === 4 && window.__x === 0;
+  unregisterModule('junkmode'); unregisterModule('xssmode'); return ok || 'варианты: ' + Object.keys(OPTIONS);
+}));
+test('чужой ключ варианта не затирает существующий', async p => p.evaluate(() => {
+  registerModule({ id:'taxi2', group:'mode', icon:'?', name:'Другое', desc:'', where:'', on:true,
+    options:{ taxi:{ name:'Другое такси', purpose:'go', legs:[{type:'car', geom:'taxiDrive', lo:1, hi:2, label:'x'}] } } });
+  syncCtx(); SYNC_KEY = null; syncCtx(); const ok = OPTIONS.taxi.name === 'Такси'; unregisterModule('taxi2'); return ok || OPTIONS.taxi.name;
+}));
+test('ночью закрытое метро — в конце списка, не открывается; на маршруте — другие способы', async p => p.evaluate(() => {
+  restart(); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=1440+180; render();
+  const cards = [...document.querySelectorAll('.card[data-k]')].map(c => c.dataset.k);
+  const last = cards[cards.length-1]==='metro' && document.querySelector('.card[data-k=metro]').tagName !== 'BUTTON';
+  state.sel='metro'; go('route'); const alt = document.body.innerText.includes('Сейчас можно так') && !document.body.innerText.includes('Сохранить маршрут');
+  return (last && alt) || JSON.stringify({cards, last, alt});
+}));
+test('«Сохранить» без способа не падает', async p => p.evaluate(() => {
+  restart(); openPlace('baum'); state.sel = null; go('save'); return document.body.innerText.includes('Сначала выбери способ') || 'нет сообщения';
+}));
 // ---------- навигация ----------
 test('место → поиск → место: на экране место', async p => p.evaluate(() => {
   restart(); openPlace('baum'); go('find'); openPlace('baum');
