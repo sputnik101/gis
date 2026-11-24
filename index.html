@@ -222,7 +222,7 @@ const DEST = [37.67876,55.77235];          // Бауманская, выход �
 const YAUZA = [37.6905,55.7772], ELOKH = [37.6764,55.7731];
 const stops = n => n + ' ' + (n%10===1&&n%100!==11?'остановка':(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'остановки':'остановок');
 
-const state = { arrive: 9*60, mode:'hurry', sel:'metro', modules:{}, view:'home', history:[], timeMode:'depart', depart:NOW,
+const state = { arrive: 9*60, mode:'hurry', sel:null, modules:{}, view:'home', history:[], timeMode:'depart', depart:NOW,
   dest:null, templates:[], recents:[], visits:{}, declined:{} };   // первый запуск: ни шаблонов, ни истории
 // Места поиска. Маршруты в прототипе есть только до м. Бауманская.
 const PLACES = {
@@ -230,35 +230,12 @@ const PLACES = {
   baumst: { name:'Бауманская улица', sub:'Басманный район', km:'8 км', ico:'📍' },
   mgtu: { name:'МГТУ им. Баумана', sub:'2-я Бауманская ул., 5', km:'8,6 км', ico:'🏛' } };
 
-/* ================= МЕТРО: модель по интервалам (этап 2, 22.11) =================
-   Открытого расписания (GTFS) московского метро нет, и оно не нужно: поезда ходят по интервалам.
-   Метро = вход и путь до платформы (зависит от глубины станции) + ожидание (случайное, от 0 до интервала)
-         + перегоны (расстояние / ходовая скорость + стоянка) + подъём в город.
-   Интервалы — линия 3 в будни, примерные: ПРОВЕРИТЬ по факту и уточнять калибровкой «Как прошло?». */
-const PERIODS = [   // [с какой минуты суток, до какой, название, интервал мин]
-  [   0,   60, 'поздно вечером', 7  ], [  60,  330, 'ночью', null ],         // 1:00–5:30 метро закрыто
-  [ 330,  420, 'рано утром',     4  ], [ 420,  600, 'в час пик', 2 ],
-  [ 600, 1020, 'днём',           3.5], [1020, 1200, 'в час пик', 2 ],
-  [1200, 1380, 'вечером',        4  ], [1380, 1440, 'поздно вечером', 6 ] ];
-const OPEN = 330;
-const period = m => { m = ((Math.round(m) % DAY) + DAY) % DAY; const p = PERIODS.find(p => m >= p[0] && m < p[1]); return { key:p[0], name:p[2], iv:p[3], m }; };
-// От двери вестибюля до платформы и обратно. deep — глубокая, в час пик очередь на эскалатор.
-const DEPTH = {
-  'Первомайская':     { lo:1, hi:2, deep:false, how:'мелкая станция — по лестнице' },
-  'Электрозаводская': { lo:2, hi:3, deep:true,  how:'наверх по эскалатору' },
-  'Бауманская':       { lo:2, hi:3, deep:true,  how:'выход один — наверх по длинному эскалатору' } };
-const RUN_KMH = 42, DWELL = 0.5, DWELL_PEAK = 0.7;   // ходовая скорость с разгоном; стоянка на станции, мин
-const METRO_TAIL = [0.03, 3, 10];
-// METRO_TAIL — сбой с увеличением интервалов: ~3% поездок, +3–10 мин (график выполняется на 99,98%, но сбои всё же бывают)
-const SKIP_PEAK = 0.25;             // утром в час пик в каждом 4-м случае первый поезд в центр полный — ждёшь следующий
-function km(a, b){ const R = 6371, la = (a[1]+b[1])/2*Math.PI/180, dx = (b[0]-a[0])*Math.PI/180*Math.cos(la)*R, dy = (b[1]-a[1])*Math.PI/180*R; return Math.hypot(dx, dy); }
-const ivText = iv => iv % 1 ? Math.floor(iv) + '–' + Math.ceil(iv) : String(iv);
-/* ===== КОНТЕКСТ ПОЕЗДКИ (проверка 3) =====
-   Одно время для всего: интервалы метро, пробки, дождь, загруженность.
-   T — когда человек окажется на платформе (≈ выход + 12 мин ходьбы).
-   В режиме «Прибыть к» выход зависит от прогноза, а прогноз — от T: уточняем 2–3 раза. */
-const WALK_TO_METRO = 12;
-// Пробки по времени суток: диапазон «за рулём», надпись, предупреждение, сбой
+/* ===== КОНТЕКСТ ПОЕЗДКИ =====
+   Одно время для всего: каждый модуль (способ передвижения или подсказки) готовит свои данные на время T.
+   T — опорное время поездки ≈ выход + 12 мин. В режиме «Прибыть к» выход зависит от прогноза,
+   а прогноз — от T: уточняем 2–3 раза. */
+const TRIP_ANCHOR = 12;
+// Общие дорожные данные ядра: пробки по времени суток (ими пользуются модули такси и каршеринга)
 const TRAFFIC = {
   morning: { lo:22, hi:36, lm:'Утренние пробки: возможна задержка', warn:true,  tail:[0.10,5,15] },
   evening: { lo:22, hi:36, lm:'Вечерние пробки: возможна задержка', warn:true,  tail:[0.10,5,15] },
@@ -267,97 +244,62 @@ const TRAFFIC = {
   night:   { lo:13, hi:18, lm:'Ночью дороги свободны',               warn:false, tail:[0.02,2,6] } };
 const trafficAt = m => { m = ((Math.round(m) % DAY) + DAY) % DAY;
   return m >= 420 && m < 600 ? 'morning' : m >= 1020 && m < 1200 ? 'evening' : m >= 600 && m < 1020 ? 'day' : m >= 1200 && m < 1380 ? 'late' : 'night'; };
-const CTX = { T: null, key: null, P: null, traffic: 'morning', mods: {} };
-let METRO_P = null;
+const CTX = { T: null, key: null, traffic: 'morning', mods: {} };
 function setCtx(T){
-  const P = period(T), tr = trafficAt(T);
+  const tr = trafficAt(T);
   // Факты модулей на время поездки; каждый модуль — в своей «песочнице»
   const mods = {}, parts = [];
   for(const m of activeModules()){ let f = {};
     if(typeof m.context === 'function'){ try{ f = m.context(T) || {}; JSON.stringify(f); }catch(e){ broke(m, 'context', e); continue; } }
     mods[m.id] = f; parts.push(m.id + ':' + JSON.stringify(f)); }
   CTX.T = T; CTX.traffic = tr; CTX.mods = mods;
-  const key = P.key + '|' + tr + '|' + parts.join(';'); if(CTX.key === key) return;   // включённые модули и их факты — в ключе: изменились — пересчёт
-  CTX.key = key; CTX.P = P; METRO_P = P;
-  for(const x in FC) delete FC[x];                    // сменился контекст — пересчитать всё
-  const peak = P.iv === 2, morningPeak = P.key === 420, iv = P.iv || 7;
-  for(const k in OPTIONS){ const o = OPTIONS[k];
-   if(o.legs.some(l => l.model)) o.closed = !P.iv;    // 1:00–5:30 метро не ходит
-   if(o.legs.some(l => l.type === 'car')) o.tail = TRAFFIC[tr].tail;
-   for(const l of o.legs){
-    if(l.type === 'car'){ const t = TRAFFIC[tr]; l.lo = t.lo; l.hi = t.hi; l.lm = t.lm; l.warn = t.warn; }
-    if(l.model === 'board'){ const d = DEPTH[l.station];
-      l.plo = d.lo; l.phi = d.hi; l.iv = iv; l.skip = morningPeak ? SKIP_PEAK : 0;
-      l.lo = d.lo; l.hi = Math.round(d.hi + iv * (morningPeak ? 2 : 1));
-      l.lm = `Поезда ${P.name} — раз в ${ivText(iv)} мин. ${d.how[0].toUpperCase() + d.how.slice(1)}`; }
-    if(l.model === 'ride'){ let t = 0; for(let i = 1; i < l.stations.length; i++) t += km(ST[l.stations[i-1]], ST[l.stations[i]]) / RUN_KMH * 60 + (peak ? DWELL_PEAK : DWELL);
-      l.lo = Math.round(t * 0.97); l.hi = Math.round(t * 1.08 + (peak ? 1 : 0)); }
-    if(l.model === 'exit'){ const d = DEPTH[l.station];
-      l.lo = d.lo; l.hi = d.hi + (peak && d.deep ? 1 : 0);
-      l.lm = (l.station === 'Бауманская' ? 'Выход на Бауманской один — наверх по эскалатору' : d.how[0].toUpperCase() + d.how.slice(1)) + (peak && d.deep ? '. В час пик у эскалатора бывает очередь' : ''); l.warn = peak && d.deep; }
-  } }
+  const key = tr + '|' + parts.join(';'); if(CTX.key === key) return;   // включённые модули и их факты — в ключе: изменились — пересчёт
+  CTX.key = key;
+  for(const x in FC) delete FC[x];
+  // способы передвижения готовят свои варианты (интервалы, пробки…) на это время
+  for(const m of activeModules()) if(typeof m.prepare === 'function'){ try{ m.prepare(T, mods[m.id] || {}); }catch(e){ broke(m, 'prepare', e); } }
 }
 // Контекст для текущего выбора времени. Кэш по ключу выбора — считаем один раз на изменение.
 let SYNC_KEY = null;
 function syncCtx(){
-  const key = [state.mode, state.timeMode, state.arrive, state.depart, JSON.stringify(state.modules)].join('|');
+  const key = [state.mode, state.timeMode, state.arrive, state.depart, JSON.stringify(state.modules), MODULES.map(m=>m.id + (m.__broken?'!':'')).join(',')].join('|');
   if(key === SYNC_KEY) return; SYNC_KEY = key;
-  if(!arriveMode()){ setCtx(dep() + WALK_TO_METRO); return; }
+  rebuildOptions();
+  if(!arriveMode()){ setCtx(dep() + TRIP_ANCHOR); return; }
   let T = state.arrive - 25;
   for(let i = 0; i < 3; i++){
     setCtx(T);
-    const L = state.arrive - simulate('metro').p95;
-    const nT = (L >= NOW + 1 ? L : NOW) + WALK_TO_METRO;
+    const ks = goKeys().filter(k => !OPTIONS[k].closed && !OPTIONS[k].noTarget); if(!ks.length) break;
+    const L = state.arrive - Math.min(...ks.map(k => simulate(k).p95));   // по самому быстрому из доступных способов
+    const nT = (L >= NOW + 1 ? L : NOW) + TRIP_ANCHOR;
     if(Math.abs(nT - T) < 1) break; T = nT;
   }
 }
 
+// Варианты маршрута дают модули-способы (см. МОДУЛИ). Ядро собирает их здесь и ничего не знает о конкретных способах.
+// Вариант: name, ico, bg, fg, price, detail, legs, tail, pois; purpose — 'go' (добраться) или 'walk' (погулять); order;
+// verb («Выходи»/«Вызывай»), cta (кнопка), confirm (подтверждение перед оплатой), startToast, riskWord, varyWord, delayWhy, legIco;
+// requires — другие способы, без которых вариант не нужен; closed/closedInfo — способ сейчас не работает (ставит модуль).
 // Каждый шаг — диапазон lo–hi минут. Прогноз = сумма шагов, считается симуляцией (см. forecast).
-// tail — редкий сбой: вероятность и добавка в минутах. geom — запечённая геометрия из BAKED.routes.
-const OPTIONS = {
-  metro:{ name:'Метро', ico:'Ⓜ', bg:'#E3EBFD', fg:'#2E6FE6', price:'≈ 70 ₽', tail:METRO_TAIL,
-    detail: stops(5) + ' без пересадок',
-    legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы, ближе к дому', tip:'Вход №3'},
-           {type:'wait', kind:'Подожди', model:'board', station:'Первомайская', at:ENTRY3, lo:1, hi:4, label:'Вход, платформа и поезд', lm:''},
-           {type:'metro', model:'ride', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'Садись в первые вагоны: на Бауманской выход у головы поезда. Перед выходом — вибрация', src:'data/metro-cars.json · расчёт по карте'},
-           {type:'wait', kind:'Подъём', model:'exit', station:'Бауманская', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'', tip:'Ты на месте'} ] },
-  taxi:{ name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.10,5,15],
-    detail:'подача 3–9 мин',
-    legs:[ {type:'wait', kind:'Подача', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
-           {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'', tip:'Ты на месте'} ] },
-  carshare:{ name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500\u00a0₽', tail:[0.10,5,15],
-    detail:'машина в 360 м',
-    legs:[ {type:'walk', geom:'toCar', lo:4, hi:6, label:'Пешком до машины', lm:'Ближайшая свободная машина — 360 м', tip:'Машина здесь'},
-           {type:'wait', kind:'Подготовка', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
-           {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:''},
-           {type:'wait', kind:'Парковка', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', warn:true, tip:'Ты на месте'} ] },
-  walk:{ name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0],
-    detail:'≈ 10 км',
-    legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
-  // режим «Гуляю»
-  stroll:{ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', tail:METRO_TAIL,
-    detail:'метро + 2,5 км пешком',
-    pois:[            {e:'🌊', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
-           {e:'⛪', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
-    legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы', tip:'Вход №3'},
-           {type:'wait', kind:'Подожди', model:'board', station:'Первомайская', at:ENTRY3, lo:1, hi:4, label:'Вход, платформа и поезд', lm:''},
-           {type:'metro', model:'ride', stations:LINE3.slice(0,5), lo:9, hi:11, label:'Метро до Электрозаводской · ' + stops(4), lm:'Выходи на Электрозаводской — дальше пешком'},
-           {type:'wait', kind:'Подъём', model:'exit', station:'Электрозаводская', at:[37.70386,55.78161], lo:2, hi:3, label:'Подъём в город', lm:''},
-           {type:'walk', geom:'strollWalk', lo:29, hi:36, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Ты на месте'} ] },
-  loop:{ name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true,
-    detail:'кольцо вдоль Измайловского лесопарка',
-    pois:[ {e:'🌳', n:'Опушка леса', d:'тихий участок', at:[37.8115,55.78878], extra:'по пути'},
-           {e:'🪑', n:'Скамейки', d:'можно передохнуть', at:[37.82262,55.78883], extra:'по пути'},
-         ],
-    legs:[ {type:'walk', geom:'loop', lo:30, hi:38, label:'Кольцо 2,6 км и обратно домой', lm:'Можно сократить в любой момент', tip:'Почти дома'} ] }
-};
+const OPTIONS = {};
+const isOn = id => activeModules().some(m => m.id === id);
+function rebuildOptions(){
+  for(const k in OPTIONS) delete OPTIONS[k];
+  for(const m of activeModules()) if(m.options) for(const [k, o] of Object.entries(m.options))
+    if((o.requires || []).every(isOn)) OPTIONS[k] = o;
+  if(state.sel && !OPTIONS[state.sel]) state.sel = goKeys()[0] || walkKeys()[0] || null;
+}
+const keysFor = purpose => Object.keys(OPTIONS).filter(k => OPTIONS[k].purpose === purpose).sort((a,b) => (OPTIONS[a].order||9) - (OPTIONS[b].order||9));
+const goKeys = () => keysFor('go'), walkKeys = () => keysFor('walk');
 
 /* ================= МОДУЛИ =================
    Модуль — самостоятельный объект. Ядро о модулях ничего не знает: оно спрашивает включённые модули
    в четырёх точках встраивания и показывает ответы в своём стиле. Модуль отдаёт данные, не HTML.
    Добавить модуль = описать объект и вызвать registerModule(). Убрать = удалить объект (или выключить).
 
-   Описание:      id (латиница), icon, name, desc, where, on (включён по умолчанию)
+   Описание:      id (латиница), icon, name, desc, where, on (включён по умолчанию),
+                  group: 'mode' — способ передвижения (даёт options — варианты маршрута, и prepare(T, f) — готовит их на время T),
+                  requires: ['metro'] — работает, только если включены эти модули
    Свои данные:   context(T)            → факты на время поездки T (минуты суток), кладутся в CTX.mods[id]
    1. Прогноз:    legFactor(leg, f)      → множитель времени шага (1 — без изменений; ограничен 0,5–3)
    2. Шаги:       stepHints(leg, t, f)   → [{icon, text, warn}] — плашки у шага маршрута (t — время начала шага)
@@ -380,7 +322,9 @@ function unregisterModule(id){ const i = MODULES.findIndex(x => x.id === id); if
 // Модуль может сам попросить пересчёт (пришла свежая погода и т.п.)
 var APP_READY = false;   // до первого экрана модули только регистрируются
 function refreshModules(){ SYNC_KEY = null; CTX.key = null; if(FC) for(const x in FC) delete FC[x]; if(APP_READY) render(); }
-const activeModules = () => MODULES.filter(m => state.modules[m.id] && !m.__broken);
+const usable = m => m && state.modules[m.id] && !m.__broken;
+// включён, не сломан и включены модули, без которых он не нужен (requires)
+const activeModules = () => MODULES.filter(m => usable(m) && (m.requires || []).every(id => usable(MODULES.find(x => x.id === id))));
 const facts = m => (CTX.mods && CTX.mods[m.id]) || {};
 // Ошибка модуля: отключаем его до конца сеанса, остальное приложение работает
 function broke(m, hook, e){ if(m.__broken) return; m.__broken = true; console.warn('модуль ' + m.id + ' отключён: ошибка в ' + hook + ' — ' + (e && e.message));
@@ -405,6 +349,104 @@ function legFactor(l){ let k = 1;
 // Шаг для модуля — копия с ключом способа k: модуль не может испортить данные маршрута
 const legView = (k, l) => Object.freeze(Object.assign({ k }, l));
 
+
+/* ---------- Способы передвижения ---------- */
+// ---- Метро: модель по интервалам (этап 2). Открытого расписания (GTFS) нет, и оно не нужно: поезда ходят по интервалам.
+// Метро = вход и путь до платформы (глубина станции) + ожидание (0…интервал) + перегоны (расстояние / ходовая скорость + стоянка) + подъём.
+// Интервалы — линия 3 в будни, примерные: ПРОВЕРИТЬ по факту и уточнять калибровкой.
+registerModule((() => {
+  const PERIODS = [   // [с какой минуты суток, до какой, название, интервал мин]
+    [   0,   60, 'поздно вечером', 7  ], [  60,  330, 'ночью', null ],         // 1:00–5:30 метро закрыто
+    [ 330,  420, 'рано утром',     4  ], [ 420,  600, 'в час пик', 2 ],
+    [ 600, 1020, 'днём',           3.5], [1020, 1200, 'в час пик', 2 ],
+    [1200, 1380, 'вечером',        4  ], [1380, 1440, 'поздно вечером', 6 ] ];
+  const OPEN = 330;
+  const period = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; const p = PERIODS.find(p => m >= p[0] && m < p[1]); return { key:p[0], name:p[2], iv:p[3] }; };
+  // От двери вестибюля до платформы и обратно. deep — глубокая, в час пик очередь на эскалатор.
+  const DEPTH = {
+    'Первомайская':     { lo:1, hi:2, deep:false, how:'мелкая станция — по лестнице' },
+    'Электрозаводская': { lo:2, hi:3, deep:true,  how:'наверх по эскалатору' },
+    'Бауманская':       { lo:2, hi:3, deep:true,  how:'выход один — наверх по длинному эскалатору' } };
+  const RUN_KMH = 42, DWELL = 0.5, DWELL_PEAK = 0.7;   // ходовая скорость с разгоном; стоянка на станции, мин
+  const TAIL = [0.03, 3, 10];       // сбой с увеличением интервалов: ~3% поездок, +3–10 мин
+  const SKIP_PEAK = 0.25;           // утром в час пик в каждом 4-м случае первый поезд в центр полный — ждёшь следующий
+  const km = (a, b) => { const R = 6371, la = (a[1]+b[1])/2*Math.PI/180, dx = (b[0]-a[0])*Math.PI/180*Math.cos(la)*R, dy = (b[1]-a[1])*Math.PI/180*R; return Math.hypot(dx, dy); };
+  const ivText = iv => iv % 1 ? Math.floor(iv) + '–' + Math.ceil(iv) : String(iv);
+  const cap = t => t[0].toUpperCase() + t.slice(1);
+  const common = { verb:'Выходи', riskWord:'есть риск', varyWord:'бывает дольше', delayWhy:'если поезд задержится', tail:TAIL };
+  const options = {
+    metro: Object.assign({ name:'Метро', ico:'Ⓜ', bg:'#E3EBFD', fg:'#2E6FE6', price:'≈ 70 ₽', purpose:'go', order:1,
+      detail: stops(5) + ' без пересадок',
+      legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы, ближе к дому', tip:'Вход №3'},
+           {type:'wait', kind:'Подожди', model:'board', station:'Первомайская', at:ENTRY3, lo:1, hi:4, label:'Вход, платформа и поезд', lm:''},
+           {type:'metro', model:'ride', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'Садись в первые вагоны: на Бауманской выход у головы поезда. Перед выходом — вибрация', src:'data/metro-cars.json · расчёт по карте'},
+           {type:'wait', kind:'Подъём', model:'exit', station:'Бауманская', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'', tip:'Ты на месте'} ] }, common),
+    // «Погулять рядом»: метро + прогулка — нужен и модуль «Пешком»
+    stroll: Object.assign({ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', purpose:'walk', order:2, requires:['walk'],
+      detail:'метро + 2,5 км пешком',
+      pois:[            {e:'🌊', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
+           {e:'⛪', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
+      legs:[ {type:'walk', geom:'walkToMetro', lo:9, hi:13, label:'Пешком до м. Первомайская', lm:'Вход №3 — на южной стороне улицы', tip:'Вход №3'},
+           {type:'wait', kind:'Подожди', model:'board', station:'Первомайская', at:ENTRY3, lo:1, hi:4, label:'Вход, платформа и поезд', lm:''},
+           {type:'metro', model:'ride', stations:LINE3.slice(0,5), lo:9, hi:11, label:'Метро до Электрозаводской · ' + stops(4), lm:'Выходи на Электрозаводской — дальше пешком'},
+           {type:'wait', kind:'Подъём', model:'exit', station:'Электрозаводская', at:[37.70386,55.78161], lo:2, hi:3, label:'Подъём в город', lm:''},
+           {type:'walk', geom:'strollWalk', lo:29, hi:36, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Ты на месте'} ] }, common, { delayWhy:'если задержишься' }) };
+  return { id:'metro', group:'mode', icon:'Ⓜ', name:'Метро', desc:'Интервалы по времени суток, глубина станций', where:'способы, маршрут, ведение', on:true,
+    options,
+    context(T){ return { period: period(T).key }; },   // смена периода (пик, день, ночь) — пересчёт
+    prepare(T){
+      const P = period(T), peak = P.iv === 2, morningPeak = P.key === 420, iv = P.iv || 7;
+      for(const o of Object.values(options)){
+        o.closed = !P.iv;
+        o.closedInfo = { word:'ночью не ходит', card:['метро', 'закрыто', 'с ' + fmt(OPEN)], head:'Метро ночью закрыто', sub:'Откроется в ' + fmt(OPEN) + '. Ночью доберёшься на такси или пешком' };
+        for(const l of o.legs){
+          if(l.model === 'board'){ const d = DEPTH[l.station];
+            l.plo = d.lo; l.phi = d.hi; l.iv = iv; l.skip = morningPeak ? SKIP_PEAK : 0;
+            l.lo = d.lo; l.hi = Math.round(d.hi + iv * (morningPeak ? 2 : 1));
+            l.lm = `Поезда ${P.name} — раз в ${ivText(iv)} мин. ${cap(d.how)}`; }
+          if(l.model === 'ride'){ let t = 0; for(let i = 1; i < l.stations.length; i++) t += km(ST[l.stations[i-1]], ST[l.stations[i]]) / RUN_KMH * 60 + (peak ? DWELL_PEAK : DWELL);
+            l.lo = Math.round(t * 0.97); l.hi = Math.round(t * 1.08 + (peak ? 1 : 0)); }
+          if(l.model === 'exit'){ const d = DEPTH[l.station];
+            l.lo = d.lo; l.hi = d.hi + (peak && d.deep ? 1 : 0);
+            l.lm = (l.station === 'Бауманская' ? 'Выход на Бауманской один — наверх по эскалатору' : cap(d.how)) + (peak && d.deep ? '. В час пик у эскалатора бывает очередь' : ''); l.warn = peak && d.deep; }
+        } } } };
+})());
+// ---- Пешком
+registerModule({ id:'walk', group:'mode', icon:'🚶', name:'Пешком', desc:'Пешие маршруты и прогулки', where:'способы, «Погулять рядом»', on:true,
+  options: {
+    walk: { name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0], purpose:'go', order:4, verb:'Выходи', delayWhy:'если задержишься',
+      detail:'≈ 10 км',
+      legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
+    loop: { name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true, purpose:'walk', order:1, verb:'Выходи',
+      detail:'кольцо вдоль Измайловского лесопарка',
+      pois:[ {e:'🌳', n:'Опушка леса', d:'тихий участок', at:[37.8115,55.78878], extra:'по пути'},
+             {e:'🪑', n:'Скамейки', d:'можно передохнуть', at:[37.82262,55.78883], extra:'по пути'} ],
+      legs:[ {type:'walk', geom:'loop', lo:30, hi:38, label:'Кольцо 2,6 км и обратно домой', lm:'Можно сократить в любой момент', tip:'Почти дома'} ] } } });
+// ---- Такси и каршеринг: время за рулём — из общих данных о пробках (TRAFFIC)
+function carPrepare(o){ return T => { const t = TRAFFIC[trafficAt(T)]; o.tail = t.tail;
+  for(const l of o.legs) if(l.type === 'car'){ l.lo = t.lo; l.hi = t.hi; l.lm = t.lm; l.warn = t.warn; } }; }
+registerModule((() => { const o = { name:'Такси', ico:'🚕', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.10,5,15], purpose:'go', order:2,
+    verb:'Вызывай', cta:'Вызвать такси', riskWord:'риск из-за пробок', varyWord:'зависит от пробок', delayWhy:'в пробку', legIco:'🚕',
+    startToast:'Такси вызвано · подача ~5 мин',
+    confirm:{ crumb:'Вызов такси', title:'Вызвать такси?', rows:[['Тариф','Эконом'],['Цена','≈ 650 ₽'],['Подача','3–9 мин']], note:'Оформим в приложении такси — точная цена там. В прототипе это имитация.', btn:'Вызвать' },
+    detail:'подача 3–9 мин',
+    legs:[ {type:'wait', kind:'Подача', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
+           {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'', tip:'Ты на месте'} ] };
+  return { id:'taxi', group:'mode', icon:'🚕', name:'Такси', desc:'Подача и поездка с учётом пробок', where:'способы, подтверждение перед вызовом', on:true,
+    options:{ taxi:o }, context(T){ return { traffic: trafficAt(T) }; }, prepare: carPrepare(o) }; })());
+registerModule((() => { const o = { name:'Каршеринг', ico:'🚗', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500 ₽', tail:[0.10,5,15], purpose:'go', order:3,
+    verb:'Выходи', cta:'Забронировать машину', riskWord:'риск из-за пробок', varyWord:'зависит от пробок', delayWhy:'в пробку', legIco:'🚗',
+    startToast:'Машина забронирована · 20 мин бесплатно',
+    confirm:{ crumb:'Бронь машины', title:'Забронировать машину?', rows:[['Машина','ближайшая, 360 м'],['Цена','≈ 300–500 ₽'],['Бесплатное ожидание','20 мин']], note:'Оформим в приложении каршеринга — точная цена там. В прототипе это имитация.', btn:'Забронировать' },
+    detail:'машина в 360 м',
+    legs:[ {type:'walk', geom:'toCar', lo:4, hi:6, label:'Пешком до машины', lm:'Ближайшая свободная машина — 360 м', tip:'Машина здесь'},
+           {type:'wait', kind:'Подготовка', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
+           {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:''},
+           {type:'wait', kind:'Парковка', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', warn:true, tip:'Ты на месте'} ] };
+  return { id:'carshare', group:'mode', icon:'🚗', name:'Каршеринг', desc:'Ближайшая машина, поездка с учётом пробок', where:'способы, подтверждение перед бронью', on:true,
+    options:{ carshare:o }, context(T){ return { traffic: trafficAt(T) }; }, prepare: carPrepare(o) }; })());
+
+/* ---------- Подсказки ---------- */
 // ---- Погода в пути. В приложении данные — из погодного сервиса; в прототипе: дождь сегодня 8:40–13:00
 registerModule({
   id:'weather', icon:'☔', name:'Погода в пути', desc:'Дождь и гололёд — в прогнозе и подсказках', where:'на экране способов и в прогнозе пешком', on:true,
@@ -416,12 +458,12 @@ registerModule({
 });
 // ---- Загруженность вагонов. В приложении — данные о загрузке поездов; в прототипе: утром в 8:30–8:50 полные
 registerModule({
-  id:'crowd', icon:'👥', name:'Загруженность вагонов', desc:'Когда в поездах свободнее', where:'в шаге метро', on:true,
+  id:'crowd', requires:['metro'], icon:'👥', name:'Загруженность вагонов', desc:'Когда в поездах свободнее', where:'в шаге метро', on:true,
   stepHints(l, t){ return l.type==='metro' && t >= 8*60+25 && t < 8*60+55 ? [{ icon:'👥', text:'в 8:30–8:50 вагоны полные — в первые вагоны свободнее не будет' }] : []; }
 });
 // ---- Кофе по пути. В приложении — кофейни из поиска мест; в прототипе — две точки
 registerModule({
-  id:'coffee', icon:'☕', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'«По пути» на маршруте прогулки', on:false,
+  id:'coffee', requires:['walk'], icon:'☕', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'«По пути» на маршруте прогулки', on:false,
   places:{ stroll:[{e:'☕', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'}],
            loop:[{e:'☕', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'}] },
   pois(k){ return this.places[k] || []; }
@@ -467,9 +509,8 @@ const DAY = 24*60;
 const fmt = m => { m = Math.round(m); const h = Math.floor(m/60)%24, mm = ((m%60)+60)%60; return h + ':' + String(mm).padStart(2,'0'); };
 const fmtD = m => fmt(m) + (m >= DAY ? ' завтра' : '');
 const dur = m => { m = Math.round(m); return m>=60 ? Math.floor(m/60) + ' ч' + (m%60 ? ' ' + m%60 + ' мин' : '') : m + ' мин'; };
-const isCar = k => k==='taxi' || k==='carshare';
-const delayWhy = k => isCar(k) ? 'в пробку' : k==='walk' || k==='loop' ? 'если задержишься' : 'если поезд задержится';
-const goVerb = k => k==='taxi' ? 'Вызывай' : 'Выходи';
+const delayWhy = k => OPTIONS[k].delayWhy || 'если задержишься';
+const goVerb = k => OPTIONS[k].verb || 'Выходи';
 const arriveMode = () => state.mode==='hurry' && state.timeMode==='arrive';
 const dep = () => state.timeMode==='depart' || state.mode!=='hurry' ? state.depart : NOW;
 const latest = k => state.arrive - forecast(k).p95;
@@ -478,16 +519,16 @@ const latest = k => state.arrive - forecast(k).p95;
    Режим «Выйти в»: по относительному разбросу (самое позднее − обычное) / обычное. */
 function verdict(k){
   const o = OPTIONS[k], f = forecast(k);
-  if(o.closed) return { cls:'', word:'ночью не ходит', closed:true, plan:'now' };
+  if(o.closed) return { cls:'', word:(o.closedInfo||{}).word || 'сейчас не работает', closed:true, plan:'now' };
   if(!arriveMode() || o.noTarget){
     const rel = (f.p95 - f.mid) / f.mid;
-    return rel <= 0.15 ? { cls:'g', word:'стабильно' } : rel <= 0.30 ? { cls:'a', word: isCar(k) ? 'зависит от пробок' : 'бывает дольше' } : { cls:'r', word:'непредсказуемо' };
+    return rel <= 0.15 ? { cls:'g', word:'стабильно' } : rel <= 0.30 ? { cls:'a', word: o.varyWord || 'бывает дольше' } : { cls:'r', word:'непредсказуемо' };
   }
   const L = latest(k);
   if(L >= NOW + 1) return { cls:'g', word:'надёжно', plan:'until', L, spare: L - NOW };          // есть время собраться
   const budget = state.arrive - NOW, p = f.chance(budget);
   if(p >= 0.95) return { cls:'g', word:'надёжно', plan:'now' };
-  if(p >= 0.5)  return { cls:'a', word: isCar(k) ? 'риск из-за пробок' : 'есть риск', plan:'now', badLate: f.p95 - budget };
+  if(p >= 0.5)  return { cls:'a', word: o.riskWord || 'есть риск', plan:'now', badLate: f.p95 - budget };
   if(p >= 0.1)  return { cls:'r', word:'скорее опоздаешь', plan:'now', late: Math.max(1, f.mid - budget) };
   return { cls:'r', word:'не успеешь', plan:'now', late: f.mid - budget, never:true };
 }
@@ -495,7 +536,8 @@ function verdict(k){
 function bestOption(keys){
   // «Прибыть к»: сначала надёжность, потом время; без цели — кто раньше будет на месте (самое позднее)
   const score = k => { const v = verdict(k), f = forecast(k); if(!arriveMode()) return f.p95; const rank = v.cls==='g' ? 0 : v.cls==='a' ? 1 : 2; return rank*1e4 + f.mid; };
-  return keys.filter(k=>!OPTIONS[k].noTarget && !verdict(k).closed).reduce((a,b)=>score(b)<score(a)?b:a);
+  const ks = keys.filter(k=>!OPTIONS[k].noTarget && !verdict(k).closed); if(!ks.length) return null;
+  return ks.reduce((a,b)=>score(b)<score(a)?b:a);
 }
 
 /* ================= ЭКРАНЫ ================= */
@@ -515,8 +557,10 @@ const isSaved = () => state.templates.some(t => t.dest===state.dest && !t.revers
 function tplTime(t){   // «выйди до 8:23» для шаблона — считаем как для выбранного времени, затем возвращаем выбор
   const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode };
   Object.assign(state, { dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
+  syncCtx();
+  if(!OPTIONS[t.mode]){ Object.assign(state, keep); return `<div class="m">способ</div><b>выключен</b>`; }
   const f = forecast(t.mode), v = verdict(t.mode);
-  const out = t.arrive==null ? `<div class="m">в пути</div><b>~${dur(f.mid)}</b>` : v.closed ? `<div class="m">метро</div><b>закрыто</b>` : v.plan==='until' ? `<div class="m">выйди до</div><b>${fmtD(v.L)}</b>` : `<div class="m">${goVerb(t.mode).toLowerCase()}</div><b>сейчас</b>`;
+  const out = t.arrive==null ? `<div class="m">в пути</div><b>~${dur(f.mid)}</b>` : v.closed ? `<div class="m">${OPTIONS[t.mode].name.toLowerCase()}</div><b>закрыто</b>` : v.plan==='until' ? `<div class="m">выйди до</div><b>${fmtD(v.L)}</b>` : `<div class="m">${goVerb(t.mode).toLowerCase()}</div><b>сейчас</b>`;
   Object.assign(state, keep);
   return out;
 }
@@ -553,11 +597,11 @@ V.place = () => {
 /* ----- Способы: та же шторка раскрыта ----- */
 V.compare = () => {
   const walkMode = state.mode==='walk', arr = arriveMode();
-  const keys = walkMode ? ['loop','stroll'] : ['metro','taxi','carshare','walk'];
+  const keys = walkMode ? walkKeys() : goKeys();
   const best = walkMode ? null : bestOption(keys);
-  const allLate = arr && keys.every(k=>verdict(k).cls==='r');
+  const allLate = arr && keys.length && keys.every(k=>verdict(k).cls==='r');
   let late = '';
-  if(allLate){
+  if(allLate && fastest()){
     const fk = fastest(), f = forecast(fk), nextT = Math.ceil((NOW + f.p95) / 15) * 15;
     late = `<div class="banner late" role="alert"><b>К ${fmtD(state.arrive)} уже не успеть</b><br>Быстрее всего — ${OPTIONS[fk].name.toLowerCase()}, будешь около ${fmt(NOW+f.mid)}
       <div class="row" style="flex-wrap:wrap;margin-top:10px"><button class="chip press" onclick="setTime(${nextT})">Показать к ${fmt(nextT)}</button><button class="chip press" onclick="pick('${fk}')">Самый быстрый</button><button class="chip press" onclick="lateMsg('${fk}')">Предупредить, что опоздаю</button></div></div>`;
@@ -566,15 +610,15 @@ V.compare = () => {
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">${destName()}</h1></div>
   <div class="tripbar"><button class="from press" onclick="toast('В прототипе маршрут — от дома')"><i aria-hidden="true"></i>Отсюда</button>${timeBtn()}</div>
   ${late}
-  ${keys.map(k=>card(k, k===best && !allLate)).join('')}
+  ${keys.length ? keys.map(k=>card(k, k===best && !allLate)).join('') : `<div class="offer"><div class="t">Нет включённых способов</div><div class="m" style="margin:4px 0 10px">${walkMode ? 'Для прогулок включи модуль «Пешком»' : 'Включи хотя бы один способ передвижения'}</div><button class="chip on press" onclick="go('modules')">Модули</button></div>`}
   ${w}
   <div class="note">Время, цены и ориентиры в прототипе примерные. «Самое позднее» — так в 19 поездках из 20.</div>`;
 };
-function fastest(){ return ['metro','taxi','carshare'].filter(k=>!verdict(k).closed).reduce((a,b)=>forecast(b).mid<forecast(a).mid?b:a); }
+function fastest(){ const ks = goKeys().filter(k=>!verdict(k).closed && !OPTIONS[k].noTarget); return ks.length ? ks.reduce((a,b)=>forecast(b).mid<forecast(a).mid?b:a) : null; }
 function card(k, isBest){
   const o = OPTIONS[k], f = forecast(k), v = verdict(k), arr = arriveMode() && !o.noTarget;
   let right, pills = [];
-  if(v.closed){ right = `<div class="m">метро</div><div class="big">закрыто</div><div class="m">с ${fmt(OPEN)}</div>`; pills.push(`<span class="pill">ночью не ходит</span>`); }
+  if(v.closed){ const c = (o.closedInfo||{}).card || ['', 'закрыто', '']; right = `<div class="m">${c[0]}</div><div class="big">${c[1]}</div><div class="m">${c[2]}</div>`; pills.push(`<span class="pill">${v.word}</span>`); }
   else if(o.noTarget){ right = `<div class="big">${f.mid} мин</div><div class="m">${o.price}</div>`; pills.push(`<span class="pill">когда захочешь</span>`); }
   else if(arr && v.plan==='until'){
     right = `<div class="m">выйди до</div><div class="big">${fmtD(v.L)}</div><div class="m">${v.spare >= 120 ? '' : 'ещё ' + dur(v.spare)}</div>`;
@@ -673,16 +717,17 @@ function setTimeMode(m){ const dr = state.draft; if(dr.mode===m) return; const t
 function setTime(t){ if(arriveMode()) state.arrive = t; else state.depart = t; render(); }
 
 V.route = () => {
+  if(!OPTIONS[state.sel]){ state.view = 'compare'; return V.compare(); }   // способ выключили — к способам
   const k = state.sel, o = OPTIONS[k], f = forecast(k), v = verdict(k), arr = arriveMode() && !o.noTarget;
   const start = arr ? (v.plan==='until' ? v.L : NOW) : dep();
   let t = start;
-  const icon = l => l.type==='walk' ? '🚶' : l.type==='metro' ? 'Ⓜ' : l.type==='wait' ? '⏱' : k==='taxi' ? '🚕' : '🚗';
+  const icon = l => l.type==='walk' ? '🚶' : l.type==='metro' ? 'Ⓜ' : l.type==='wait' ? '⏱' : o.legIco || '🚗';
   const steps = o.legs.map((l,i) => { const mid = legMin(k,i); const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" aria-hidden="true" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
      <div class="tx"><b>${l.label}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div> ${collect('stepHints', legView(k, l), t).map(h => `<div class="lm${h.warn?' w':''}"><span aria-hidden="true">${esc(h.icon)}</span> ${esc(h.text)}</div>`).join('')}${l.lm?`<div class="lm${l.warn?' w':''}"><span aria-hidden="true">${l.warn?'⚠️':'📍'}</span> ${l.lm}</div>`:''}</div></div>`; t += mid; return s; }).join('');
   const vp = visiblePois(k);
   const pois = vp.length ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${vp.map((p,i)=>`<button class="poi press" onclick="flyPoi(${i})"><div class="e" aria-hidden="true">${esc(p.e)}</div><b>${esc(p.n)}</b><span>${esc(p.d)}${p.extra ? ' · ' + esc(p.extra) : ''}</span></button>`).join('')}</div>` : '';
   let head;
-  if(v.closed) head = `<h1 tabindex="-1">Метро ночью закрыто</h1><div class="sub">Откроется в ${fmt(OPEN)}. Ночью доберёшься на такси или пешком</div>`;
+  if(v.closed){ const c = o.closedInfo || {}; head = `<h1 tabindex="-1">${c.head || o.name + ' сейчас не работает'}</h1><div class="sub">${c.sub || ''}</div>`; }
   else if(o.noTarget) head = `<h1 tabindex="-1">${o.name}</h1><div class="sub">~${f.mid} мин · ${o.price} · можно сократить в любой момент</div>`;
   else if(!arr){ const d = dep();
     head = `<h1 tabindex="-1">Выйдешь ${d===NOW?'сейчас':'в '+fmt(d)} — будешь в ${fmtD(d+f.mid)}</h1><div class="sub">${o.name} · ${o.price} · самое позднее ${fmt(d+f.p95)}</div><div class="row" style="flex-wrap:wrap;gap:6px"><span class="pill ${v.cls}">${v.word}</span></div>`; }
@@ -691,13 +736,13 @@ V.route = () => {
   else if(!v.cls.startsWith('r') ) head = `<h1 tabindex="-1">${goVerb(k)} сейчас</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}${v.badLate ? ', но ' + delayWhy(k) + ' — опоздаешь на ' + v.badLate + ' мин' : ', самое позднее ' + fmt(NOW+f.p95)}</div><span class="pill ${v.cls}">${v.word}</span>`;   // заголовок — действие, итог — в пилюле
   else if(!v.never) head = `<h1 tabindex="-1">${goVerb(k)} сейчас</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}, это ~${dur(v.late)} опоздания. Успеешь, только если повезёт</div><span class="pill r">${v.word}</span>`;
   else head = `<h1 tabindex="-1">К ${fmtD(state.arrive)} не успеть</h1><div class="sub">Выйдешь сейчас — будешь около ${fmt(NOW+f.mid)}, опоздание ~${dur(v.late)}</div><div class="row" style="flex-wrap:wrap;gap:6px"><button class="chip press" onclick="lateMsg('${k}')">Предупредить, что опоздаю</button></div>`;
-  const cta = k==='taxi' ? 'Вызвать такси' : k==='carshare' ? 'Забронировать машину' : (arr && v.never ? 'Всё равно поехать' : 'Поехали');
+  const cta = o.cta || (arr && v.never ? 'Всё равно поехать' : 'Поехали');
   // До выхода больше часа: ничего не вызываем сейчас — напоминание за 10 мин; поездку можно проиграть в демо
   const far = arr && v.plan==='until' && v.spare >= 60;
   const remindAt = far ? v.L - 10 : 0;
   const goBtn = far
     ? `<button class="btn p press" id="remindBtn" onclick="remind(${remindAt})">Напомнить в ${fmtD(remindAt)}</button><button class="btn w press" id="goBtn" style="margin-top:8px" onclick="startTrip(true)">Демо: проиграть поездку</button>`
-    : `<button class="btn ${arr && v.never ? 'w' : 'p'} press" id="goBtn" onclick="${isCar(k) ? "go('confirm')" : 'startTrip()'}">${cta}</button>`;
+    : `<button class="btn ${arr && v.never ? 'w' : 'p'} press" id="goBtn" onclick="${o.confirm ? "go('confirm')" : 'startTrip()'}">${cta}</button>`;
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">Маршрут с ориентирами</div></div>
     ${head}${!o.noTarget && state.dest && !isSaved() ? `<div><button class="savebtn" onclick="go('save')">☆ Сохранить маршрут</button></div>` : ''}${v.closed ? '' : `<div class="steps">${steps}</div>${pois}`}
     ${v.closed ? '' : goBtn}`;
@@ -710,24 +755,26 @@ function tripStart(k){ const o = OPTIONS[k], v = verdict(k);
 function visiblePois(k){ return (OPTIONS[k].pois||[]).concat(collect('pois', k)); }
 // Подтверждение перед платным действием
 V.confirm = () => {
-  const k = state.sel, o = OPTIONS[k], taxi = k==='taxi';
-  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">${taxi?'Вызов такси':'Бронь машины'}</div></div>
-   <h1 tabindex="-1">${taxi ? 'Вызвать такси?' : 'Забронировать машину?'}</h1>
+  const o = OPTIONS[state.sel], c = o && o.confirm; if(!c){ state.view = 'route'; return V.route(); }
+  return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">${c.crumb}</div></div>
+   <h1 tabindex="-1">${c.title}</h1>
    <div class="card" style="cursor:default">
-     <div class="row" style="justify-content:space-between"><span class="m">${taxi?'Тариф':'Машина'}</span><b>${taxi?'Эконом':'ближайшая, 360 м'}</b></div>
-     <div class="row" style="justify-content:space-between;margin-top:8px"><span class="m">Цена</span><b>${o.price}</b></div>
-     <div class="row" style="justify-content:space-between;margin-top:8px"><span class="m">${taxi?'Подача':'Бесплатное ожидание'}</span><b>${taxi?'3–9 мин':'20 мин'}</b></div>
-     <div class="m" style="margin-top:10px">Оформим в приложении ${taxi?'такси':'каршеринга'} — точная цена там. В прототипе это имитация.</div>
+     ${c.rows.map((r,i)=>`<div class="row" style="justify-content:space-between${i?';margin-top:8px':''}"><span class="m">${r[0]}</span><b>${r[1]}</b></div>`).join('')}
+     <div class="m" style="margin-top:10px">${c.note}</div>
    </div>
-   <button class="btn p press" onclick="startTrip()">${taxi ? 'Вызвать' : 'Забронировать'}</button>
+   <button class="btn p press" onclick="startTrip()">${c.btn}</button>
    <div style="height:8px"></div><button class="btn w press" onclick="back()">Отмена</button>`;
 };
+function modCard(m){ const on = !!state.modules[m.id];
+  const need = (m.requires || []).filter(id => !isOn(id)).map(id => (MODULES.find(x=>x.id===id) || {name:id}).name);
+  return `<button class="card" role="switch" aria-checked="${on}" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)" style="display:flex;align-items:center;gap:12px;${on && !need.length?'':'box-shadow:none;background:#FBFAF7'}">
+      <div class="ico" aria-hidden="true" style="background:#EDEDFD">${esc(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div>
+      <div class="m" style="font-size:12px">${on && need.length ? 'Не работает без: ' + need.map(esc).join(', ') : 'Где: ' + esc(m.where)}</div></div>
+      <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>`; }
 V.modules = () => `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
-   <div class="sub" style="margin-top:6px">Добавляют подсказки к твоим поездкам. Включай только нужное.</div>
-   ${MODULES.map(m => { const on = !!state.modules[m.id];   // экран собирается из описаний модулей
-     return `<button class="card" role="switch" aria-checked="${on}" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)" style="display:flex;align-items:center;gap:12px;${on?'':'box-shadow:none;background:#FBFAF7'}">
-      <div class="ico" aria-hidden="true" style="background:#EDEDFD">${esc(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div><div class="m" style="font-size:12px">Где: ${esc(m.where)}</div></div>
-      <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>`; }).join('')}
+   <div class="sub" style="margin-top:6px">Всё, кроме поиска и маршрута, — модули. Включай только нужное.</div>
+   <div class="sec">Способы передвижения</div>${MODULES.filter(m=>m.group==='mode').map(modCard).join('')}
+   <div class="sec">Подсказки</div>${MODULES.filter(m=>m.group!=='mode').map(modCard).join('')}
    <button class="btn w press" style="margin-top:8px" onclick="resetDemo()">Демо: начать с первого запуска</button>`;
 V.done = () => {
   const o = OPTIONS[state.sel], at = trip.endAt;
@@ -777,19 +824,20 @@ function saveReverse(yes){
 }
 function useTemplate(i){ const t = state.templates[i];
   if(t.reverse){ toast('В прототипе обратный путь пока не строится'); return; }
-  Object.assign(state, { dest:t.dest, mode:'hurry', sel:t.mode, timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? t.arrive : state.arrive, depart:NOW });
-  showRoute(state.sel); go('compare'); fitAll(); }
+  Object.assign(state, { dest:t.dest, mode:'hurry', sel: OPTIONS[t.mode] ? t.mode : goKeys()[0] || null, timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? t.arrive : state.arrive, depart:NOW });
+  if(state.sel){ showRoute(state.sel); fitAll(); } go('compare'); }
 function openPlace(k){
   if(!PLACES[k].ok){ toast('В прототипе маршруты есть только до м. Бауманская'); return; }
-  state.dest = k; state.mode = 'hurry'; state.sel = 'metro'; state.timeMode = 'depart'; state.depart = NOW; state.q = '';
+  state.dest = k; state.mode = 'hurry'; syncCtx(); state.sel = goKeys()[0] || null; state.timeMode = 'depart'; state.depart = NOW; state.q = '';
   state.recents = [k].concat(state.recents.filter(x=>x!==k)).slice(0,3);
   if(state.view==='find'){                        // «назад» из места — туда, откуда открыли поиск, а не в поиск
     state.view = state.history.pop() || 'home';
     if(state.view==='place'){ render('in'); snapFor('place'); showPlace(); return; }   // поиск из шторки места → то же место, новое содержимое
   }
   go('place'); showPlace(); }
-function walkNearby(){ state.mode = 'walk'; state.dest = null; state.sel = 'loop'; state.timeMode = 'depart'; state.depart = NOW; showRoute('loop'); go('compare'); fitAll(); }
-function resetDemo(){ Object.assign(state, { templates:[], recents:[], visits:{}, declined:{}, dest:null, saveName:null, q:'', justSaved:null, mode:'hurry', timeMode:'depart', depart:NOW, arrive:9*60, sel:'metro' }); restart(); toast('Демо сброшено: первый запуск'); }
+function walkNearby(){ state.mode = 'walk'; state.dest = null; state.timeMode = 'depart'; state.depart = NOW; syncCtx(); state.sel = walkKeys()[0] || null;
+  if(state.sel){ showRoute(state.sel); fitAll(); } go('compare'); }
+function resetDemo(){ Object.assign(state, { templates:[], recents:[], visits:{}, declined:{}, dest:null, saveName:null, q:'', justSaved:null, mode:'hurry', timeMode:'depart', depart:NOW, arrive:9*60, sel:null }); restart(); toast('Демо сброшено: первый запуск'); }
 // Верхняя панель: поиск («Куда?» или выбранное место) и модули; на главном — «Погулять рядом»
 function renderTop(){
   const tb = document.getElementById('topbar'), v = state.view, show = (v==='home' || v==='place') && !trip.on;
@@ -831,7 +879,6 @@ function back(){ const from = state.view; state.view = state.history.pop() || 'h
   render('back'); snapFor(state.view);
   if(state.view==='home') showHome(); else if(state.view==='place') showPlace();
   else if(state.view==='compare' && from!=='time' && from!=='modules'){ showRoute(state.sel); fitAll(); } }
-function setMode(m){ state.mode = m; state.sel = m==='hurry' ? 'metro' : 'stroll'; state.timeMode = m==='walk' ? 'depart' : 'arrive'; render(); showRoute(state.sel); fitAll(); }
 function pick(k){ state.sel = k; showRoute(k); go('route'); fitAll(); }
 function toggleMod(k){ state.modules[k] = !state.modules[k]; render(); say((state.modules[k]?'Включено':'Выключено'));
   if(routeKey) showRoute(state.sel); }   // точки модулей на карте
@@ -929,6 +976,7 @@ function prepLeg(c, l){ const seg=[]; let tot=0; for(let i=1;i<c.length;i++){ co
   return L; }
 let routeLegs = [], routeKey = null, routeReady = Promise.resolve();
 function showRoute(k){
+  if(!OPTIONS[k]){ clearRoute(); return routeReady = Promise.resolve(); }   // способ выключен — маршрута нет
   const o = OPTIONS[k]; const token = showRoute.t = (showRoute.t||0)+1;
   routeReady = Promise.all(o.legs.map(legCoords)).then(cs => {
     if(token!==showRoute.t) return;                 // устаревший запрос (был return routeReady — промис ждал сам себя)
@@ -952,7 +1000,7 @@ function showPlace(){ clearRoute(); if(!mapOk) return; addMarker(pinEl('Ты з�
   map.fitBounds(new maplibregl.LngLatBounds(HOME, HOME).extend(DEST), {padding:{top:120,left:50,right:50,bottom:300}, pitch:0, bearing:0, duration:reduced?0:800}); }
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fitAll(){
-  if(!mapOk) return; const o = OPTIONS[state.sel];
+  if(!mapOk || !OPTIONS[state.sel]) return; const o = OPTIONS[state.sel];
   const pts = [HOME].concat(o.noTarget?[]:[DEST], ...o.legs.map(l=>l.geom?BAKED.routes[l.geom]:l.type==='metro'?l.stations.map(s=>ST[s]):l.type==='wait'?[l.at]:[l.from,l.to].concat(l.via||[])));
   const b = pts.reduce((b,p)=>b.extend(p), new maplibregl.LngLatBounds(pts[0],pts[0]));
   map.fitBounds(b, {padding:{top:120,left:40,right:40,bottom:(snapY||phone.clientHeight*0.56)+20}, pitch:0, bearing:0, duration:reduced?0:800, maxZoom:15.5});
@@ -1040,7 +1088,7 @@ async function startTrip(demo){
   if(routeKey !== k) await showRoute(k);
   if(state.sel !== k || state.view !== view0){ trip.on = false; render(); return; }   // ушёл с экрана — поездку не начинаем (и такси без подтверждения не вызываем)
   const o = OPTIONS[k];
-  if(!demo && (k==='taxi' || k==='carshare')) toast(k==='taxi' ? 'Такси вызвано · подача ~5 мин' : 'Машина забронирована · 20 мин бесплатно');
+  if(!demo && o.startToast) toast(o.startToast);
   document.getElementById('topbar').classList.add('hide'); document.getElementById('topbar').inert = true;
   sheet.inert = true; snap('hidden'); document.getElementById('guide').classList.add('on');
   document.getElementById('attrib').classList.add('guiding');

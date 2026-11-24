@@ -50,6 +50,33 @@ test('текст модулей и поиска не исполняется ка
 test('подсказки модулей видны в «Погулять рядом»', async p => p.evaluate(() => {
   restart(); walkNearby(); return document.querySelectorAll('.hint').length > 0 || 'нет подсказки о дожде на прогулке';
 }));
+// ---------- способы передвижения — тоже модули ----------
+test('выключенное такси исчезает отовсюду', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); toggleMod('taxi');
+  const ok = !document.body.innerText.includes('Такси') && !OPTIONS.taxi && document.querySelectorAll('.card').length === 3;
+  toggleMod('taxi'); return ok || 'карточек ' + document.querySelectorAll('.card').length;
+}));
+test('все способы выключены — понятное пустое состояние', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); ['metro','walk','taxi','carshare'].forEach(toggleMod);
+  const ok = document.body.innerText.includes('Нет включённых способов') && !document.querySelectorAll('.card[data-k]').length;
+  ['metro','walk','taxi','carshare'].forEach(toggleMod); return ok || 'нет пустого состояния';
+}));
+test('без метро нет «метро + прогулки» и подсказки о загрузке вагонов', async p => p.evaluate(() => {
+  toggleMod('metro'); walkNearby(); const noStroll = !OPTIONS.stroll && !document.body.innerText.includes('прогулка у Яузы');
+  const noCrowd = !activeModules().some(m => m.id === 'crowd'); toggleMod('metro'); return (noStroll && noCrowd) || 'stroll/crowd остались';
+}));
+test('ночью метро «закрыто», лучший способ — другой', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=1440+180; render();
+  const t = document.body.innerText; return (t.includes('закрыто') && bestOption(goKeys()) !== 'metro') || 'best ' + bestOption(goKeys());
+}));
+test('прогноз метро к 9:00 не изменился (33 мин, выйди до 8:23)', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render();
+  const f = forecast('metro'), v = verdict('metro'); return (f.mid === 33 && fmt(v.L) === '8:23') || `${f.mid} / ${fmt(v.L)}`;
+}));
+test('шаблон с выключенным способом не ломает главный экран', async p => p.evaluate(() => {
+  resetDemo(); state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro' }); toggleMod('metro'); restart();
+  const ok = document.body.innerText.includes('выключен'); toggleMod('metro'); return ok || 'нет пометки';
+}));
 // ---------- навигация ----------
 test('место → поиск → место: на экране место', async p => p.evaluate(() => {
   restart(); openPlace('baum'); go('find'); openPlace('baum');
