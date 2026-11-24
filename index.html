@@ -463,7 +463,7 @@ V.home = () => {
 V.find = () => `<h1 class="sr" tabindex="-1">Поиск места</h1>
   <div class="row" style="margin-top:2px"><button class="back-btn" aria-label="Назад" onclick="back()">←</button>
     <input id="q" class="q" type="search" placeholder="Куда?" autocomplete="off" aria-label="Куда едем" value="${state.q||''}" oninput="state.q=this.value;findList()"></div>
-  <div id="res" aria-live="polite">${findHtml()}</div>`;
+  <div id="res" aria-live="polite" style="margin-top:12px">${findHtml()}</div>`;
 function findHtml(){
   const q = (state.q||'').trim().toLowerCase();
   if(!q) return state.recents.length ? `<div class="sec">Недавние</div>` + state.recents.map(k=>placeRow(k)).join('') : `<div class="m" style="margin:12px 4px">Например, «Бауманская»</div>`;
