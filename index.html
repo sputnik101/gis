@@ -16,6 +16,8 @@
   --s3:0 -4px 12px rgba(20,17,58,.12),0 -16px 40px rgba(20,17,58,.24);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}   /* атрибут hidden сильнее классов вроде .pill{display:inline-flex} */
+.sheet.tight .body{padding-bottom:20px;-webkit-mask-image:none;mask-image:none}   /* шторка по содержимому — без запаса и затухания снизу */
 html,body{margin:0;height:100%;background:#E9E7F7;font-family:Inter,Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
 body{display:flex;align-items:center;justify-content:center}
 button{font-family:inherit}
@@ -747,7 +749,7 @@ function go(v){ if(state.view===v) return;
 // Высота шторки для экрана: место — низкая, способы и служебные — высокая (карта остаётся сверху)
 function snapFor(v){
   if(v==='home') snap(state.templates.length || state.recents.length ? 'half' : 'hidden');
-  else if(v==='place') snap('place');
+  else if(v==='place') fitSheet();
   else if(v==='route' || v==='done') snap('half');
   else snap('full'); }
 function back(){ const from = state.view; state.view = state.history.pop() || 'home';
@@ -765,8 +767,15 @@ function say(t){ document.getElementById('live').textContent = t; }
 /* ================= ШТОРКА ================= */
 const sheet = document.getElementById('sheet'), phone = document.getElementById('phone');
 let snapY = 0;
+// Шторка ровно по содержимому (экран места): ручка + контент + отступ снизу 24 px
+function fitSheet(){
+  const view = body.firstElementChild; if(!view) return;
+  sheet.classList.add('tight');
+  const h = document.getElementById('grab').offsetHeight + 4 + view.offsetHeight + 24;
+  sheet.classList.add('anim'); snapY = Math.min(phone.clientHeight*0.6, h); sheet.style.height = snapY + 'px'; sheet.dataset.snap = 'place';
+}
 function snaps(){ const H = phone.clientHeight; return { full: H*0.82, half: H*0.56, place: 270, peek: 150, hidden: 0 }; }
-function snap(name){ sheet.classList.add('anim'); snapY = snaps()[name]; sheet.style.height = snapY + 'px'; sheet.dataset.snap = name;
+function snap(name){ sheet.classList.remove('tight'); sheet.classList.add('anim'); snapY = snaps()[name]; sheet.style.height = snapY + 'px'; sheet.dataset.snap = name;
   document.getElementById('grab').setAttribute('aria-expanded', name==='full'); }
 const ORDER = ['peek','half','full'];
 document.getElementById('grab').addEventListener('click', e => { if(dragMoved) return; const i = ORDER.indexOf(sheet.dataset.snap); snap(i < 0 ? 'full' : ORDER[(i+1)%3]); });
@@ -1034,7 +1043,7 @@ function endTrip(){
 
 /* ================= СТАРТ ================= */
 render(); requestAnimationFrame(()=>snapFor(state.view));
-let rsT; window.addEventListener('resize', ()=>{ clearTimeout(rsT); rsT = setTimeout(()=>{ if(!trip.on){ sheet.classList.remove('anim'); snapY = snaps()[sheet.dataset.snap||'half']; sheet.style.height = snapY+'px'; } }, 150); });
+let rsT; window.addEventListener('resize', ()=>{ clearTimeout(rsT); rsT = setTimeout(()=>{ if(!trip.on){ if(sheet.dataset.snap==='place'){ fitSheet(); return; } sheet.classList.remove('anim'); snapY = snaps()[sheet.dataset.snap||'half']; sheet.style.height = snapY+'px'; } }, 150); });
 initMap();
 </script>
 </body>
