@@ -128,6 +128,17 @@ test('ночью закрытое метро — в конце списка, н�
 test('«Сохранить» без способа не падает', async p => p.evaluate(() => {
   restart(); openPlace('baum'); state.sel = null; go('save'); return document.body.innerText.includes('Сначала выбери способ') || 'нет сообщения';
 }));
+test('шаблон открывает сразу маршрут сохранённым способом, «назад» — к способам', async p => p.evaluate(() => {
+  resetDemo(); state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro' }); restart(); useTemplate(0);
+  const r = state.view==='route' && state.sel==='metro'; back(); const c = state.view==='compare'; back();
+  return (r && c && state.view==='home') || 'view ' + state.view;
+}));
+test('«Поехали» видна без прокрутки на маршруте', async p => { await p.evaluate(() => { restart(); openPlace('baum'); go('compare'); pick('metro'); }); await p.waitForTimeout(500);
+  return p.evaluate(() => { const b = document.getElementById('goBtn').getBoundingClientRect(), ph = document.getElementById('phone').getBoundingClientRect(); return (b.bottom <= ph.bottom && b.top > ph.top) || 'кнопка за краем'; }); });
+test('без «Пешком» нет подсказки о дожде и чипа «Погулять рядом»', async p => p.evaluate(() => {
+  toggleMod('walk'); restart(); const chip = !!document.querySelector('.wchip'); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render();
+  const rain = document.body.innerText.includes('Дождь'); toggleMod('walk'); return (!chip && !rain) || JSON.stringify({chip, rain});
+}));
 // ---------- навигация ----------
 test('место → поиск → место: на экране место', async p => p.evaluate(() => {
   restart(); openPlace('baum'); go('find'); openPlace('baum');
@@ -145,7 +156,7 @@ test('после «Завершить» «назад» ведёт туда, от
 });
 test('сохранение маршрута и шаблон под поиском', async p => p.evaluate(() => {
   resetDemo(); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render(); pick('metro');
-  go('save'); saveTemplate(); saveReverse(false); restart();
+  go('save'); state.saveName='Работа'; saveTemplate(); saveReverse(false); restart();
   return (state.templates.length===1 && document.body.innerText.includes('выйди до')) || 'шаблонов ' + state.templates.length;
 }));
 test('сброс демо — чистый первый запуск', async p => p.evaluate(() => {

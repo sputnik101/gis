@@ -44,6 +44,7 @@ button{font-family:inherit}
 .q:focus,.q:focus-visible{outline:none;border:2px solid var(--violet-btn);padding:0 15px}   /* поле ввода в фокусе — фиолетовая рамка, без оранжевого кольца */
 .sec{font-size:13px;color:var(--muted);margin:10px 2px 8px}
 .lrow{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 12px;margin-bottom:8px;font:inherit;color:inherit;text-align:left;cursor:pointer;min-height:56px}
+.lrow.muted{background:#FBFAF7}.lrow.muted b{color:var(--ink2)}
 .lrow .ico{width:40px;height:40px;background:#EDEDFD;color:var(--violet-d)}
 .lrow .tx{flex:1;min-width:0}.lrow .tx b{display:block;font-weight:600;font-size:15px}.lrow .r{text-align:right;flex:none}
 .lrow .r .m{font-size:12px}.lrow .r b{color:var(--violet-d);font-size:15px}
@@ -52,10 +53,12 @@ button{font-family:inherit}
 .btns{display:flex;gap:8px}.btns .btn{flex:1}.btns .btn.w{flex:none;width:auto;padding:0 20px}
 .tripbar{display:flex;gap:8px;margin:6px 0 14px}
 .tripbar button{height:40px;border-radius:20px;font:inherit;font-size:14px;display:inline-flex;align-items:center;gap:6px;padding:0 14px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
-.tripbar .from{flex:1}.tripbar .from i{width:10px;height:10px;border-radius:5px;background:var(--violet-btn);display:inline-block}
+.tripbar .from{flex:1;display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);padding:0 4px}.tripbar .from i{width:10px;height:10px;border-radius:5px;background:var(--violet-btn);display:inline-block}
 .tripbar .when{border:0;background:#EDEDFD;color:var(--violet-d);font-weight:600}
 .tripbar .when.on{background:var(--violet-btn);color:#fff}
 .savebtn{border:0;background:none;color:var(--violet-d);font:inherit;font-size:14px;font-weight:600;cursor:pointer;min-height:44px;padding:0 2px}
+.gobar{position:sticky;bottom:0;padding:14px 0 6px;margin-top:4px;background:linear-gradient(rgba(243,242,238,0),var(--bg) 24%);z-index:2}   /* «Поехали» всегда видна */
+.sheet.nomask .body{-webkit-mask-image:none;mask-image:none;padding-bottom:16px}
 .offer{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
 .search{flex:1;height:48px;border-radius:24px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 16px;box-shadow:var(--s2);font-size:14px;color:var(--ink2);border:0;text-align:left;cursor:pointer}
 .search b{color:var(--ink);font-weight:600}
@@ -138,7 +141,7 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .hint{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:2px 0 10px;font-size:13px;color:var(--ink2)}
 .hint>span:nth-child(2){flex:1}
 .mlink{border:0;background:none;color:var(--violet-d);font:inherit;font-weight:600;cursor:pointer;min-height:44px;padding:0 4px}
-.best{position:absolute;top:-9px;left:14px;background:var(--ink);color:#fff;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:8px}
+.best{display:inline-block;margin-bottom:8px;background:var(--ink);color:#fff;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:8px}
 .card .right .m{font-size:12px}
 .pill.r{background:#FBE3E1;color:#97291F}
 /* ведение */
@@ -407,7 +410,7 @@ registerModule((() => {
            {type:'metro', model:'ride', stations:LINE3, lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'В сторону центра. Перед выходом — вибрация'},
            {type:'wait', kind:'Подъём', model:'exit', station:'Бауманская', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'', tip:'Ты на месте'} ] }, common),
     // «Погулять рядом»: метро + прогулка — нужен и модуль «Пешком»
-    stroll: Object.assign({ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', purpose:'walk', order:2, requires:['walk'],
+    stroll: Object.assign({ name:'Метро + прогулка у Яузы', ico:'🌿', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', purpose:'walk', order:2, requires:['walk'], cta:'Начать прогулку',
       detail:'метро + 2,5 км пешком',
       pois:[            {e:'🌊', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
            {e:'⛪', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
@@ -416,7 +419,7 @@ registerModule((() => {
            {type:'metro', model:'ride', stations:LINE3.slice(0,5), lo:9, hi:11, label:'Метро до Электрозаводской · ' + stops(4), lm:'Выходи на Электрозаводской — дальше пешком'},
            {type:'wait', kind:'Подъём', model:'exit', station:'Электрозаводская', at:[37.70386,55.78161], lo:2, hi:3, label:'Подъём в город', lm:''},
            {type:'walk', geom:'strollWalk', lo:29, hi:36, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Ты на месте'} ] }, common, { delayWhy:'если задержишься' }) };
-  return { id:'metro', group:'mode', icon:'Ⓜ', name:'Метро', desc:'Интервалы по времени суток, глубина станций', where:'способы, маршрут, ведение', on:true,
+  return { id:'metro', group:'mode', icon:'Ⓜ', name:'Метро', desc:'Сколько ждать поезд и спускаться к платформе', where:'способы, маршрут, ведение', on:true,
     options,
     context(T){ return { period: period(T).key }; },   // смена периода (пик, день, ночь) — пересчёт
     prepare(T){
@@ -442,7 +445,7 @@ registerModule({ id:'walk', group:'mode', icon:'🚶', name:'Пешком', desc
     walk: { name:'Пешком', ico:'🚶', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0], purpose:'go', order:4, verb:'Выходи', delayWhy:'если задержишься',
       detail:'≈ 10 км',
       legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
-    loop: { name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true, purpose:'walk', order:1, verb:'Выходи',
+    loop: { name:'Просто погулять', ico:'🌳', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true, purpose:'walk', order:1, verb:'Выходи', cta:'Начать прогулку',
       detail:'кольцо вдоль Измайловского лесопарка',
       pois:[ {e:'🌳', n:'Опушка леса', d:'тихий участок', at:[37.8115,55.78878], extra:'по пути'},
              {e:'🪑', n:'Скамейки', d:'можно передохнуть', at:[37.82262,55.78883], extra:'по пути'} ],
@@ -501,7 +504,7 @@ registerModule({
   data:{ rain:[8*60+40, 13*60] },
   context(T){ const [a, b] = this.data.rain; return { rain: T + 25 > a && T - 12 < b, from:a }; },   // поездка ~[T−12; T+25] задевает дождь
   legFactor(l, f){ return f.rain && l.type==='walk' ? 1.06 : 1; },                                       // пешком на 6% дольше
-  banners(f){ return f.rain ? [{ icon:'☔', title:'Дождь с ' + fmt(f.from), text:'пешком чуть дольше, это уже в прогнозе' }] : []; },
+  banners(f){ return f.rain && isOn('walk') ? [{ icon:'☔', title:'Дождь с ' + fmt(f.from), text:'пешком чуть дольше, это уже в прогнозе' }] : []; },
   cardPills(k, f){ return f.rain && k==='walk' ? ['нужен зонт'] : []; }
 });
 // ---- Загруженность вагонов. В приложении — данные о загрузке поездов; в прототипе: утром в 8:30–8:50 полные
@@ -614,8 +617,8 @@ function tplTime(t){   // «выйди до 8:23» для шаблона — с�
 }
 V.home = () => {
   if(!state.templates.length && !state.recents.length) return `<h1 class="sr" tabindex="-1">Куда едем?</h1>`;
-  const T = state.templates.map((t,i) => `<button class="lrow press" onclick="useTemplate(${i})"><div class="ico" aria-hidden="true">${t.name==='Работа'?'💼':t.reverse?'🏠':'⭐'}</div>
-      <div class="tx"><b>${t.name}</b><div class="m">${t.reverse ? PLACES[t.dest].name + ' → сюда' : 'Отсюда → ' + PLACES[t.dest].name}${t.arrive!=null ? ' · к ' + fmt(t.arrive) : ''}</div></div>
+  const T = state.templates.map((t,i) => `<button class="lrow press${t.reverse ? ' muted' : ''}" onclick="useTemplate(${i})"><div class="ico" aria-hidden="true">${t.name==='Работа'?'💼':t.reverse?'🏠':'⭐'}</div>
+      <div class="tx"><b>${t.name}</b><div class="m">${t.reverse ? PLACES[t.dest].name + ' → сюда · строится позже' : 'Отсюда → ' + PLACES[t.dest].name}${t.arrive!=null ? ' · к ' + fmt(t.arrive) : ''}</div></div>
       <div class="r">${t.reverse ? '' : tplTime(t)}</div></button>`).join('');
   const R = state.recents.map(k => `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">🕘</div><div class="tx"><b>${PLACES[k].name}</b><div class="m">${PLACES[k].sub}</div></div></button>`).join('');
   return `<h1 class="sr" tabindex="-1">Куда едем?</h1>
@@ -640,7 +643,7 @@ V.place = () => {
   if(!state.dest){ state.view = 'home'; return V.home(); }
   const p = PLACES[state.dest];   // только место и решение «едем?» — способы со временем на следующем шаге
   return `<h1 tabindex="-1">${p.name}</h1><div class="sub" style="margin-bottom:16px">${p.sub} · ${p.km} отсюда</div>
-   <div class="btns"><button class="btn p press" onclick="go('compare')">Маршрут</button>${isSaved() ? '' : `<button class="btn w press" onclick="go('save')">Сохранить</button>`}</div>`;
+   <div class="btns"><button class="btn p press" onclick="go('compare')">Маршрут</button></div>`;
 };
 /* ----- Способы: та же шторка раскрыта ----- */
 V.compare = () => {
@@ -656,9 +659,9 @@ V.compare = () => {
   }
   const w = collect('banners').map((b,i) => `<div class="hint"><span aria-hidden="true">${esc(b.icon)}</span> <span><b>${esc(b.title)}</b>${b.text ? ' — ' + esc(b.text) : ''}</span>${i===0 ? modsLink() : ''}</div>`).join('');
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">${destName()}</h1></div>
-  <div class="tripbar"><button class="from press" onclick="toast('В прототипе маршрут — от дома')"><i aria-hidden="true"></i>Отсюда</button>${timeBtn()}</div>
+  <div class="tripbar"><span class="from"><i aria-hidden="true"></i>Отсюда</span>${timeBtn()}</div>
   ${late}
-  ${keys.length ? keys.map(k=>card(k, k===best && !allLate)).join('') : `<div class="offer"><div class="t">Нет включённых способов</div><div class="m" style="margin:4px 0 10px">${walkMode ? 'Для прогулок включи модуль «Пешком»' : 'Включи хотя бы один способ передвижения'}</div><button class="chip on press" onclick="go('modules')">Модули</button></div>`}
+  ${keys.length ? keys.map(k=>card(k, k===best && !allLate)).join('') : `<div class="offer"><div class="t">Нет включённых способов</div><div class="m" style="margin:4px 0 10px">${walkMode ? 'Для прогулок нужен модуль «Пешком»' : 'Включи хотя бы один способ передвижения'}</div>${walkMode ? `<button class="chip on press" onclick="toggleMod('walk')">Включить «Пешком»</button>` : `<button class="chip on press" onclick="go('modules')">Модули</button>`}</div>`}
   ${w}
   <div class="note">Время, цены и ориентиры в прототипе примерные. «Самое позднее» — так в 19 поездках из 20.</div>`;
 };
@@ -798,7 +801,7 @@ V.route = () => {
     : `<button class="btn ${arr && v.never ? 'w' : 'p'} press" id="goBtn" onclick="${o.confirm ? "go('confirm')" : 'startTrip()'}">${cta}</button>`;
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><div class="m">Маршрут с ориентирами</div></div>
     ${head}${!o.noTarget && state.dest && !isSaved() && !v.closed ? `<div><button class="savebtn" onclick="go('save')">☆ Сохранить маршрут</button></div>` : ''}${v.closed ? closedAlt(k) : `<div class="steps">${steps}</div>${pois}`}
-    ${v.closed ? '' : goBtn}`;
+    ${v.closed ? '' : `<div class="gobar">${goBtn}</div>`}`;
 };
 // Способ сейчас не работает — сразу предложить работающие
 function closedAlt(k){ const alt = (state.mode==='walk' ? walkKeys() : goKeys()).filter(x => x !== k && !verdict(x).closed);
@@ -856,22 +859,22 @@ V.save = () => {
     <div class="sub">Найдёшь его под поиском — в одно касание</div>
     <div class="offer"><div class="t">Добавить обратный путь?</div><div class="m" style="margin:4px 0 10px">${PLACES[state.dest].name} → сюда</div>
     <div class="row"><button class="chip on press" onclick="saveReverse(true)">Добавить</button><button class="chip press" onclick="saveReverse(false)">Не нужно</button></div></div>`;
-  const arr = arriveMode(), nm = state.saveName || (arr ? 'Работа' : 'Работа');
+  const arr = arriveMode(), nm = state.saveName || null;   // название выбирает человек
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">←</button><h1 tabindex="-1" style="margin:0">Сохранить маршрут</h1></div>
    <div class="sub" style="margin-top:6px">Отсюда → ${PLACES[state.dest].name}</div>
    <div class="sec">Как назвать</div>
    <div class="chips" style="flex-wrap:wrap">${['Работа','Учёба','Спорт'].map(n=>`<button class="chip press ${nm===n?'on':''}" aria-pressed="${nm===n}" onclick="state.saveName='${n}';render()">${n}</button>`).join('')}
-     <button class="chip press ${['Работа','Учёба','Спорт'].includes(nm)?'':'on'}" onclick="askName()">${['Работа','Учёба','Спорт'].includes(nm)?'Своё…':nm}</button></div>
+     <button class="chip press ${nm && !['Работа','Учёба','Спорт'].includes(nm)?'on':''}" onclick="askName()">${nm && !['Работа','Учёба','Спорт'].includes(nm) ? esc(nm) : 'Своё…'}</button></div>
    <div class="card" style="cursor:default">
      <div class="row" style="justify-content:space-between"><span class="m">Время</span><b>${arr ? 'прибыть к ' + fmt(state.arrive) : 'без времени'}</b></div>
      <div class="row" style="justify-content:space-between;margin-top:8px"><span class="m">Способ</span><b>${OPTIONS[state.sel].name}</b></div>
      <div class="m" style="margin-top:10px">Если способ недоступен (ночью метро закрыто) — предложим другой. Дни недели и напоминание «пора выходить» — в следующей версии.</div>
    </div>
-   <button class="btn p press" onclick="saveTemplate()">Сохранить</button>`;
+   <button class="btn p press" ${nm ? '' : 'disabled aria-disabled="true" style="opacity:.5"'} onclick="saveTemplate()">${nm ? 'Сохранить' : 'Выбери название'}</button>`;
 };
 function askName(){ const v = prompt('Название маршрута', state.saveName || ''); if(v && v.trim()){ state.saveName = v.trim().replace(/['"<>&]/g,'').slice(0,24) || 'Мой маршрут'; render(); } }
 function saveTemplate(){
-  const name = state.saveName || 'Работа';
+  const name = state.saveName; if(!name) return;
   state.templates.push({ name, dest:state.dest, arrive: arriveMode() ? state.arrive : null, mode: state.sel });
   state.justSaved = name; render('in'); say('Маршрут сохранён: ' + name);
 }
@@ -882,8 +885,11 @@ function saveReverse(yes){
 }
 function useTemplate(i){ const t = state.templates[i];
   if(t.reverse){ toast('В прототипе обратный путь пока не строится'); return; }
-  Object.assign(state, { dest:t.dest, mode:'hurry', sel: OPTIONS[t.mode] ? t.mode : goKeys()[0] || null, timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? t.arrive : state.arrive, depart:NOW });
-  if(state.sel){ showRoute(state.sel); fitAll(); } go('compare'); }
+  Object.assign(state, { dest:t.dest, mode:'hurry', timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? t.arrive : state.arrive, depart:NOW });
+  syncCtx(); state.sel = OPTIONS[t.mode] && !verdict(t.mode).closed ? t.mode : null;
+  if(!state.sel){ toast('Сохранённый способ сейчас недоступен — выбери другой'); go('compare'); return; }
+  // в одно касание: сразу маршрут сохранённым способом; «назад» — к остальным способам
+  state.history.push('home'); state.view = 'compare'; showRoute(state.sel); go('route'); fitAll(); }
 function openPlace(k){
   if(!PLACES[k].ok){ toast('В прототипе маршруты есть только до м. Бауманская'); return; }
   state.dest = k; state.mode = 'hurry'; syncCtx(); state.sel = goKeys()[0] || null; state.timeMode = 'depart'; state.depart = NOW; state.q = '';
@@ -905,7 +911,7 @@ function renderTop(){
   const label = v==='place' && state.dest ? `<b>${PLACES[state.dest].name}</b>` : `<span class="ph">Куда?</span>`;
   tb.innerHTML = `<button class="search press" onclick="go('find')" aria-label="Поиск: куда едем"><span aria-hidden="true">🔍</span>${label}</button>
     <button class="round press" aria-label="Модули" onclick="go('modules')">⚙︎</button>
-    ${v==='home' ? `<div class="brk"></div><button class="wchip press" onclick="walkNearby()"><span aria-hidden="true">🚶</span>Погулять рядом</button>` : ''}`;
+    ${v==='home' && walkKeys().length ? `<div class="brk"></div><button class="wchip press" onclick="walkNearby()"><span aria-hidden="true">🚶</span>Погулять рядом</button>` : ''}`;
 }
 const glue = h => h.replace(/(\d) (мин|ч|₽|км|м)(?=[\s<.,·)]|$)/g, '$1&nbsp;$2').replace(/≈ /g, '≈&nbsp;');
 // Короткая блокировка кликов после смены экрана: второй тап двойного клика не попадает в новую кнопку
@@ -919,6 +925,7 @@ function render(anim){
   body.innerHTML = `<div class="view ${anim==='back'?'back':anim==='in'?'in':''}">${glue(V[state.view]())}</div>`;
   if(anim) { body.scrollTop = 0; lockNav(); const h = body.querySelector('h1'); if(h) h.focus({preventScroll:true}); }
   if(state.view==='time') setupWheel();
+  sheet.classList.toggle('nomask', state.view==='route');
   if(fk){ const t = [...body.querySelectorAll('button,input,[tabindex]')].find(el => keyOf(el) === fk) || body.querySelector('h1'); if(t) t.focus({preventScroll:true}); }
   renderTop();
   if(state.view==='find' && anim){ const q = document.getElementById('q'); if(q) setTimeout(()=>q.focus(), 0); }
