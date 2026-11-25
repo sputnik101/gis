@@ -573,6 +573,22 @@ test('ориентиры поворотов: на маршруте — спис�
   return ok || JSON.stringify({ route: route.slice(0, 120), g });
 });
 
+test('ориентир на карте: подпись появляется на подходе (300 м), рядом — подсвечена, после поездки убрана', async p => {
+  await p.evaluate(() => { openPlace('baum'); go('compare'); pick('walk'); return startTrip(true); }); await p.waitForTimeout(400);
+  // карта в проверках не грузится — подменяем маркер, чтобы проверить логику ядра
+  return p.evaluate(() => new Promise(res => {
+    const els = []; window.maplibregl = window.maplibregl || {}; const M = function(o){ this.el = o.element; els.push(this); }; M.prototype.setLngLat = function(a){ this.at = a; return this; }; M.prototype.addTo = function(){ return this; }; M.prototype.remove = function(){ this.gone = true; }; M.prototype.getElement = function(){ return this.el; };
+    maplibregl.Marker = M; mapOk = true; window.map = window.map || {}; trip.markId = ''; trip.gkey = '';
+    const at = t => { trip.t = t; trip.gkey = ''; guideHints(0, trip.o.legs[0], Math.min(1, t / trip.legs[0])); return trip.mark; };
+    const far = at(trip.legs[0] * 0.05);            // ~490 м, до «Парикмахерской» далеко
+    const s1 = !far;
+    const near1 = at(trip.legs[0] * (1340 / 9809)); const t1 = near1 && near1.el.textContent, c1 = near1 && near1.el.classList.contains('near');
+    const near2 = at(trip.legs[0] * (1390 / 9809)); const c2 = near2 && near2.el.classList.contains('near');
+    mapOk = false; stopTrip(); const gone = !trip.mark;
+    res((s1 && /То, что надо/.test(t1) && !c1 && c2 && gone) || JSON.stringify({ s1, t1, c1, c2, gone }));
+  }));
+});
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;

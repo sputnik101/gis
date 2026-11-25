@@ -175,6 +175,12 @@ svg.i{display:block;flex:none}
 .gtop .h{font-size:21px;font-weight:600;margin-top:2px;line-height:1.2}
 .gtop .lmk{margin-top:8px;font-size:13px;background:rgba(255,255,255,.12);border-radius:10px;padding:4px 8px;display:inline-block}
 .gtop .lmk.w{background:#FFB27A;color:var(--ink)}   /* поворот сейчас */
+/* ориентир на карте: белая подпись; рядом с поворотом — салатовая, как путь, и мягко пульсирует */
+.tip.lmt{display:inline-flex;align-items:center;gap:4px;background:#fff;color:var(--ink);font-weight:600;box-shadow:var(--s2);transition:background .4s,transform .4s}
+.tip.lmt::after{border-top-color:#fff}
+.tip.lmt.near{background:#D7F26B;color:#2B3A00;animation:lmpulse 1.6s ease-in-out infinite}.tip.lmt.near::after{border-top-color:#D7F26B}   /* салатовый — как пройденный путь */
+@keyframes lmpulse{0%,100%{box-shadow:0 0 0 0 rgba(215,242,107,.8),var(--s2)}50%{box-shadow:0 0 0 10px rgba(215,242,107,0),var(--s2)}}
+.gtop .lmk.now{background:#D7F26B;color:#2B3A00}
 .gtop.alert{background:var(--violet-d)}
 .stations{display:flex;gap:4px;margin-top:12px}
 .stations i{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.25)}
@@ -434,7 +440,8 @@ function call(m, hook, args){ try{ return m[hook](...args, facts(m)); }catch(e){
 const SHAPE = {
   banners:   x => x && x.title ? { icon: String(x.icon || '•'), title: String(x.title), text: String(x.text || '') } : null,
   stepHints: x => x && x.text ? { icon: String(x.icon || '•'), text: String(x.text), warn: !!x.warn } : null,
-  guideHint: x => x && x.text ? { icon: String(x.icon || '•'), text: String(x.text), warn: !!x.warn } : null,
+  guideHint: x => x && x.text ? { icon: String(x.icon || '•'), text: String(x.text), warn: !!x.warn, near: !!x.near,
+    at: Array.isArray(x.at) && x.at.length === 2 && x.at.every(Number.isFinite) ? x.at : null, label: String(x.label || '').slice(0, 40) } : null,
   cardPills: x => typeof x === 'string' && x ? x : null,
   homeCards: x => x && x.title ? { icon: String(x.icon || 'Колокол'), title: String(x.title), text: String(x.text || ''), go: !!x.go, warn: !!x.warn } : null,
   pois:      x => x && x.n && Array.isArray(x.at) && x.at.length === 2 && x.at.every(Number.isFinite) ? { e: String(x.e || 'Пин'), n: String(x.n), d: String(x.d || ''), at: x.at, extra: String(x.extra || '') } : null };
@@ -531,20 +538,20 @@ registerModule((() => {
 })());
 // ---- Пешком
 registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешком', desc:'Пешие маршруты и прогулки', where:'Видно в способах и в «Погулять рядом»', on:true,
-  // Повороты пеших маршрутов с ориентирами (OpenStreetMap, 25.11.2026): [метров от начала, куда, ориентир]. Без «через 200 м» — только что видно глазами.
+  // Повороты пеших маршрутов с ориентирами (OpenStreetMap, 25.11.2026): [метров от начала, куда, ориентир, где он на карте, короткая подпись]. Без «через 200 м» — только что видно глазами.
   turns:{
-    walkToMetro:{ len:863, list:[[52,'налево','у аптеки «Вита Экспресс»'], [750,'направо','у цветочного «Мосцветторг» — вход в метро впереди']] },
-    walkAll:{ len:9809, list:[[35,'направо','от подъезда'], [116,'налево','у «Пятёрочки»'], [202,'направо','у остановки «12-я Парковая улица»'],
-      [1421,'налево','у парикмахерской «То, что надо»'], [1521,'направо','у магазина «Ассорти»'], [1941,'налево','у «Дежурной аптеки»'],
-      [2105,'направо','у «Еврокафе», метро «Измайловская» рядом'], [2171,'налево','за «Еврокафе»'], [3537,'направо','перед остановкой «Главная аллея»'],
-      [3600,'налево','у остановки «Главная аллея»'], [4606,'налево','у автостанции «Измайловская»'], [6229,'налево','у кафе «Этно»'],
-      [6432,'направо','у банка ВТБ'], [6570,'налево','у «Мосаптеки»'], [6670,'направо','у метро «Семёновская»'],
-      [8116,'налево','сразу за мостом через Яузу'], [8262,'направо','у «Кулинарии», остановка «Бакунинская улица»'], [9729,'налево','у «Шоколадницы» — метро «Бауманская» впереди']] },
-    strollWalk:{ len:2492, list:[[92,'налево','у памятника «Метростроевцы в забое»'], [622,'налево','сразу за мостом через Яузу'], [768,'направо','у «Кулинарии»'],
-      [2321,'направо','у Московского театра кукол']] },
-    loop:{ len:2515, list:[[35,'направо','от подъезда'], [116,'налево','у «Пятёрочки»'], [465,'налево','у МФЦ'], [969,'направо','у остановки «Площадь Мазурина» — вход в лесопарк'],
-      [1336,'налево','на развилке в лесопарке'], [1620,'налево','на выходе из лесопарка'], [1890,'направо','у гостиницы «Первомайская»'],
-      [1965,'налево','за гостиницей «Первомайская»'], [2480,'направо','к подъезду']] } },
+    walkToMetro:{ len:863, list:[[52,'налево','у аптеки «Вита Экспресс»',[37.81108,55.79294],'«Вита Экспресс»'], [750,'направо','у цветочного «Мосцветторг» — вход в метро впереди',[37.801,55.79305],'«Мосцветторг»']] },
+    walkAll:{ len:9809, list:[[35,'направо','от подъезда',[37.81142,55.7924],'от подъезда'], [116,'налево','у «Пятёрочки»',[37.81006,55.79182],'«Пятёрочка»'], [202,'направо','у остановки «12-я Парковая улица»',[37.81024,55.79105],'остановка'],
+      [1421,'налево','у парикмахерской «То, что надо»',[37.79106,55.79141],'«То, что надо»'], [1521,'направо','у магазина «Ассорти»',[37.7913,55.78972],'«Ассорти»'], [1941,'налево','у «Дежурной аптеки»',[37.7846,55.78959],'аптека'],
+      [2105,'направо','у «Еврокафе», метро «Измайловская» рядом',[37.78396,55.78863],'«Еврокафе»'], [2171,'налево','за «Еврокафе»',[37.78334,55.78819],'за «Еврокафе»'], [3537,'направо','перед остановкой «Главная аллея»',[37.76331,55.78836],'«Главная аллея»'],
+      [3600,'налево','у остановки «Главная аллея»',[37.76331,55.78836],'«Главная аллея»'], [4606,'налево','у автостанции «Измайловская»',[37.74647,55.78821],'автостанция'], [6229,'налево','у кафе «Этно»',[37.72184,55.78508],'«Этно»'],
+      [6432,'направо','у банка ВТБ',[37.72192,55.78352],'ВТБ'], [6570,'налево','у «Мосаптеки»',[37.71999,55.78345],'«Мосаптека»'], [6670,'направо','у метро «Семёновская»',[37.72022,55.7824],'м. Семёновская'],
+      [8116,'налево','сразу за мостом через Яузу',[37.69727,55.78253],'за мостом'], [8262,'направо','у «Кулинарии», остановка «Бакунинская улица»',[37.69678,55.78149],'«Кулинария»'], [9729,'налево','у «Шоколадницы» — метро «Бауманская» впереди',[37.67862,55.77306],'«Шоколадница»']] },
+    strollWalk:{ len:2492, list:[[92,'налево','у памятника «Метростроевцы в забое»',[37.70532,55.7822],'памятник'], [622,'налево','сразу за мостом через Яузу',[37.69727,55.78253],'за мостом'], [768,'направо','у «Кулинарии»',[37.69678,55.78149],'«Кулинария»'],
+      [2321,'направо','у Московского театра кукол',[37.67789,55.77273],'театр кукол']] },
+    loop:{ len:2515, list:[[35,'направо','от подъезда',[37.81142,55.7924],'от подъезда'], [116,'налево','у «Пятёрочки»',[37.81006,55.79182],'«Пятёрочка»'], [465,'налево','у МФЦ',[37.80925,55.78907],'МФЦ'], [969,'направо','у остановки «Площадь Мазурина» — вход в лесопарк',[37.81838,55.78864],'«Площадь Мазурина»'],
+      [1336,'налево','на развилке в лесопарке',[37.8233,55.78889],'развилка'], [1620,'налево','на выходе из лесопарка',[37.82356,55.79136],'выход из парка'], [1890,'направо','у гостиницы «Первомайская»',[37.82001,55.79158],'гостиница'],
+      [1965,'налево','за гостиницей «Первомайская»',[37.81939,55.79218],'за гостиницей'], [2480,'направо','к подъезду',[37.81142,55.7924],'к подъезду']] } },
   // На маршруте: коротко — все повороты (если их немного) или сколько их
   stepHints(l){ if(l.type !== 'walk' || l.where === 'guide') return []; const r = this.turns[l.geom];   // в пути — по одному повороту (guideHint) if(!r || !r.list.length) return [];
     const n = r.list.length, cap = t => t[0].toUpperCase() + t.slice(1);
@@ -552,8 +559,9 @@ registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешко�
   // В пути: следующий поворот (f — пройденная доля шага)
   guideHint(l, f){ if(l.type !== 'walk') return []; const r = this.turns[l.geom]; if(!r) return [];
     const done = f * r.len, nx = r.list.find(x => x[0] > done + 5); if(!nx) return [];
-    const soon = nx[0] - done < 80;
-    return [{ icon: nx[1] === 'налево' ? 'Налево' : 'Направо', text: (soon ? 'Сейчас ' : 'Дальше ') + nx[1] + ' ' + nx[2], warn: soon }]; },
+    const left = nx[0] - done, soon = left < 80, ico = nx[1] === 'налево' ? 'Налево' : 'Направо';
+    // на карте ориентир подписан, когда до него меньше 300 м; рядом — подсвечен
+    return [{ icon: ico, text: (soon ? 'Сейчас ' : 'Дальше ') + nx[1] + ' ' + nx[2], near: soon, at: left < 300 ? nx[3] : null, label: nx[4] }]; },
   options: {
     walk: { name:'Пешком', ico:'Пешком', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0], purpose:'go', order:4, verb:'Выходи', delayWhy:'если задержишься', cta:'Пошли', ctaLate:'Всё равно пойти', stopLabel:'Закончить путь', endToast:'Путь прерван',
       detail:'≈ 10 км',
@@ -1479,8 +1487,19 @@ async function startTrip(demo){
 const KIND = { walk:'Пешком', car:'В пути', metro:'Метро' };
 // Подсказка модулей по ходу шага (следующий поворот и т.п.); пересчёт — когда пройдено ещё 0,5% шага
 function guideHints(li, l, f){ const key = li + ':' + Math.floor(f * 200); if(trip.gkey === key) return trip.ghtml || ''; trip.gkey = key;
-  trip.ghtml = collect('guideHint', legView(trip.k, l, 'guide'), f).map(h => `<div class="lmk${h.warn ? ' w' : ''}"><span aria-hidden="true">${icn(h.icon, 16)}</span> ${esc(h.text)}</div>`).join('');
+  const hs = collect('guideHint', legView(trip.k, l, 'guide'), f);
+  trip.ghtml = hs.map(h => `<div class="lmk${h.near ? ' now' : h.warn ? ' w' : ''}"><span aria-hidden="true">${icn(h.icon, 16)}</span> ${esc(h.text)}</div>`).join('');
+  guideMark(hs.find(h => h.at));
   return trip.ghtml; }
+// Ориентир на карте: подпись у самого места; рядом с поворотом — оранжевая, пульсирует
+function guideMark(h){
+  const id = h ? h.at.join(',') + '|' + h.near : '';
+  if(trip.markId === id) return; trip.markId = id;
+  if(!h){ if(trip.mark){ trip.mark.remove(); trip.mark = null; } return; }
+  if(!mapOk) return;
+  const html = `<span aria-hidden="true">${icn(h.icon, 14)}</span>${esc(h.label || '')}`;
+  if(!trip.mark){ const d = document.createElement('div'); d.className = 'tip lmt'; trip.mark = new maplibregl.Marker({ element:d, anchor:'bottom', offset:[0,-10] }).setLngLat(h.at).addTo(map); }
+  const el = trip.mark.getElement(); el.innerHTML = html; el.classList.toggle('near', h.near); trip.mark.setLngLat(h.at); }
 const modHints = li => (trip.hints && trip.hints[li] || []).map(h => `<div class="lmk"><span aria-hidden="true">${icn(h.icon, 16)}</span> ${esc(h.text)}</div>`).join('');
 function update(dt){
   const o = trip.o; let acc=0, li=0;
@@ -1521,7 +1540,7 @@ function update(dt){
 function toggleSpeed(){ trip.speed = trip.speed===1 ? 5 : 1; document.getElementById('speedBtn').textContent = 'Демо: ×' + trip.speed; }
 function stopTrip(){
   trip.on=false; cancelAnimationFrame(trip.raf);
-  if(trip.me){ trip.me.remove(); trip.me=null; } if(trip.tip){ trip.tip.remove(); trip.tip=null; }
+  if(trip.me){ trip.me.remove(); trip.me=null; } if(trip.tip){ trip.tip.remove(); trip.tip=null; } if(trip.mark){ trip.mark.remove(); trip.mark=null; } trip.markId=''; trip.gkey='';
   trip.speed = 1; trip.smoothBrg = 0; document.getElementById('speedBtn').textContent = 'Демо: ×1';
   document.getElementById('guide').classList.remove('on'); document.getElementById('attrib').classList.remove('guiding');
   const tb = document.getElementById('topbar'); tb.classList.remove('hide'); tb.inert = false; sheet.inert = false;
