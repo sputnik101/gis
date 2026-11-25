@@ -295,7 +295,7 @@ const tap = async (p, sel) => { await p.click(sel, { timeout: 5000 }); await p.w
 const tapText = async (p, t) => { await p.locator('button', { hasText: t }).first().click({ timeout: 5000 }); await p.waitForTimeout(650); };
 test('«Пробки» на «Модулях»: предупреждение о такси и каршеринге, «Отмена» и «Выключить»', async p => {
   await p.evaluate(() => { openPlace('baum'); go('modules'); }); await p.waitForTimeout(650);
-  await tap(p, '.card[data-mod=roads]');
+  await tapText(p, 'Служебные модули'); await tap(p, '.card[data-mod=roads]');
   const warn = (await txt(p)).includes('Без «Пробки» не будут работать «Такси» и «Каршеринг»');
   await tapText(p, 'Отмена'); const still = await p.evaluate(() => state.modules.roads);
   await tap(p, '.card[data-mod=roads]'); await tapText(p, 'Выключить'); const off = await p.evaluate(() => !state.modules.roads && state.modules.taxi);
@@ -485,6 +485,55 @@ test('каршеринг — бронь только после подтверж
   await p.click('#goBtn'); await p.waitForTimeout(650);
   return p.evaluate(() => (state.view === 'confirm' && !trip.on) || 'экран ' + state.view + ' поездка ' + trip.on);
 });
+
+// ---------- шаблоны, фаза 2: дни недели и «Пора выходить» ----------
+const saveWork = () => { setDemoNow(8*60+20, 2); openPlace('baum'); go('compare'); state.timeMode = 'arrive'; state.arrive = 540; render(); pick('metro'); go('save'); };
+test('сохранение: у «Работы» сразу пн–пт, у «Спорта» дни не выбраны; дни можно поменять', async p => { await p.evaluate('window.saveWork = ' + saveWork); await p.evaluate(saveWork); return p.evaluate(() => {
+  state.saveName = 'Спорт'; render(); const sport = saveDays().length === 0 && document.body.innerText.includes('в любой день');
+  state.saveName = 'Работа'; render(); const work = saveDays().join() === '0,1,2,3,4';
+  navLock = 0; [...document.querySelectorAll('.chips.days .chip')][5].click(); const sat = saveDays().includes(5);
+  saveTemplate(); const t = state.templates[0];
+  return (sport && work && sat && t.days.join() === '0,1,2,3,4,5') || JSON.stringify({ sport, work, sat, days: t.days });
+}); });
+test('«Пора выходить»: за 3 мин — «Через 3 мин выходить», «Маршрут» открывает маршрут метро', async p => { await p.evaluate('window.saveWork = ' + saveWork);
+  await p.evaluate(() => { saveWork(); state.saveName = 'Работа'; saveTemplate(); saveReverse(false); restart(); });
+  await p.evaluate(() => { setDemoNow(8*60+20, 2); restart(); }); await p.waitForTimeout(650);
+  const t = await p.evaluate(() => (document.querySelector('.homecard') || {}).innerText || '');
+  await p.locator('.homecard .mlink').click(); await p.waitForTimeout(650);
+  const r = await p.evaluate(() => state.view === 'route' && state.sel === 'metro');
+  return (/Через\s3\sмин выходить/.test(t) && /выйди до 8:23/.test(t) && r) || JSON.stringify({ t, r });
+});
+test('«Пора выходить»: в 8:23 — «Пора выходить», в 8:00 при 10 мин — нет, при 25 мин — есть; в субботу — нет, у шаблона «пн»', async p => { await p.evaluate('window.saveWork = ' + saveWork);
+  await p.evaluate(() => { saveWork(); state.saveName = 'Работа'; saveTemplate(); saveReverse(false); });
+  return p.evaluate(() => {
+    const card = () => (document.querySelector('.homecard') || {}).innerText || '';
+    setDemoNow(8*60+23, 2); restart(); const now = card();
+    setDemoNow(8*60, 2); restart(); const early = card();
+    go('modules'); openModSet('leave'); navLock = 0; [...document.querySelectorAll('.chip')].find(b => b.textContent.replace(/\s/g, ' ') === '25 мин').click(); restart(); const early25 = card();
+    setDemoNow(8*60+20, 5); restart(); const sat = card(); const right = document.querySelector('.lrow .r').innerText;
+    return (/^Пора выходить\n/.test(now) && !/впритык/.test(now) && !early && /Через\s23\sмин/.test(early25) && !sat && /пн/.test(right)) || JSON.stringify({ now, early, early25, sat, right });
+  });
+});
+test('«Пора выходить» выключен — плашки нет; шаблоны и дни переживают перезагрузку', async p => { await p.evaluate('window.saveWork = ' + saveWork);
+  await p.evaluate(() => { saveWork(); state.saveName = 'Работа'; saveTemplate(); saveReverse(false); setMod('leave', false); setDemoNow(8*60+20, 2); restart(); });
+  const off = await p.evaluate(() => !document.querySelector('.homecard'));
+  await p.reload(); await p.waitForTimeout(600);
+  const kept = await p.evaluate(() => state.templates[0] && state.templates[0].days.join() === '0,1,2,3,4' && !state.modules.leave);
+  await p.evaluate(() => localStorage.clear());
+  return (off && kept) || JSON.stringify({ off, kept });
+});
+test('плашка главного от модуля — через шлюз: одна, текст не исполняется', async p => { await p.evaluate('window.saveWork = ' + saveWork); return p.evaluate(() => {
+  window.__x = 0; saveWork(); state.saveName = 'Работа'; saveTemplate(); saveReverse(false); setMod('leave', false);
+  registerModule({ id:'hc', icon:'?', name:'H', desc:'', where:'', on:true, homeCards(n){ return [{ title:'<img src=x onerror="window.__x=1">', text: n.name }, { title:'вторая' }]; } });
+  restart(); const n = document.querySelectorAll('.homecard').length, txt = document.querySelector('.homecard').innerText;
+  return new Promise(r => setTimeout(() => { unregisterModule('hc'); r((n === 1 && window.__x === 0 && /Работа/.test(txt)) || JSON.stringify({ n, x: window.__x, txt })); }, 200));
+}); });
+test('«Модули»: служебные («Пробки», «Мой темп») спрятаны, открываются по ссылке', async p => p.evaluate(() => {
+  openPlace('baum'); go('modules'); const hidden = !document.querySelector('.card[data-mod=roads]') && !document.querySelector('.card[data-mod=pace]');
+  navLock = 0; [...document.querySelectorAll('.mlink')].find(b => b.textContent.startsWith('Служебные модули')).click();
+  const shown = !!document.querySelector('.card[data-mod=roads]') && !!document.querySelector('.card[data-mod=pace]');
+  return (hidden && shown) || JSON.stringify({ hidden, shown });
+}));
 
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
