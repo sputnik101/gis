@@ -1298,8 +1298,9 @@ async function iconsGrid(parent) {
   let name = base, k = 2; while (figma.root.children.some(p => p.name === name)) name = base + ' (' + (k++) + ')';
   PG = figma.createPage(); PG.name = name; await figma.setCurrentPageAsync(PG);
   const doc = AL(PG, 'VERTICAL', { name: 'Дизайн-система v3', gap: 48, pad: 48, r: 32, bg: 'white', x: 0, y: 0, w: 1440 });
-  await TX(doc, 'Своя ГИС — дизайн-система v3', 'title', 'ink');
-  await TX(doc, 'Источник правды — прототип. Цвета, текст, тени и размеры — переменные и стили файла: поменяешь здесь — обновятся все макеты. Отступы и радиусы компонентов привязаны к переменным «ГИС · Размеры».', 'body', 'ink2', { fill: true });
+  const hd = AL(doc, 'VERTICAL', { name: 'Шапка', gap: 8, fill: true });
+  await TX(hd, 'Своя ГИС — дизайн-система v3', 'title', 'ink');
+  await TX(hd, 'Источник правды — прототип. Цвета, текст, тени и размеры — переменные и стили файла: поменяешь здесь — обновятся все макеты. Отступы и радиусы компонентов привязаны к переменным «ГИС · Размеры».', 'body', 'ink2', { fill: true });
   await swatches(await section(doc, 'Цвета', 'Лайм — только «надёжно». Оранжевый — риск, розовый — опоздание, лаванда — нейтральное. Выбранное — тёмный (ink) с галочкой. Неактивное — светлая лаванда.'));
   await typeScale(await section(doc, 'Текст', 'Inter. Заголовки и акценты — Semi Bold (600), как в прототипе.'));
   await spacing(await section(doc, 'Отступы'));
