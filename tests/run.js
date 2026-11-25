@@ -369,6 +369,41 @@ test('выбранный ответ — тёмный чип с aria-pressed; н�
   return (dis === 'rgb(228, 225, 243)' && sel === 'true rgb(26, 22, 64)') || JSON.stringify({ dis, sel });
 });
 
+// ---------- этап P2 ----------
+test('второй шаблон к тому же месту другим способом — можно сохранить', async p => p.evaluate(() => {
+  state.templates.push({ name:'Работа', dest:'baum', arrive:null, mode:'metro' }); openPlace('baum'); go('compare'); pick('taxi'); go('route');
+  const can = !!document.querySelector('.savebtn'); go('compare'); pick('metro'); go('route'); const no = !document.querySelector('.savebtn');
+  return (can && no) || JSON.stringify({ can, no });
+}));
+test('клавиатура: Enter в поиске открывает первое место, Escape — назад, «Сохранено» можно закрыть', async p => {
+  await p.evaluate(() => go('find')); await p.waitForTimeout(650);
+  await p.fill('#q', 'Бау'); await p.waitForTimeout(200); await p.press('#q', 'Enter'); await p.waitForTimeout(650);
+  const place = await p.evaluate(() => state.view === 'place' && state.dest === 'baum');
+  await p.evaluate(() => go('compare')); await p.waitForTimeout(650); await p.keyboard.press('Escape'); await p.waitForTimeout(650);
+  const esc = await p.evaluate(() => state.view === 'place');
+  await p.evaluate(() => { go('compare'); pick('metro'); go('save'); state.saveName = 'Работа'; saveTemplate(); }); await p.waitForTimeout(650);
+  const hasBack = await p.evaluate(() => !!document.querySelector('#body .back-btn'));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(650);
+  const left = await p.evaluate(() => state.view !== 'save' && !state.justSaved);
+  return (place && esc && hasBack && left) || JSON.stringify({ place, esc, hasBack, left });
+});
+test('модуль получает другой модуль только через this.use и только из requires', async p => p.evaluate(() => {
+  let got = 'x', got2 = 'x';
+  registerModule({ id:'peek', icon:'?', name:'P', desc:'', where:'', on:true, context(){ got = this.use('roads'); return {}; } });
+  registerModule({ id:'peek2', requires:['roads'], icon:'?', name:'P2', desc:'', where:'', on:true, context(){ got2 = this.use('roads'); return {}; } });
+  openPlace('baum'); go('compare'); unregisterModule('peek'); unregisterModule('peek2');
+  return (got === null && got2 && typeof got2.at === 'function') || JSON.stringify({ got, got2: !!got2 });
+}));
+test('320 px: длинное слово без пробелов из модуля не вылезает за экран', async p => {
+  await p.setViewportSize({ width: 320, height: 640 });
+  return p.evaluate(() => { const W = 'Оченьдлинноесловобезпробеловкотороеможетприйтиизмодуля';
+    registerModule({ id:'long', icon:'?', name:'L', desc:'', where:'', on:true, banners(){ return [{ title: W, text: W }]; }, cardPills(){ return [W]; }, stepHints(){ return [{ text: W }]; } });
+    openPlace('baum'); go('compare'); snap('full'); const bad = [];
+    const chk = v => document.querySelectorAll('#body *').forEach(e => { const r = e.getBoundingClientRect(); if(r.width && r.right > innerWidth + 1) bad.push(v + ':' + e.className); });
+    chk('compare'); pick('metro'); go('route'); chk('route'); unregisterModule('long');
+    return !bad.length || [...new Set(bad)].slice(0, 6).join(', '); });
+});
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;

@@ -187,7 +187,10 @@ svg.i{display:block;flex:none}
 .toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);background:rgba(26,22,64,.94);color:#fff;border-radius:18px;padding:16px 20px;font-size:15px;z-index:40;opacity:0;pointer-events:none;transition:all .25s;text-align:center}
 .toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#fff;text-align:center;padding:40px;font-size:14px;z-index:5;
-  background:repeating-linear-gradient(8deg,transparent 0 118px,rgba(200,240,106,.28) 118px 121px),repeating-linear-gradient(96deg,transparent 0 96px,rgba(200,240,106,.28) 96px 99px),var(--violet)}
+  background:repeating-linear-gradient(8deg,transparent 0 118px,rgba(255,255,255,.18) 118px 120px),repeating-linear-gradient(96deg,transparent 0 96px,rgba(255,255,255,.18) 96px 98px),#8F8DF2}
+.card .t,.card .m,.pill,.lm,.lmk,.hint,.tx b,.tx .m,.offer .t,.offer .m,h1,.sub{overflow-wrap:anywhere;hyphens:auto}
+.pill{max-width:100%;white-space:normal}
+h1{text-wrap:balance}
 .fallback span{background:rgba(26,22,64,.45);padding:8px 14px;border-radius:14px;margin-top:-180px}
 .shake{animation:shake .5s}
 @keyframes shake{0%,100%{transform:none}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
@@ -391,6 +394,7 @@ function storeFor(id, schema){ const key = 'gis.mod.' + id;
 function registerModule(m){
   if(!m || !/^[a-z][a-z0-9_-]*$/.test(m.id || '')){ console.warn('модуль без корректного id — пропущен'); return; }
   if(!m.store) m.store = storeFor(m.id, m.schema);
+  m.use = useFor(m);
   const i = MODULES.findIndex(x => x.id === m.id); if(i >= 0) MODULES[i] = m; else MODULES.push(m);
   if(!(m.id in state.modules)) state.modules[m.id] = !!m.on;
   refreshModules(); }
@@ -403,7 +407,9 @@ const usable = m => m && state.modules[m.id] && !m.__broken;
 const activeModules = () => MODULES.filter(m => usable(m) && (m.requires || []).every(id => usable(MODULES.find(x => x.id === id))));
 const facts = m => (CTX.mods && CTX.mods[m.id]) || {};
 // Модуль может опереться на другой включённый модуль (через requires): use('roads').at(T)
+// Модуль опирается на другой только через this.use(id) и только если объявил его в requires
 const use = id => activeModules().find(m => m.id === id) || null;
+function useFor(m){ return id => { if(!(m.requires || []).includes(id)){ console.warn('модуль ' + m.id + ' просит «' + id + '», но не объявил его в requires'); return null; } return use(id); }; }
 // Ошибка модуля: отключаем его до конца сеанса, остальное приложение работает
 function broke(m, hook, e){ if(m.__broken) return; m.__broken = true; console.warn('модуль ' + m.id + ' отключён: ошибка в ' + hook + ' — ' + (e && e.message));
   SYNC_KEY = null; CTX.key = null; }
@@ -480,7 +486,7 @@ registerModule((() => {
            Object.assign({type:'metro', model:'ride', lo:9, hi:11, label:'Метро до Электрозаводской · ' + stops(4), lm:'Выходи на Электрозаводской — дальше пешком'}, ride(LINE.slice(0,5))),
            {type:'wait', kind:'Подъём', model:'exit', station:'Электрозаводская', at:[37.70386,55.78161], lo:2, hi:3, label:'Подъём в город', lm:''},
            {type:'walk', geom:'strollWalk', lo:29, hi:36, label:'Прогулка до Бауманской', lm:'Вдоль Яузы, мимо Елоховского собора', tip:'Ты на месте'} ] }, common, { delayWhy:'если задержишься' }) };
-  return { id:'metro', group:'mode', line: LINE, icon:'Метро', name:'Метро', desc:'Сколько ждать поезд и спускаться к платформе', where:'способы, маршрут, ведение', on:true,
+  return { id:'metro', group:'mode', line: LINE, icon:'Метро', name:'Метро', desc:'Сколько ждать поезд и спускаться к платформе', where:'Видно в способах, на маршруте и в пути', on:true,
     options,
     context(T){ return { period: period(T).key }; },   // смена периода (пик, день, ночь) — пересчёт
     prepare(T){
@@ -505,7 +511,7 @@ registerModule((() => {
         } } } };
 })());
 // ---- Пешком
-registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешком', desc:'Пешие маршруты и прогулки', where:'способы, «Погулять рядом»', on:true,
+registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешком', desc:'Пешие маршруты и прогулки', where:'Видно в способах и в «Погулять рядом»', on:true,
   options: {
     walk: { name:'Пешком', ico:'Пешком', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0], purpose:'go', order:4, verb:'Выходи', delayWhy:'если задержишься',
       detail:'≈ 10 км',
@@ -517,7 +523,7 @@ registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешко�
       legs:[ {type:'walk', geom:'loop', lo:30, hi:38, label:'Кольцо 2,6 км и обратно домой', lm:'Можно сократить в любой момент', tip:'Почти дома'} ] } } });
 // ---- Пробки — модуль-поставщик данных: сам ничего не показывает, им пользуются такси и каршеринг (requires: ['roads'])
 // В приложении — данные о загруженности дорог; в прототипе — типичная картина по времени суток.
-registerModule({ id:'roads', group:'data', icon:'Светофор', name:'Пробки', desc:'Как загружены дороги в разное время', where:'время такси и каршеринга', on:true,
+registerModule({ id:'roads', group:'data', icon:'Светофор', name:'Пробки', desc:'Как загружены дороги в разное время', where:'Нужен такси и каршерингу', on:true,
   TABLE: {
     morning: { lo:22, hi:36, lm:'Утренние пробки: возможна задержка', warn:true,  tail:[0.10,5,15] },
     evening: { lo:22, hi:36, lm:'Вечерние пробки: возможна задержка', warn:true,  tail:[0.10,5,15] },
@@ -529,7 +535,7 @@ registerModule({ id:'roads', group:'data', icon:'Светофор', name:'Про
   at(T){ return this.TABLE[this.key(T)]; },
   context(T){ return { traffic: this.key(T) }; } });
 // ---- Такси и каршеринг: время за рулём — от модуля «Пробки»
-function carPrepare(o){ return T => { const t = use('roads').at(T); o.tail = t.tail;
+function carPrepare(o){ return function(T){ const t = this.use('roads').at(T); o.tail = t.tail;
   for(const l of o.legs) if(l.type === 'car'){ l.lo = t.lo; l.hi = t.hi; l.lm = t.lm; l.warn = t.warn; } }; }
 registerModule((() => { const o = { name:'Такси', ico:'Такси', bg:'#FFF2D6', fg:'#8A5610', price:'≈ 650 ₽', tail:[0.10,5,15], purpose:'go', order:2,
     verb:'Вызывай', cta:'Вызвать такси', riskWord:'риск из-за пробок', varyWord:'зависит от пробок', delayWhy:'в пробку', legIco:'Такси',
@@ -538,7 +544,7 @@ registerModule((() => { const o = { name:'Такси', ico:'Такси', bg:'#FF
     detail:'подача 3–9 мин',
     legs:[ {type:'wait', kind:'Подача', at:HOME, lo:3, hi:9, label:'Подача машины', lm:'Выйди к подъезду, когда машина будет в 2 минутах', tip:'Подача здесь'},
            {type:'car', geom:'taxiDrive', lo:22, hi:36, label:'Такси до Бауманской', lm:'', tip:'Ты на месте'} ] };
-  return { id:'taxi', group:'mode', icon:'Такси', name:'Такси', desc:'Подача и поездка с учётом пробок', where:'способы, подтверждение перед вызовом', on:true,
+  return { id:'taxi', group:'mode', icon:'Такси', name:'Такси', desc:'Подача и поездка с учётом пробок', where:'Перед вызовом спросим подтверждение', on:true,
     requires:['roads'], options:{ taxi:o }, prepare: carPrepare(o) }; })());
 registerModule((() => { const o = { name:'Каршеринг', ico:'Каршеринг', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 300⁠–⁠500 ₽', tail:[0.10,5,15], purpose:'go', order:3,
     verb:'Выходи', cta:'Забронировать машину', riskWord:'риск из-за пробок', varyWord:'зависит от пробок', delayWhy:'в пробку', legIco:'Каршеринг',
@@ -549,14 +555,14 @@ registerModule((() => { const o = { name:'Каршеринг', ico:'Каршер
            {type:'wait', kind:'Подготовка', at:[37.80909,55.7922], lo:1, hi:3, label:'Открыть машину и выехать', lm:'Осмотр и фото машины — заранее, пока идёшь'},
            {type:'car', geom:'carDrive', lo:22, hi:36, label:'За рулём до Бауманской', lm:''},
            {type:'wait', kind:'Парковка', at:DEST, lo:4, hi:9, label:'Парковка и пешком до входа', lm:'Завершай аренду только в разрешённой зоне — проверь в приложении', warn:true, tip:'Ты на месте'} ] };
-  return { id:'carshare', group:'mode', icon:'Каршеринг', name:'Каршеринг', desc:'Ближайшая машина, поездка с учётом пробок', where:'способы, подтверждение перед бронью', on:true,
+  return { id:'carshare', group:'mode', icon:'Каршеринг', name:'Каршеринг', desc:'Ближайшая машина, поездка с учётом пробок', where:'Перед бронью спросим подтверждение', on:true,
     requires:['roads'], options:{ carshare:o }, prepare: carPrepare(o) }; })());
 
 /* ---------- Подсказки ---------- */
 // ---- Вагон для выхода. Данные — data/metro-cars.json (часть поезда, а не номер вагона; пока расчёт по карте).
 // Есть запись — подсказка; нет записи — модуль молчит. Работает только с метро.
 registerModule({
-  id:'cars', requires:['metro'], icon:'Вагон', name:'Вагон для выхода', desc:'В какой части поезда садиться, чтобы выход был рядом', where:'в шагах метро', on:true,
+  id:'cars', requires:['metro'], icon:'Вагон', name:'Вагон для выхода', desc:'В какой части поезда садиться, чтобы выход был рядом', where:'Подсказка в шаге метро', on:true,
   // station, line, direction, action, via, part — как в data/metro-cars.json (выдержка для прототипа)
   records:[
     { station:'Первомайская', direction:'в центр', action:'вход', via:'вход №3', part:'голова' },
@@ -566,7 +572,7 @@ registerModule({
   find(station, direction, action){ return this.records.find(r => r.station===station && r.direction===direction && r.action===action); },
   stepHints(l){
     if(l.type !== 'metro' || !l.stations) return [];
-    const line = (use('metro') || {}).line || []; const a = line.indexOf(l.stations[0]), b = line.indexOf(l.stations[l.stations.length-1]);
+    const line = (this.use('metro') || {}).line || []; const a = line.indexOf(l.stations[0]), b = line.indexOf(l.stations[l.stations.length-1]);
     const dir = b > a ? 'в центр' : 'из центра', exit = l.stations[l.stations.length-1];
     const r = this.find(exit, dir, 'выход'); if(!r) return [];
     const where = { 'голова':'первые вагоны', 'середина':'середину поезда', 'хвост':'последние вагоны' }[r.part];
@@ -579,7 +585,7 @@ registerModule({
 // ---- Мой темп (калибровка): после поездки — один короткий вопрос; ответы подстраивают прогноз под человека.
 // Первая поездка — «Как ты обычно ходишь?», дальше — «Что-то задержало?». Всё хранится только на телефоне.
 registerModule({
-  id:'pace', icon:'Шаги', name:'Мой темп', desc:'Прогноз подстраивается под тебя по ответам после поездок', where:'после поездки, во всех прогнозах', on:true,
+  id:'pace', icon:'Шаги', name:'Мой темп', desc:'Прогноз подстраивается под тебя по ответам после поездок', where:'Один вопрос после поездки', on:true,
   schema:{ asked:false, n:[0, 100000, 0], walkK:[0.5, 2, 1], boardK:[0.5, 2, 1], exitK:[0.5, 2, 1] },   // ядро проверяет сохранённое по этой схеме
   data(){ return this.store.get(); },
   legFactor(l){ const d = this.data(); return l.type==='walk' ? d.walkK : l.model==='board' ? d.boardK : l.model==='exit' ? d.exitK : 1; },
@@ -610,7 +616,7 @@ registerModule({
 });
 // ---- Погода в пути. В приложении данные — из погодного сервиса; в прототипе: дождь сегодня 8:40–13:00
 registerModule({
-  id:'weather', icon:'Дождь', name:'Погода в пути', desc:'Дождь и гололёд — в прогнозе и подсказках', where:'на экране способов и в прогнозе пешком', on:true,
+  id:'weather', icon:'Дождь', name:'Погода в пути', desc:'Дождь и гололёд — в прогнозе и подсказках', where:'Учитывается во времени пешком', on:true,
   data:{ rain:[8*60+40, 13*60] },
   context(T){ const [a, b] = this.data.rain; return { rain: T + 25 > a && T - 12 < b, from:a }; },   // поездка ~[T−12; T+25] задевает дождь
   legFactor(l, f){ return f.rain && l.type==='walk' ? 1.06 : 1; },                                       // пешком на 6% дольше
@@ -619,12 +625,12 @@ registerModule({
 });
 // ---- Загруженность вагонов. В приложении — данные о загрузке поездов; в прототипе: утром в 8:30–8:50 полные
 registerModule({
-  id:'crowd', requires:['metro'], icon:'Толпа', name:'Загруженность вагонов', desc:'Когда в поездах свободнее', where:'в шаге метро', on:true,
+  id:'crowd', requires:['metro'], icon:'Толпа', name:'Загруженность вагонов', desc:'Когда в поездах свободнее', where:'Подсказка в шаге метро', on:true,
   stepHints(l, t){ return l.type==='metro' && t >= 8*60+25 && t < 8*60+55 ? [{ icon:'Толпа', text:'в 8:30–8:50 вагоны полные — в первые вагоны свободнее не будет' }] : []; }
 });
 // ---- Кофе по пути. В приложении — кофейни из поиска мест; в прототипе — две точки
 registerModule({
-  id:'coffee', requires:['walk'], icon:'Кофе', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'«По пути» на маршруте прогулки', on:false,
+  id:'coffee', requires:['walk'], icon:'Кофе', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'Видно «По пути» на прогулке', on:false,
   places:{ stroll:[{e:'Кофе', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'}],
            loop:[{e:'Кофе', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'}] },
   pois(k){ return this.places[k] || []; }
@@ -714,7 +720,7 @@ function timeBtn(){
 }
 function modsLink(){ return `<button class="mlink" onclick="go('modules')">Модули</button>`; }
 const destName = () => state.mode==='walk' ? 'Погулять рядом' : state.dest ? PLACES[state.dest].name : '';
-const isSaved = () => state.templates.some(t => t.dest===state.dest && !t.reverse);
+const isSaved = () => state.templates.some(t => t.dest===state.dest && t.mode===state.sel && !t.reverse);   // другим способом — можно сохранить второй
 
 /* ----- Главный экран: поиск. Под ним — мои маршруты и недавние (если есть) ----- */
 function tplTime(t){   // «выйди до 8:23» для шаблона — считаем как для выбранного времени, затем возвращаем выбор
@@ -730,7 +736,7 @@ function tplTime(t){   // «выйди до 8:23» для шаблона — с�
 V.home = () => {
   if(!state.templates.length && !state.recents.length) return `<h1 class="sr" tabindex="-1">Куда едем?</h1>`;
   const T = state.templates.map((t,i) => `<button class="lrow press${t.reverse ? ' muted' : ''}" onclick="useTemplate(${i})"><div class="ico" aria-hidden="true">${ic(t.name==='Работа'?'Работа':t.reverse?'Дом':'Звезда')}</div>
-      <div class="tx"><b>${t.name}</b><div class="m">${t.reverse ? PLACES[t.dest].name + ' → сюда · строится позже' : 'Отсюда → ' + PLACES[t.dest].name}${t.arrive!=null ? ' · к ' + fmt(t.arrive) : ''}</div></div>
+      <div class="tx"><b>${esc(t.name)}</b><div class="m">${t.reverse ? PLACES[t.dest].name + ' → сюда · строится позже' : 'Отсюда → ' + PLACES[t.dest].name}${t.arrive!=null ? ' · к ' + fmtD(t.arrive) : ''}</div></div>
       <div class="r">${t.reverse ? '' : tplTime(t)}</div></button>`).join('');
   const R = state.recents.map(k => `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">${ic('История')}</div><div class="tx"><b>${PLACES[k].name}</b><div class="m">${PLACES[k].sub}</div></div></button>`).join('');
   return `<h1 class="sr" tabindex="-1">Куда едем?</h1>
@@ -739,7 +745,7 @@ V.home = () => {
 /* ----- Поиск: ввод ----- */
 V.find = () => `<h1 class="sr" tabindex="-1">Поиск места</h1>
   <div class="row" style="margin-top:2px"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button>
-    <input id="q" class="q" type="search" placeholder="Куда?" autocomplete="off" aria-label="Куда едем" value="${esc(state.q)}" oninput="state.q=this.value;findList()"></div>
+    <input id="q" class="q" type="search" placeholder="Куда?" autocomplete="off" aria-label="Куда едем" value="${esc(state.q)}" oninput="state.q=this.value;findList()" onkeydown="if(event.key==='Enter'){ const b = document.querySelector('#res button'); if(b){ event.preventDefault(); b.click(); } }"></div>
   <div id="res" aria-live="polite" style="margin-top:12px">${findHtml()}</div>`;
 function findHtml(){
   const q = (state.q||'').trim().toLowerCase();
@@ -915,7 +921,9 @@ V.route = () => {
   else if(!v.cls.startsWith('r') ) head = `<h1 tabindex="-1">${goVerb(k)} сейчас</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}${v.badLate ? ', но ' + delayWhy(k) + ' — опоздаешь на ' + v.badLate + ' мин' : ', самое позднее ' + fmt(NOW+f.p95)}</div><span class="pill ${v.cls}">${v.word}</span>`;   // заголовок — действие, итог — в пилюле
   else if(!v.never) head = `<h1 tabindex="-1">${goVerb(k)} сейчас</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}, это ~${dur(v.late)} опоздания. Успеешь, только если повезёт</div><span class="pill r">${v.word}</span>`;
   else head = `<h1 tabindex="-1">К ${fmtD(state.arrive)} не успеть</h1><div class="sub">Выйдешь сейчас — будешь около ${fmt(NOW+f.mid)}, опоздание ~${dur(v.late)}</div><div class="row" style="flex-wrap:wrap;gap:6px"><button class="chip press" onclick="lateMsg('${k}')">Предупредить, что опоздаю</button></div>`;
-  if(!v.closed && !v.never){ const cp = collect('cardPills', k); if(cp.length) head += `<div class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px">${cp.map(t => `<span class="pill">${esc(t)}</span>`).join('')}</div>`; }
+  // пилюли модулей («по твоему темпу», «нужен зонт») — в той же строке, что итог
+  if(!v.closed && !v.never){ const cp = collect('cardPills', k).map(t => `<span class="pill">${esc(t)}</span>`).join('');
+    if(cp) head = head.endsWith('</span></div>') ? head.slice(0, -6) + cp + '</div>' : head.replace(/(<span class="pill [^"]*">[^<]*<\/span>)$/, `<div class="row" style="flex-wrap:wrap;gap:6px">$1${cp}</div>`); }
   const cta = o.cta || (arr && v.never ? 'Всё равно поехать' : 'Поехали');
   // До выхода больше часа: ничего не вызываем сейчас — напоминание за 10 мин; поездку можно проиграть в демо
   const far = arr && v.plan==='until' && v.spare >= 60;
@@ -952,11 +960,11 @@ function modCard(m){ const on = !!state.modules[m.id];
   const need = (m.requires || []).filter(id => !isOn(id)).map(id => (MODULES.find(x=>x.id===id) || {name:id}).name);
   return `<button class="card" role="switch" aria-checked="${on}" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)" style="display:flex;align-items:center;gap:12px;${on && !need.length?'':'box-shadow:none;background:#FBFAF7'}">
       <div class="ico" aria-hidden="true">${icn(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div>
-      <div class="m" style="font-size:12px">${on && need.length ? 'Не работает без: ' + need.map(esc).join(', ') : 'Где: ' + esc(m.where)}</div></div>
+      <div class="m" style="font-size:12px">${on && need.length ? 'Не работает без: ' + need.map(esc).join(', ') : esc(m.where)}</div></div>
       <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>${state.modOff === m.id ? `<div class="offer" role="alert" style="margin:-4px 0 10px"><div class="t">Без «${esc(m.name)}» не будут работать ${esc(namesList(dependentsOf(m.id)))}</div>
       <div class="row" style="margin-top:10px"><button class="chip on press" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)">Выключить</button><button class="chip press" onclick="state.modOff=null;render()">Отмена</button></div></div>` : ''}${typeof m.settings === 'function' && on ? `<button class="mlink" style="margin:-6px 0 8px 4px" data-mod="${esc(m.id)}" onclick="openModSet(this.dataset.mod)">Подробнее: ${esc(m.name)} ›</button>` : ''}`; }
 V.modules = () => `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
-   <div class="sub" style="margin-top:6px">Всё, кроме поиска и маршрута, — модули. Включай только нужное.</div>
+   <div class="sub" style="margin-top:6px">Включай только то, что нужно тебе. Выключенное не мешает.</div>
    <div class="sec">Способы передвижения</div>${MODULES.filter(m=>m.group==='mode').map(modCard).join('')}
    <div class="sec">Подсказки</div>${MODULES.filter(m=>!m.group).map(modCard).join('')}
    <div class="sec">Данные</div>${MODULES.filter(m=>m.group==='data').map(modCard).join('')}
@@ -984,7 +992,7 @@ V.done = () => {
 V.save = () => {
   if(!OPTIONS[state.sel]) return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Сохранить маршрут</h1></div>
    <div class="sub" style="margin-top:6px">Сначала выбери способ — сохраним маршрут вместе с ним</div>`;
-  if(state.justSaved) return `<h1 tabindex="-1">Сохранено: ${state.justSaved}</h1>
+  if(state.justSaved) return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="state.justSaved=null;back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Сохранено: ${esc(state.justSaved)}</h1></div>
     <div class="sub">Найдёшь его под поиском — в одно касание</div>
     <div class="offer"><div class="t">Добавить обратный путь?</div><div class="m" style="margin:4px 0 10px">${PLACES[state.dest].name} → сюда</div>
     <div class="row"><button class="chip on press" onclick="saveReverse(true)">Добавить</button><button class="chip press" onclick="saveReverse(false)">Не нужно</button></div></div>`;
@@ -1438,6 +1446,9 @@ function loadApp(){ let d; try{ d = JSON.parse(localStorage.getItem(APP_KEY) || 
 loadApp();
 for(const id in state.modules) if(!MODULES.some(m => m.id === id)) delete state.modules[id];   // следы удалённых модулей
 APP_READY = true;
+document.addEventListener('keydown', e => { if(e.key !== 'Escape' || e.defaultPrevented || trip.on) return;
+  if(state.view === 'save' && state.justSaved){ state.justSaved = null; back(); return; }
+  if(state.history.length && state.view !== 'home') back(); });
 render(); requestAnimationFrame(()=>snapFor(state.view));
 let rsT; window.addEventListener('resize', ()=>{ clearTimeout(rsT); rsT = setTimeout(()=>{ if(!trip.on){ if(sheet.dataset.snap==='place'){ fitSheet(); return; } sheet.classList.remove('anim'); snapY = snaps()[sheet.dataset.snap||'half']; sheet.style.height = snapY+'px'; } }, 150); });
 initMap();
