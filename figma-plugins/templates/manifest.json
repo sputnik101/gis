@@ -1,0 +1,9 @@
+{
+  "name": "Своя ГИС — шаблоны v2",
+  "id": "own-gis-templates-v2-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] }
+}
