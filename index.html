@@ -53,7 +53,7 @@ button{font-family:inherit}
 .btns{display:flex;gap:8px}.btns .btn{flex:1}.btns .btn.w{flex:none;width:auto;padding:0 20px}
 .tripbar{display:flex;gap:8px;margin:6px 0 14px}
 .tripbar button{height:40px;border-radius:20px;font:inherit;font-size:14px;display:inline-flex;align-items:center;gap:6px;padding:0 14px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
-.tripbar .from{flex:1;display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--ink2);padding:0 4px}.tripbar .from i{width:10px;height:10px;border-radius:5px;background:var(--violet-btn);display:inline-block}
+.tripbar .from{flex:1;min-width:0;height:40px;border-radius:20px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);padding:0 14px}.tripbar .from i{width:10px;height:10px;border-radius:5px;background:var(--violet-btn);display:inline-block}
 .tripbar .when{border:0;background:#EDEDFD;color:var(--violet-d);font-weight:600}
 .tripbar .when.on{background:var(--violet-btn);color:#fff}
 .savebtn{border:0;background:none;color:var(--violet-d);font:inherit;font-size:14px;font-weight:600;cursor:pointer;min-height:44px;padding:0 2px}
@@ -81,7 +81,9 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .row{display:flex;gap:8px;align-items:center}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
 .chip{flex:none;height:44px;padding:0 16px;border-radius:22px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink);cursor:pointer}
-.chip.sel{background:#D7F26B;border-color:#D7F26B;color:#2B3A00;font-weight:600}   /* выбранный вариант ответа — лайм */
+.chip.sel{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600;padding-left:12px}
+.chip.sel::before{content:'';display:inline-block;width:16px;height:16px;margin-right:6px;vertical-align:-3px;background:no-repeat center/16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 10.5l4 4 8-9'/%3E%3C/svg%3E")}
+.btn:disabled,.chip:disabled{background:#E4E1F3!important;border-color:#E4E1F3!important;color:#9C97C4!important;opacity:1!important;cursor:default}   /* выбранный вариант ответа — лайм */
 .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .seg{display:flex;background:#E7E5F3;border-radius:14px;padding:3px;margin:4px 0 12px}
 .seg button{flex:1;height:42px;border:0;border-radius:11px;background:transparent;font-size:14px;color:var(--ink2);cursor:pointer;font-weight:500;transition:all .2s}
@@ -102,6 +104,7 @@ h1{font-size:20px;font-weight:600;margin:6px 0 2px}
 .card{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:var(--s1);cursor:pointer;position:relative;border:2px solid transparent;display:block;width:100%;text-align:left;font:inherit;color:inherit}
 .card.sel{border-color:var(--violet)}
 .card.late{background:#F6F5F9;box-shadow:none}
+.card.closed>.top,.card.closed>.win{opacity:.55}.card.closed .big{font-weight:600;color:#8A86A6}
 .card.late .win{display:flex}
 .card .top{display:flex;align-items:center;gap:12px}
 svg.i{display:block;flex:none}
@@ -235,7 +238,7 @@ const stops = n => n + ' ' + (n%10===1&&n%100!==11?'остановка':(n%10>=2
 
 /* ================= ИКОНКИ =================
    Один набор с Фигмой: 20×20, линия 1.75, скруглённые концы (figma-plugins/icons). Модули указывают иконку по имени. */
-const ICON = {"Маршрут": ["M 5 13 C 6.1046 13 7 13.8954 7 15 C 7 16.1046 6.1046 17 5 17 C 3.8954 17 3 16.1046 3 15 C 3 13.8954 3.8954 13 5 13 Z", "M 15 3 C 16.1046 3 17 3.8954 17 5 C 17 6.1046 16.1046 7 15 7 C 13.8954 7 13 6.1046 13 5 C 13 3.8954 13.8954 3 15 3 Z", "M 5 13 L 5 10 C 5 8.5 6 7.5 7.5 7.5 L 13 7.5"], "Пешком": ["M 11 1.9 C 11.88368 1.9 12.6 2.61632 12.6 3.5 C 12.6 4.38368 11.88368 5.1 11 5.1 C 10.11632 5.1 9.4 4.38368 9.4 3.5 C 9.4 2.61632 10.11632 1.9 11 1.9 Z", "M 9.5 7 L 8 12 L 11 14 L 11 18", "M 8 12 L 6 17", "M 9.5 7 L 12.5 9 L 15 8.5"], "Автобус": ["M 6.5 3 L 13.5 3 C 14.880749999999999 3 16 4.11925 16 5.5 L 16 12.5 C 16 13.880749999999999 14.880749999999999 15 13.5 15 L 6.5 15 C 5.11925 15 4 13.880749999999999 4 12.5 L 4 5.5 C 4 4.11925 5.11925 3 6.5 3 Z", "M 4 10 L 16 10", "M 6.5 15 L 6.5 17.5", "M 13.5 15 L 13.5 17.5", "M 8 6 L 12 6"], "Метро": ["M 4 15 L 4 5 L 10 12 L 16 5 L 16 15"], "Машина": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z"], "Парковка": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 8 14 L 8 6 L 11.5 6 C 13 6 14 7 14 8.5 C 14 10 13 11 11.5 11 L 8 11"], "Дом": ["M 3 9 L 10 3 L 17 9", "M 5 7.5 L 5 17 L 15 17 L 15 7.5", "M 8.5 17 L 8.5 12 L 11.5 12 L 11.5 17"], "Работа": ["M 5 6 L 15 6 C 16.1046 6 17 6.8954 17 8 L 17 15 C 17 16.1046 16.1046 17 15 17 L 5 17 C 3.8954 17 3 16.1046 3 15 L 3 8 C 3 6.8954 3.8954 6 5 6 Z", "M 7.5 6 L 7.5 4.5 C 7.5 4 8 3.5 8.5 3.5 L 11.5 3.5 C 12 3.5 12.5 4 12.5 4.5 L 12.5 6", "M 3 11 L 17 11"], "Зал": ["M 3 8 L 3 12", "M 5.5 6 L 5.5 14", "M 14.5 6 L 14.5 14", "M 17 8 L 17 12", "M 5.5 10 L 14.5 10"], "Семья": ["M 10 16 C 6 13 3 10.5 3 7.5 C 3 5.5 4.5 4 6.5 4 C 8 4 9.3 5 10 6.2 C 10.7 5 12 4 13.5 4 C 15.5 4 17 5.5 17 7.5 C 17 10.5 14 13 10 16 Z"], "Часы": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 10 6 L 10 10 L 13 12"], "Поиск": ["M 9 3.5 C 12.03765 3.5 14.5 5.96235 14.5 9 C 14.5 12.03765 12.03765 14.5 9 14.5 C 5.96235 14.5 3.5 12.03765 3.5 9 C 3.5 5.96235 5.96235 3.5 9 3.5 Z", "M 13 13 L 17 17"], "Закладка": ["M 5 3 L 15 3 L 15 17 L 10 13 L 5 17 Z"], "Вход": ["M 5 17 L 5 3 L 13 3 L 13 17", "M 3 17 L 17 17", "M 10.5 10 L 11 10"], "Профиль": ["M 10 3.5 C 11.93305 3.5 13.5 5.06695 13.5 7 C 13.5 8.93305 11.93305 10.5 10 10.5 C 8.06695 10.5 6.5 8.93305 6.5 7 C 6.5 5.06695 8.06695 3.5 10 3.5 Z", "M 4 17 C 4 13.5 6.5 11.5 10 11.5 C 13.5 11.5 16 13.5 16 17"], "Назад": ["M 16 10 L 4 10", "M 9 5 L 4 10 L 9 15"], "Плюс": ["M 10 4 L 10 16", "M 4 10 L 16 10"], "Дождь": ["M 6 12 C 3.8 12 3 10.5 3 9.3 C 3 7.6 4.4 6.3 6 6.5 C 6.6 4.5 8.3 3 10.5 3 C 13.3 3 15.3 5.2 15.2 7.6 C 16.8 7.8 17.5 9 17.5 10 C 17.5 11.2 16.6 12 15.2 12 Z", "M 7 14.5 L 6 17", "M 10.5 14.5 L 9.5 17", "M 14 14.5 L 13 17"], "Колокол": ["M 5 14 L 5 9 C 5 6 7.2 3.8 10 3.8 C 12.8 3.8 15 6 15 9 L 15 14 L 16.5 15.5 L 3.5 15.5 Z", "M 8.5 17.5 L 11.5 17.5"], "Аптека": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 10 6.5 L 10 13.5", "M 6.5 10 L 13.5 10"], "Кофе": ["M 4 8 L 14 8 L 13 15 C 12.9 16.1 12 17 10.9 17 L 7.1 17 C 6 17 5.1 16.1 5 15 Z", "M 14 9.5 L 15.5 9.5 C 16.6 9.5 17 10.3 17 11 C 17 11.8 16.4 12.5 15.5 12.5 L 13.6 12.5", "M 8 3 L 8 5.5", "M 11 3 L 11 5.5"], "Здание": ["M 5.5 3 L 14.5 3 C 15.32845 3 16 3.67155 16 4.5 L 16 15.5 C 16 16.32845 15.32845 17 14.5 17 L 5.5 17 C 4.67155 17 4 16.32845 4 15.5 L 4 4.5 C 4 3.67155 4.67155 3 5.5 3 Z", "M 7.5 7 L 8.5 7", "M 11.5 7 L 12.5 7", "M 7.5 10.5 L 8.5 10.5", "M 11.5 10.5 L 12.5 10.5", "M 9 17 L 9 14 L 11 14 L 11 17"], "Навигатор": ["M 10 2.5 L 16 17 L 10 13.5 L 4 17 Z"], "Внимание": ["M 10 3 L 17.5 16.5 L 2.5 16.5 Z", "M 10 8 L 10 11.5", "M 10 14 L 10 14.1"], "Галочка": ["M 4 10.5 L 8 14.5 L 16 5.5"], "Шаги": ["M 6 17 C 4.5 17 4 15.5 4.2 14 C 4.5 12 5.5 11 6.5 11 C 7.5 11 8 12.2 7.8 14 C 7.6 15.8 7.2 17 6 17 Z", "M 13.5 9 C 12.3 9 11.8 7.7 12 6.2 C 12.3 4.2 13.3 3 14.3 3 C 15.3 3 15.8 4.3 15.6 6 C 15.4 7.8 14.7 9 13.5 9 Z"], "Такси": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z", "M 8 5 L 8 2.8 L 12 2.8 L 12 5"], "Каршеринг": ["M 3 14 L 3 11 L 5 7.5 C 5.3 6.9 5.9 6.5 6.6 6.5 L 13.4 6.5 C 14.1 6.5 14.7 6.9 15 7.5 L 17 11 L 17 14 Z", "M 3 11 L 17 11", "M 6.5 14.2 C 7.21799 14.2 7.8 14.78201 7.8 15.5 C 7.8 16.21799 7.21799 16.8 6.5 16.8 C 5.78201 16.8 5.2 16.21799 5.2 15.5 C 5.2 14.78201 5.78201 14.2 6.5 14.2 Z", "M 13.5 14.2 C 14.21799 14.2 14.8 14.78201 14.8 15.5 C 14.8 16.21799 14.21799 16.8 13.5 16.8 C 12.78201 16.8 12.2 16.21799 12.2 15.5 C 12.2 14.78201 12.78201 14.2 13.5 14.2 Z", "M 7.2 3.6 C 8.9 2.2 11.1 2.2 12.8 3.6"], "Лист": ["M 4 16 C 4 8.5 8.5 4 16 4 C 16 11.5 11.5 16 4 16 Z", "M 4 16 L 11.5 8.5"], "Толпа": ["M 7 3.9000000000000004 C 8.27029 3.9000000000000004 9.3 4.92971 9.3 6.2 C 9.3 7.47029 8.27029 8.5 7 8.5 C 5.72971 8.5 4.7 7.47029 4.7 6.2 C 4.7 4.92971 5.72971 3.9000000000000004 7 3.9000000000000004 Z", "M 2.5 16 C 2.5 12.5 4.5 10.8 7 10.8 C 9.5 10.8 11.5 12.5 11.5 16", "M 13.6 4.6 C 14.7046 4.6 15.6 5.4954 15.6 6.6 C 15.6 7.704599999999999 14.7046 8.6 13.6 8.6 C 12.4954 8.6 11.6 7.704599999999999 11.6 6.6 C 11.6 5.4954 12.4954 4.6 13.6 4.6 Z", "M 12.6 11 C 15.4 10.7 17.5 12.3 17.5 15.5"], "Вагон": ["M 7.5 2.5 L 12.5 2.5 C 13.880749999999999 2.5 15 3.61925 15 5 L 15 12 C 15 13.380749999999999 13.880749999999999 14.5 12.5 14.5 L 7.5 14.5 C 6.11925 14.5 5 13.380749999999999 5 12 L 5 5 C 5 3.61925 6.11925 2.5 7.5 2.5 Z", "M 5 9 L 15 9", "M 8 12 L 8.1 12", "M 11.9 12 L 12 12", "M 7.5 14.5 L 5.5 17.5", "M 12.5 14.5 L 14.5 17.5"], "Пин": ["M 10 18 C 10 18 4.5 12.2 4.5 8 C 4.5 5 7 2.5 10 2.5 C 13 2.5 15.5 5 15.5 8 C 15.5 12.2 10 18 10 18 Z", "M 10 6 C 11.1046 6 12 6.8954 12 8 C 12 9.1046 11.1046 10 10 10 C 8.8954 10 8 9.1046 8 8 C 8 6.8954 8.8954 6 10 6 Z"], "Звезда": ["M 10 2.8 L 12.2 7.4 L 17.2 8 L 13.5 11.4 L 14.5 16.4 L 10 13.9 L 5.5 16.4 L 6.5 11.4 L 2.8 8 L 7.8 7.4 Z"], "Шестерёнка": ["M 10 4.4 C 13.092880000000001 4.4 15.6 6.90712 15.6 10 C 15.6 13.092880000000001 13.092880000000001 15.6 10 15.6 C 6.90712 15.6 4.4 13.092880000000001 4.4 10 C 4.4 6.90712 6.90712 4.4 10 4.4 Z", "M 10 7.8 C 11.21506 7.8 12.2 8.78494 12.2 10 C 12.2 11.21506 11.21506 12.2 10 12.2 C 8.78494 12.2 7.8 11.21506 7.8 10 C 7.8 8.78494 8.78494 7.8 10 7.8 Z", "M 10.00 4.40 L 10.00 2.40", "M 14.85 7.20 L 16.58 6.20", "M 14.85 12.80 L 16.58 13.80", "M 10.00 15.60 L 10.00 17.60", "M 5.15 12.80 L 3.42 13.80", "M 5.15 7.20 L 3.42 6.20"], "Песочные часы": ["M 5.5 3 L 14.5 3", "M 5.5 17 L 14.5 17", "M 7 3 C 7 7 13 7 13 10 C 13 13 7 13 7 17", "M 13 3 C 13 7 7 7 7 10 C 7 13 13 13 13 17"], "Эскалатор": ["M 2.5 16 L 6.5 16 L 13.5 5 L 17.5 5", "M 8.5 7 L 8.5 7.1", "M 6.5 10.5 L 11 10.5"], "Готово": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 6.8 10.2 L 9 12.4 L 13.4 7.8"], "История": ["M 4.2 6.8 C 5.4 4.5 7.6 3 10 3 C 13.9 3 17 6.1 17 10 C 17 13.9 13.9 17 10 17 C 6.6 17 3.8 14.6 3.2 11.4", "M 3.2 3.6 L 4.2 6.8 L 7.4 6", "M 10 6.5 L 10 10 L 12.5 11.5"], "Флаг": ["M 5 18 L 5 3", "M 5 3.5 L 15 3.5 L 12.5 7 L 15 10.5 L 5 10.5"]};
+const ICON = {"Маршрут": ["M 5 13 C 6.1046 13 7 13.8954 7 15 C 7 16.1046 6.1046 17 5 17 C 3.8954 17 3 16.1046 3 15 C 3 13.8954 3.8954 13 5 13 Z", "M 15 3 C 16.1046 3 17 3.8954 17 5 C 17 6.1046 16.1046 7 15 7 C 13.8954 7 13 6.1046 13 5 C 13 3.8954 13.8954 3 15 3 Z", "M 5 13 L 5 10 C 5 8.5 6 7.5 7.5 7.5 L 13 7.5"], "Пешком": ["M 11 1.9 C 11.88368 1.9 12.6 2.61632 12.6 3.5 C 12.6 4.38368 11.88368 5.1 11 5.1 C 10.11632 5.1 9.4 4.38368 9.4 3.5 C 9.4 2.61632 10.11632 1.9 11 1.9 Z", "M 9.5 7 L 8 12 L 11 14 L 11 18", "M 8 12 L 6 17", "M 9.5 7 L 12.5 9 L 15 8.5"], "Автобус": ["M 6.5 3 L 13.5 3 C 14.880749999999999 3 16 4.11925 16 5.5 L 16 12.5 C 16 13.880749999999999 14.880749999999999 15 13.5 15 L 6.5 15 C 5.11925 15 4 13.880749999999999 4 12.5 L 4 5.5 C 4 4.11925 5.11925 3 6.5 3 Z", "M 4 10 L 16 10", "M 6.5 15 L 6.5 17.5", "M 13.5 15 L 13.5 17.5", "M 8 6 L 12 6"], "Метро": ["M 4 15 L 4 5 L 10 12 L 16 5 L 16 15"], "Машина": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z"], "Парковка": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 8 14 L 8 6 L 11.5 6 C 13 6 14 7 14 8.5 C 14 10 13 11 11.5 11 L 8 11"], "Дом": ["M 3 9 L 10 3 L 17 9", "M 5 7.5 L 5 17 L 15 17 L 15 7.5", "M 8.5 17 L 8.5 12 L 11.5 12 L 11.5 17"], "Работа": ["M 5 6 L 15 6 C 16.1046 6 17 6.8954 17 8 L 17 15 C 17 16.1046 16.1046 17 15 17 L 5 17 C 3.8954 17 3 16.1046 3 15 L 3 8 C 3 6.8954 3.8954 6 5 6 Z", "M 7.5 6 L 7.5 4.5 C 7.5 4 8 3.5 8.5 3.5 L 11.5 3.5 C 12 3.5 12.5 4 12.5 4.5 L 12.5 6", "M 3 11 L 17 11"], "Зал": ["M 3 8 L 3 12", "M 5.5 6 L 5.5 14", "M 14.5 6 L 14.5 14", "M 17 8 L 17 12", "M 5.5 10 L 14.5 10"], "Семья": ["M 10 16 C 6 13 3 10.5 3 7.5 C 3 5.5 4.5 4 6.5 4 C 8 4 9.3 5 10 6.2 C 10.7 5 12 4 13.5 4 C 15.5 4 17 5.5 17 7.5 C 17 10.5 14 13 10 16 Z"], "Часы": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 10 6 L 10 10 L 13 12"], "Поиск": ["M 9 3.5 C 12.03765 3.5 14.5 5.96235 14.5 9 C 14.5 12.03765 12.03765 14.5 9 14.5 C 5.96235 14.5 3.5 12.03765 3.5 9 C 3.5 5.96235 5.96235 3.5 9 3.5 Z", "M 13 13 L 17 17"], "Закладка": ["M 5 3 L 15 3 L 15 17 L 10 13 L 5 17 Z"], "Вход": ["M 5 17 L 5 3 L 13 3 L 13 17", "M 3 17 L 17 17", "M 10.5 10 L 11 10"], "Профиль": ["M 10 3.5 C 11.93305 3.5 13.5 5.06695 13.5 7 C 13.5 8.93305 11.93305 10.5 10 10.5 C 8.06695 10.5 6.5 8.93305 6.5 7 C 6.5 5.06695 8.06695 3.5 10 3.5 Z", "M 4 17 C 4 13.5 6.5 11.5 10 11.5 C 13.5 11.5 16 13.5 16 17"], "Назад": ["M 16 10 L 4 10", "M 9 5 L 4 10 L 9 15"], "Плюс": ["M 10 4 L 10 16", "M 4 10 L 16 10"], "Дождь": ["M 6 12 C 3.8 12 3 10.5 3 9.3 C 3 7.6 4.4 6.3 6 6.5 C 6.6 4.5 8.3 3 10.5 3 C 13.3 3 15.3 5.2 15.2 7.6 C 16.8 7.8 17.5 9 17.5 10 C 17.5 11.2 16.6 12 15.2 12 Z", "M 7 14.5 L 6 17", "M 10.5 14.5 L 9.5 17", "M 14 14.5 L 13 17"], "Колокол": ["M 5 14 L 5 9 C 5 6 7.2 3.8 10 3.8 C 12.8 3.8 15 6 15 9 L 15 14 L 16.5 15.5 L 3.5 15.5 Z", "M 8.5 17.5 L 11.5 17.5"], "Аптека": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 10 6.5 L 10 13.5", "M 6.5 10 L 13.5 10"], "Кофе": ["M 4 8 L 14 8 L 13 15 C 12.9 16.1 12 17 10.9 17 L 7.1 17 C 6 17 5.1 16.1 5 15 Z", "M 14 9.5 L 15.5 9.5 C 16.6 9.5 17 10.3 17 11 C 17 11.8 16.4 12.5 15.5 12.5 L 13.6 12.5", "M 8 3 L 8 5.5", "M 11 3 L 11 5.5"], "Здание": ["M 5.5 3 L 14.5 3 C 15.32845 3 16 3.67155 16 4.5 L 16 15.5 C 16 16.32845 15.32845 17 14.5 17 L 5.5 17 C 4.67155 17 4 16.32845 4 15.5 L 4 4.5 C 4 3.67155 4.67155 3 5.5 3 Z", "M 7.5 7 L 8.5 7", "M 11.5 7 L 12.5 7", "M 7.5 10.5 L 8.5 10.5", "M 11.5 10.5 L 12.5 10.5", "M 9 17 L 9 14 L 11 14 L 11 17"], "Навигатор": ["M 10 2.5 L 16 17 L 10 13.5 L 4 17 Z"], "Внимание": ["M 10 3 L 17.5 16.5 L 2.5 16.5 Z", "M 10 8 L 10 11.5", "M 10 14 L 10 14.1"], "Галочка": ["M 4 10.5 L 8 14.5 L 16 5.5"], "Шаги": ["M 6 17 C 4.5 17 4 15.5 4.2 14 C 4.5 12 5.5 11 6.5 11 C 7.5 11 8 12.2 7.8 14 C 7.6 15.8 7.2 17 6 17 Z", "M 13.5 9 C 12.3 9 11.8 7.7 12 6.2 C 12.3 4.2 13.3 3 14.3 3 C 15.3 3 15.8 4.3 15.6 6 C 15.4 7.8 14.7 9 13.5 9 Z"], "Такси": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z", "M 7.5 5 L 7.5 2.5 L 12.5 2.5 L 12.5 5", "M 10 2.5 L 10 5", "M 7.5 3.75 L 12.5 3.75"], "Каршеринг": ["M 6.5 6.5 C 8.433 6.5 10.0 8.067 10.0 10 C 10.0 11.933 8.433 13.5 6.5 13.5 C 4.567 13.5 3.0 11.933 3.0 10 C 3.0 8.067 4.567 6.5 6.5 6.5 Z", "M 10 10 L 17.5 10", "M 14.5 10 L 14.5 13", "M 17 10 L 17 12.5"], "Лист": ["M 4 16 C 4 8.5 8.5 4 16 4 C 16 11.5 11.5 16 4 16 Z", "M 4 16 L 11.5 8.5"], "Толпа": ["M 7 3.9000000000000004 C 8.27029 3.9000000000000004 9.3 4.92971 9.3 6.2 C 9.3 7.47029 8.27029 8.5 7 8.5 C 5.72971 8.5 4.7 7.47029 4.7 6.2 C 4.7 4.92971 5.72971 3.9000000000000004 7 3.9000000000000004 Z", "M 2.5 16 C 2.5 12.5 4.5 10.8 7 10.8 C 9.5 10.8 11.5 12.5 11.5 16", "M 13.6 4.6 C 14.7046 4.6 15.6 5.4954 15.6 6.6 C 15.6 7.704599999999999 14.7046 8.6 13.6 8.6 C 12.4954 8.6 11.6 7.704599999999999 11.6 6.6 C 11.6 5.4954 12.4954 4.6 13.6 4.6 Z", "M 12.6 11 C 15.4 10.7 17.5 12.3 17.5 15.5"], "Вагон": ["M 7.5 2.5 L 12.5 2.5 C 13.880749999999999 2.5 15 3.61925 15 5 L 15 12 C 15 13.380749999999999 13.880749999999999 14.5 12.5 14.5 L 7.5 14.5 C 6.11925 14.5 5 13.380749999999999 5 12 L 5 5 C 5 3.61925 6.11925 2.5 7.5 2.5 Z", "M 5 9 L 15 9", "M 8 12 L 8.1 12", "M 11.9 12 L 12 12", "M 7.5 14.5 L 5.5 17.5", "M 12.5 14.5 L 14.5 17.5"], "Пин": ["M 10 18 C 10 18 4.5 12.2 4.5 8 C 4.5 5 7 2.5 10 2.5 C 13 2.5 15.5 5 15.5 8 C 15.5 12.2 10 18 10 18 Z", "M 10 6 C 11.1046 6 12 6.8954 12 8 C 12 9.1046 11.1046 10 10 10 C 8.8954 10 8 9.1046 8 8 C 8 6.8954 8.8954 6 10 6 Z"], "Звезда": ["M 10 2.8 L 12.2 7.4 L 17.2 8 L 13.5 11.4 L 14.5 16.4 L 10 13.9 L 5.5 16.4 L 6.5 11.4 L 2.8 8 L 7.8 7.4 Z"], "Шестерёнка": ["M 3 5 L 5.2 5", "M 8.8 5 L 17 5", "M 7 3.2 C 7.994 3.2 8.8 4.006 8.8 5 C 8.8 5.994 7.994 6.8 7 6.8 C 6.006 6.8 5.2 5.994 5.2 5 C 5.2 4.006 6.006 3.2 7 3.2 Z", "M 3 10 L 11.2 10", "M 14.8 10 L 17 10", "M 13 8.2 C 13.994 8.2 14.8 9.006 14.8 10 C 14.8 10.994 13.994 11.8 13 11.8 C 12.006 11.8 11.2 10.994 11.2 10 C 11.2 9.006 12.006 8.2 13 8.2 Z", "M 3 15 L 7.2 15", "M 10.8 15 L 17 15", "M 9 13.2 C 9.994 13.2 10.8 14.006 10.8 15 C 10.8 15.994 9.994 16.8 9 16.8 C 8.006 16.8 7.2 15.994 7.2 15 C 7.2 14.006 8.006 13.2 9 13.2 Z"], "Песочные часы": ["M 5.5 3 L 14.5 3", "M 5.5 17 L 14.5 17", "M 6.5 3 L 6.5 5.5 L 10 10 L 6.5 14.5 L 6.5 17", "M 13.5 3 L 13.5 5.5 L 10 10 L 13.5 14.5 L 13.5 17", "M 8.3 15.6 L 11.7 15.6"], "Эскалатор": ["M 2.5 17 L 6 17 L 6 14 L 9.5 14 L 9.5 11 L 13 11 L 13 8 L 17.5 8", "M 2.5 13 L 11 4.5 L 17.5 4.5"], "Готово": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 6.8 10.2 L 9 12.4 L 13.4 7.8"], "История": ["M 4.2 6.8 C 5.4 4.5 7.6 3 10 3 C 13.9 3 17 6.1 17 10 C 17 13.9 13.9 17 10 17 C 6.6 17 3.8 14.6 3.2 11.4", "M 3.2 3.6 L 4.2 6.8 L 7.4 6", "M 10 6.5 L 10 10 L 12.5 11.5"], "Флаг": ["M 5 18 L 5 3", "M 5 3.5 L 15 3.5 L 12.5 7 L 15 10.5 L 5 10.5"], "Светофор": ["M 8 2 L 12 2 C 13.1 2 14 2.9 14 4 L 14 16 C 14 17.1 13.1 18 12 18 L 8 18 C 6.9 18 6 17.1 6 16 L 6 4 C 6 2.9 6.9 2 8 2 Z", "M 10 4.199999999999999 C 10.773 4.199999999999999 11.4 4.827 11.4 5.6 C 11.4 6.373 10.773 7.0 10 7.0 C 9.227 7.0 8.6 6.373 8.6 5.6 C 8.6 4.827 9.227 4.199999999999999 10 4.199999999999999 Z", "M 10 8.6 C 10.773 8.6 11.4 9.227 11.4 10 C 11.4 10.773 10.773 11.4 10 11.4 C 9.227 11.4 8.6 10.773 8.6 10 C 8.6 9.227 9.227 8.6 10 8.6 Z", "M 10 13.0 C 10.773 13.0 11.4 13.627 11.4 14.4 C 11.4 15.173 10.773 15.8 10 15.8 C 9.227 15.8 8.6 15.173 8.6 14.4 C 8.6 13.627 9.227 13.0 10 13.0 Z"]};
 const ic = (name, size) => `<svg class="i" viewBox="0 0 20 20" width="${size||20}" height="${size||20}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name].map(d => `<path d="${d}"/>`).join('')}</svg>`;
 // иконка по имени из набора; иначе — текст (экранированный): модуль не может вставить разметку
 const icn = (v, size) => ICON[v] ? ic(v, size) : esc(v);
@@ -484,7 +487,10 @@ registerModule((() => {
       const P = period(T), peak = P.iv === 2, morningPeak = P.key === 420, iv = P.iv || 7;
       for(const o of Object.values(options)){
         o.closed = !P.iv;
-        o.closedInfo = { word:'ночью не ходит', card:['метро', 'закрыто', 'с ' + fmt(OPEN)], head:'Метро ночью закрыто', sub:'Откроется в ' + fmt(OPEN) + '. Ночью доберёшься на такси или пешком' };
+        const tm = ((Math.round(T) % 1440) + 1440) % 1440;
+        if(!P.iv && tm < 60 + 20) o.closedInfo = { word:'закроется раньше', card:['вход', 'до 1:00', 'не успеть'], head:'Метро закроется раньше, чем дойдёшь',
+          sub:'Вход на станции — до 1:00, а дорога до платформы займёт больше. Доберёшься на такси или пешком' };
+        else o.closedInfo = { word:'ночью не ходит', card:['метро', 'закрыто', 'с ' + fmt(OPEN)], head:'Метро ночью закрыто', sub:'Откроется в ' + fmt(OPEN) + '. Ночью доберёшься на такси или пешком' };
         for(const l of o.legs){
           if(l.model === 'board'){ const d = DEPTH[l.station];
             // время шага из частей: путь до платформы + ожидание (0…интервал) + иногда пропуск полного поезда
@@ -511,7 +517,7 @@ registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешко�
       legs:[ {type:'walk', geom:'loop', lo:30, hi:38, label:'Кольцо 2,6 км и обратно домой', lm:'Можно сократить в любой момент', tip:'Почти дома'} ] } } });
 // ---- Пробки — модуль-поставщик данных: сам ничего не показывает, им пользуются такси и каршеринг (requires: ['roads'])
 // В приложении — данные о загруженности дорог; в прототипе — типичная картина по времени суток.
-registerModule({ id:'roads', group:'data', icon:'Машина', name:'Пробки', desc:'Как загружены дороги в разное время', where:'время такси и каршеринга', on:true,
+registerModule({ id:'roads', group:'data', icon:'Светофор', name:'Пробки', desc:'Как загружены дороги в разное время', where:'время такси и каршеринга', on:true,
   TABLE: {
     morning: { lo:22, hi:36, lm:'Утренние пробки: возможна задержка', warn:true,  tail:[0.10,5,15] },
     evening: { lo:22, hi:36, lm:'Вечерние пробки: возможна задержка', warn:true,  tail:[0.10,5,15] },
@@ -573,7 +579,7 @@ registerModule({
 // ---- Мой темп (калибровка): после поездки — один короткий вопрос; ответы подстраивают прогноз под человека.
 // Первая поездка — «Как ты обычно ходишь?», дальше — «Что-то задержало?». Всё хранится только на телефоне.
 registerModule({
-  id:'pace', icon:'Пешком', name:'Мой темп', desc:'Прогноз подстраивается под тебя по ответам после поездок', where:'после поездки, во всех прогнозах', on:true,
+  id:'pace', icon:'Шаги', name:'Мой темп', desc:'Прогноз подстраивается под тебя по ответам после поездок', where:'после поездки, во всех прогнозах', on:true,
   schema:{ asked:false, n:[0, 100000, 0], walkK:[0.5, 2, 1], boardK:[0.5, 2, 1], exitK:[0.5, 2, 1] },   // ядро проверяет сохранённое по этой схеме
   data(){ return this.store.get(); },
   legFactor(l){ const d = this.data(); return l.type==='walk' ? d.walkK : l.model==='board' ? d.boardK : l.model==='exit' ? d.exitK : 1; },
@@ -660,6 +666,8 @@ function simulate(k){
     chance: budget => { let lo=0, hi=N; while(lo<hi){ const m=(lo+hi)>>1; if(s[m]<=budget) lo=m+1; else hi=m; } return lo/N; } };
 }
 const legMin = (k, i) => forecast(k).legMins[i];
+// «обычно lo–hi» с учётом модулей (темп, погода): диапазон не противоречит «~N мин»
+function stepRange(l, mid){ const kf = legK(l); const lo = Math.min(mid, Math.round(l.lo * kf)), hi = Math.max(mid, Math.round(l.hi * kf)); return lo + '–' + hi; }
 const DAY = 24*60;
 const fmt = m => { m = Math.round(m); const h = Math.floor(m/60)%24, mm = ((m%60)+60)%60; return h + ':' + String(mm).padStart(2,'0'); };
 const fmtD = m => fmt(m) + (m >= DAY ? ' завтра' : '');
@@ -677,7 +685,7 @@ function verdict(k){
   if(o.closed) return { cls:'', word:(o.closedInfo||{}).word || 'сейчас не работает', closed:true, plan:'now' };
   if(!arriveMode() || o.noTarget){
     const rel = (f.p95 - f.mid) / f.mid;
-    return rel <= 0.15 ? { cls:'g', word:'стабильно' } : rel <= 0.30 ? { cls:'a', word: o.varyWord || 'бывает дольше' } : { cls:'r', word:'непредсказуемо' };
+    return rel <= 0.15 ? { cls:'g', word:'надёжно' } : rel <= 0.30 ? { cls:'a', word: o.varyWord || 'бывает дольше' } : { cls:'r', word:'непредсказуемо' };
   }
   const L = latest(k);
   if(L >= NOW + 1) return { cls:'g', word:'надёжно', plan:'until', L, spare: L - NOW };          // есть время собраться
@@ -761,7 +769,11 @@ V.compare = () => {
     late = `<div class="banner late" role="alert"><b>К ${fmtD(state.arrive)} уже не успеть</b><br>Быстрее всего — ${esc(OPTIONS[fk].name.toLowerCase())}, будешь около ${fmt(NOW+f.mid)}
       <div class="row" style="flex-wrap:wrap;margin-top:10px"><button class="chip press" onclick="setTime(${nextT})">Показать к ${fmt(nextT)}</button><button class="chip press" onclick="pick('${fk}')">Самый быстрый</button><button class="chip press" onclick="lateMsg('${fk}')">Предупредить, что опоздаю</button></div></div>`;
   }
-  const w = collect('banners').map((b,i) => `<div class="hint"><span aria-hidden="true">${icn(b.icon)}</span> <span><b>${esc(b.title)}</b>${b.text ? ' — ' + esc(b.text) : ''}</span>${i===0 ? modsLink() : ''}</div>`).join('');
+  // способы включены, но ждут выключенный модуль данных — сказать прямо и дать включить
+  const waiting = MODULES.filter(m => m.group==='mode' && usable(m) && !activeModules().includes(m) && m.options && Object.values(m.options).some(o => o && o.purpose === (walkMode ? 'walk' : 'go')));
+  const need = [...new Set(waiting.flatMap(m => needsOf(m.id).slice(1).filter(id => !state.modules[id])))];
+  const wait = waiting.length && need.length && keys.length ? `<div class="hint"><span aria-hidden="true">${icn(MODULES.find(m => m.id === need[0]).icon)}</span> <span><b>${esc(waiting.map(m => m.name).join(' и '))}</b> — не работа${waiting.length > 1 ? 'ют' : 'ет'} без ${esc(namesList(need))}</span><button class="mlink" data-ids="${esc(need.join(','))}" onclick="enableMods(this.dataset.ids.split(','))">Включить</button></div>` : '';
+  const w = wait + collect('banners').map((b,i) => `<div class="hint"><span aria-hidden="true">${icn(b.icon)}</span> <span><b>${esc(b.title)}</b>${b.text ? ' — ' + esc(b.text) : ''}</span>${i===0 ? modsLink() : ''}</div>`).join('');
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">${destName()}</h1></div>
   <div class="tripbar"><span class="from"><i aria-hidden="true"></i>Отсюда</span>${timeBtn()}</div>
   ${late}
@@ -770,8 +782,11 @@ V.compare = () => {
   <div class="note">Время, цены и ориентиры в прототипе примерные. «Самое позднее» — так в 19 поездках из 20.</div>`;
 };
 // Пустое состояние: предложить включить выключенные способы, которые дают такие варианты
-function offerModes(purpose){ const ms = MODULES.filter(m => m.group==='mode' && !state.modules[m.id] && m.options && Object.values(m.options).some(o => o.purpose===purpose));
-  return ms.length ? ms.slice(0,3).map(m => `<button class="chip on press" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)">Включить «${esc(m.name)}»</button>`).join(' ')
+function offerModes(purpose){
+  const ms = MODULES.filter(m => m.group==='mode' && m.options && Object.values(m.options).some(o => o && o.purpose===purpose))
+    .map(m => ({ m, ids: needsOf(m.id, purpose).filter(id => !state.modules[id] || (MODULES.find(x => x.id === id) || {}).__broken) }))
+    .filter(x => x.ids.length && x.ids.every(id => !(MODULES.find(y => y.id === id) || {}).__broken));
+  return ms.length ? ms.slice(0,3).map(x => `<button class="chip on press" data-ids="${esc(x.ids.join(','))}" onclick="enableMods(this.dataset.ids.split(','))">Включить ${esc(namesList(x.ids))}</button>`).join(' ')
                    : `<button class="chip on press" onclick="go('modules')">Модули</button>`; }
 function fastest(){ const ks = goKeys().filter(k=>!verdict(k).closed && !OPTIONS[k].noTarget); return ks.length ? ks.reduce((a,b)=>forecast(b).mid<forecast(a).mid?b:a) : null; }
 function card(k, isBest){
@@ -795,7 +810,7 @@ function card(k, isBest){
   }
   if(!v.never && !v.closed) collect('cardPills', k).forEach(t => pills.push(`<span class="pill">${esc(t)}</span>`));
   const compact = arr && v.never;
-  if(v.closed) return `<div class="card late" data-k="${k}" aria-disabled="true">
+  if(v.closed) return `<div class="card late closed" data-k="${k}" aria-disabled="true">
     <div class="top"><div class="ico" aria-hidden="true">${icn(o.ico)}</div>
       <div style="flex:1;min-width:0"><div class="t">${esc(o.name)}</div><div class="m">${esc(o.detail)}</div></div>
       <div class="right">${right}</div></div>
@@ -887,7 +902,7 @@ V.route = () => {
   let t = start;
   const icon = l => ic(l.type==='walk' ? 'Пешком' : l.type==='metro' ? 'Метро' : l.type==='wait' ? (l.model==='exit' ? 'Эскалатор' : 'Песочные часы') : ICON[o.legIco] ? o.legIco : 'Машина', 16);
   const steps = o.legs.map((l,i) => { const mid = legMin(k,i); const s = `<div class="st ${l.type==='metro'?'metro':''}"><div class="dot" aria-hidden="true" style="${l.type==='metro'?'background:var(--metro3);color:#fff':''}">${icon(l)}</div>
-     <div class="tx"><b>${esc(l.label)}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно '+l.lo+'–'+l.hi+')':''}</div> ${collect('stepHints', legView(k, l), t).map(h => `<div class="lm${h.warn?' w':''}"><span aria-hidden="true">${icn(h.icon, 16)}</span> ${esc(h.text)}</div>`).join('')}${l.lm?`<div class="lm${l.warn?' w':''}"><span aria-hidden="true">${ic(l.warn?'Внимание':'Пин', 16)}</span> ${esc(l.lm)}</div>`:''}</div></div>`; t += mid; return s; }).join('');
+     <div class="tx"><b>${esc(l.label)}</b><div class="m">${fmt(t)} · ~${mid} мин${l.lo!==l.hi?' (обычно ' + stepRange(l, mid) + ')':''}</div> ${collect('stepHints', legView(k, l), t).map(h => `<div class="lm${h.warn?' w':''}"><span aria-hidden="true">${icn(h.icon, 16)}</span> ${esc(h.text)}</div>`).join('')}${l.lm?`<div class="lm${l.warn?' w':''}"><span aria-hidden="true">${ic(l.warn?'Внимание':'Пин', 16)}</span> ${esc(l.lm)}</div>`:''}</div></div>`; t += mid; return s; }).join('');
   const vp = visiblePois(k);
   const pois = vp.length ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${vp.map((p,i)=>`<button class="poi press" onclick="flyPoi(${i})"><div class="e" aria-hidden="true">${icn(p.e, 22)}</div><b>${esc(p.n)}</b><span>${esc(p.d)}${p.extra ? ' · ' + esc(p.extra) : ''}</span></button>`).join('')}</div>` : '';
   let head;
@@ -900,6 +915,7 @@ V.route = () => {
   else if(!v.cls.startsWith('r') ) head = `<h1 tabindex="-1">${goVerb(k)} сейчас</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}${v.badLate ? ', но ' + delayWhy(k) + ' — опоздаешь на ' + v.badLate + ' мин' : ', самое позднее ' + fmt(NOW+f.p95)}</div><span class="pill ${v.cls}">${v.word}</span>`;   // заголовок — действие, итог — в пилюле
   else if(!v.never) head = `<h1 tabindex="-1">${goVerb(k)} сейчас</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}, это ~${dur(v.late)} опоздания. Успеешь, только если повезёт</div><span class="pill r">${v.word}</span>`;
   else head = `<h1 tabindex="-1">К ${fmtD(state.arrive)} не успеть</h1><div class="sub">Выйдешь сейчас — будешь около ${fmt(NOW+f.mid)}, опоздание ~${dur(v.late)}</div><div class="row" style="flex-wrap:wrap;gap:6px"><button class="chip press" onclick="lateMsg('${k}')">Предупредить, что опоздаю</button></div>`;
+  if(!v.closed && !v.never){ const cp = collect('cardPills', k); if(cp.length) head += `<div class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px">${cp.map(t => `<span class="pill">${esc(t)}</span>`).join('')}</div>`; }
   const cta = o.cta || (arr && v.never ? 'Всё равно поехать' : 'Поехали');
   // До выхода больше часа: ничего не вызываем сейчас — напоминание за 10 мин; поездку можно проиграть в демо
   const far = arr && v.plan==='until' && v.spare >= 60;
@@ -937,7 +953,8 @@ function modCard(m){ const on = !!state.modules[m.id];
   return `<button class="card" role="switch" aria-checked="${on}" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)" style="display:flex;align-items:center;gap:12px;${on && !need.length?'':'box-shadow:none;background:#FBFAF7'}">
       <div class="ico" aria-hidden="true">${icn(m.icon)}</div><div style="flex:1"><div class="t">${esc(m.name)}${m.__broken ? ' · <span style="color:#97291F">выключен из-за ошибки</span>' : ''}</div><div class="m">${esc(m.desc)}</div>
       <div class="m" style="font-size:12px">${on && need.length ? 'Не работает без: ' + need.map(esc).join(', ') : 'Где: ' + esc(m.where)}</div></div>
-      <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>${typeof m.settings === 'function' && on ? `<button class="mlink" style="margin:-6px 0 8px 4px" data-mod="${esc(m.id)}" onclick="openModSet(this.dataset.mod)">Подробнее: ${esc(m.name)} ›</button>` : ''}`; }
+      <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>${state.modOff === m.id ? `<div class="offer" role="alert" style="margin:-4px 0 10px"><div class="t">Без «${esc(m.name)}» не будут работать ${esc(namesList(dependentsOf(m.id)))}</div>
+      <div class="row" style="margin-top:10px"><button class="chip on press" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)">Выключить</button><button class="chip press" onclick="state.modOff=null;render()">Отмена</button></div></div>` : ''}${typeof m.settings === 'function' && on ? `<button class="mlink" style="margin:-6px 0 8px 4px" data-mod="${esc(m.id)}" onclick="openModSet(this.dataset.mod)">Подробнее: ${esc(m.name)} ›</button>` : ''}`; }
 V.modules = () => `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
    <div class="sub" style="margin-top:6px">Всё, кроме поиска и маршрута, — модули. Включай только нужное.</div>
    <div class="sec">Способы передвижения</div>${MODULES.filter(m=>m.group==='mode').map(modCard).join('')}
@@ -950,13 +967,14 @@ V.done = () => {
   const sub = o.noTarget ? `${trip.total} мин · ${esc(o.price)}` : hurry ? (diff>0 ? `на ${dur(diff)} раньше, чем нужно` : diff===0 ? 'ровно вовремя' : `опоздание ${dur(-diff)}`) : `${trip.total} мин в пути`;
   const chips = o.noTarget ? ['Было приятно','Слишком долго','Хочу другой маршрут'] : ['Всё по плану','Была задержка','Сложно найти'];
   // Предложить сохранить: путь похож на рутинный (задано «к …» или второй раз сюда), ещё не сохранён и не отказывались
-  const offer = !o.noTarget && state.dest && !isSaved() && !state.declined[state.dest] && (hurry || (state.visits[state.dest]||0) >= 2);
+  // Одна карточка за раз: предложение сохранить — со второй поездки сюда; тогда вопрос модулей не показываем
+  const offer = !o.noTarget && state.dest && !isSaved() && !state.declined[state.dest] && (state.visits[state.dest]||0) >= 2;
   return `<div class="done-art" aria-hidden="true"><i class="c1"></i><i class="c2"></i><i class="c3"></i><div class="flag">${ic(o.noTarget ? 'Лист' : 'Флаг', 28)}</div></div>
    <h1 tabindex="-1">${o.noTarget ? 'Прогулка позади' : 'Ты на месте в ' + fmt(at)}</h1>
    <div class="sub">${sub}</div>
    ${offer ? `<div class="offer"><div class="t">Ездишь сюда регулярно?</div><div class="m" style="margin:4px 0 10px">Сохрани маршрут — в следующий раз он будет в одно касание</div>
      <div class="row"><button class="chip on press" onclick="go('save')">Сохранить</button><button class="chip press" onclick="state.declined[state.dest]=1;render()">Не сейчас</button></div></div>` : ''}
-   ${afterTripCards()}
+   ${offer ? '' : afterTripCards()}
    <div hidden><div class="t">Как прошло?</div><div class="m" style="margin:4px 0 10px">Ответ уточнит прогноз для этого маршрута</div>
    <div class="row" style="flex-wrap:wrap">${chips.map(c=>`<button class="chip press" onclick="this.classList.add('sel');thanks()">${c}</button>`).join('')}</div></div>
    <button class="btn w press" onclick="restart()">Готово</button>`;
@@ -975,13 +993,13 @@ V.save = () => {
    <div class="sub" style="margin-top:6px">Отсюда → ${PLACES[state.dest].name}</div>
    <div class="sec">Как назвать</div>
    <div class="chips" style="flex-wrap:wrap">${['Работа','Учёба','Спорт'].map(n=>`<button class="chip press ${nm===n?'sel':''}" aria-pressed="${nm===n}" onclick="state.saveName='${n}';render()">${n}</button>`).join('')}
-     <button class="chip press ${nm && !['Работа','Учёба','Спорт'].includes(nm)?'sel':''}" onclick="askName()">${nm && !['Работа','Учёба','Спорт'].includes(nm) ? esc(nm) : 'Своё…'}</button></div>
+     <button class="chip press ${nm && !['Работа','Учёба','Спорт'].includes(nm)?'sel':''}" aria-pressed="${!!nm && !['Работа','Учёба','Спорт'].includes(nm)}" onclick="askName()">${nm && !['Работа','Учёба','Спорт'].includes(nm) ? esc(nm) : 'Своё…'}</button></div>
    <div class="card" style="cursor:default">
      <div class="row" style="justify-content:space-between"><span class="m">Время</span><b>${arr ? 'прибыть к ' + fmt(state.arrive) : 'без времени'}</b></div>
      <div class="row" style="justify-content:space-between;margin-top:8px"><span class="m">Способ</span><b>${esc(OPTIONS[state.sel].name)}</b></div>
      <div class="m" style="margin-top:10px">Если способ недоступен (ночью метро закрыто) — предложим другой. Дни недели и напоминание «пора выходить» — в следующей версии.</div>
    </div>
-   <button class="btn p press" ${nm ? '' : 'disabled aria-disabled="true" style="opacity:.5"'} onclick="saveTemplate()">${nm ? 'Сохранить' : 'Выбери название'}</button>`;
+   <button class="btn p press" ${nm ? '' : 'disabled aria-disabled="true"'} onclick="saveTemplate()">${nm ? 'Сохранить' : 'Выбери название'}</button>`;
 };
 function askName(){ const v = prompt('Название маршрута', state.saveName || ''); if(v && v.trim()){ state.saveName = v.trim().replace(/['"<>&]/g,'').slice(0,24) || 'Мой маршрут'; render(); } }
 function saveTemplate(){
@@ -1034,7 +1052,7 @@ const glue = h => h.replace(/(\d) (мин|ч|₽|км|м)(?=[\s<.,·)]|$)/g, '$1
 // Короткая блокировка кликов после смены экрана: второй тап двойного клика не попадает в новую кнопку
 let navLock = 0; const lockNav = () => { navLock = performance.now() + 450; };
 function render(anim){
-  syncCtx();
+  syncCtx(); if(APP_READY) saveApp();
   // перерисовка без перехода: вернуть фокус на ту же кнопку (по её действию и тексту)
   const ae = !anim && body.contains(document.activeElement) ? document.activeElement : null;
   const keyOf = el => (el.getAttribute('onclick') || '') + '|' + (el.dataset.mod || '') + '|' + el.textContent.trim().slice(0, 40);
@@ -1062,7 +1080,28 @@ function back(){ const from = state.view; state.view = state.history.pop() || 'h
   if(state.view==='home') showHome(); else if(state.view==='place') showPlace();
   else if(state.view==='compare' && from!=='time' && from!=='modules'){ showRoute(state.sel); fitAll(); } }
 function pick(k){ state.sel = k; showRoute(k); go('route'); fitAll(); }
-function toggleMod(k){ state.modules[k] = !state.modules[k]; render(); say((state.modules[k]?'Включено':'Выключено'));
+// Зависимости: модуль и всё, без чего он не работает (requires модуля и — для цели purpose — requires его вариантов)
+function needsOf(id, purpose){ const out = [];
+  const add = x => { const m = MODULES.find(y => y.id === x); if(!m || out.includes(x)) return; out.push(x); (m.requires || []).forEach(add);
+    if(purpose && m.options) Object.values(m.options).filter(o => o && o.purpose === purpose).forEach(o => (o.requires || []).forEach(add)); };
+  add(id); return out; }
+// кто перестанет работать без модуля id (включённые, которым он нужен — напрямую или через цепочку)
+function dependentsOf(id){ const out = [];
+  const walk = x => MODULES.forEach(m => { if(state.modules[m.id] && !out.includes(m.id) && (m.requires || []).includes(x)){ out.push(m.id); walk(m.id); } });
+  walk(id); return out; }
+const modName = id => (MODULES.find(m => m.id === id) || { name:id }).name;
+const namesList = ids => ids.map(id => '«' + modName(id) + '»').join(ids.length === 2 ? ' и ' : ', ');
+// Включить модуль вместе со всем, без чего он не работает
+function enableMods(ids){ const on = ids.filter(id => !state.modules[id]); on.forEach(id => state.modules[id] = true); state.modOff = null;
+  render(); say('Включено: ' + on.map(modName).join(', ')); if(routeKey) showRoute(state.sel); }
+// Прямое включение/выключение без вопросов (для модулей и проверок): setMod(id) — переключить, setMod(id, true/false)
+function setMod(id, on = !state.modules[id]){ if(!(id in state.modules)) return; state.modules[id] = !!on; state.modOff = null; render(); if(routeKey) showRoute(state.sel); }
+function toggleMod(k){
+  if(!(k in state.modules)) return;
+  if(!state.modules[k]){ enableMods(needsOf(k)); return; }
+  const deps = dependentsOf(k);
+  if(deps.length && state.modOff !== k){ state.modOff = k; render(); return; }    // сначала спросить: без него не заработают другие
+  state.modules[k] = false; state.modOff = null; render(); say('Выключено');
   if(routeKey) showRoute(state.sel); }   // точки модулей на карте
 function thanks(){ toast('Спасибо! Учту в прогнозе'); }
 /* После поездки: вопросы модулей (afterTrip) и их ответы (answer). Ядро только рисует и передаёт выбор. */
@@ -1076,6 +1115,7 @@ function afterTripCards(){
     const ch = q.choices.filter(c => c && /^[a-z0-9_-]+$/.test(c.id || '') && typeof c.label === 'string').slice(0, 6);
     return `<div class="card" style="cursor:default"><div class="t">${esc(q.title)}</div>${q.text ? `<div class="m" style="margin:4px 0 10px">${esc(q.text)}</div>` : ''}
       <div class="row" style="flex-wrap:wrap">${ch.map(c => `<button class="chip press ${a.sel.includes(c.id)?'sel':''}" aria-pressed="${a.sel.includes(c.id)}" data-mod="${esc(m.id)}" data-c="${c.id}" data-only="${c.only?1:''}" data-multi="${q.multi?1:''}" onclick="pickAns(this)">${esc(c.label)}</button>`).join('')}</div>
+      ${q.multi && ch.some(c => c.only) ? `<div class="m" style="margin-top:8px;font-size:12px">«${esc(ch.find(c => c.only).label)}» снимает остальные отметки</div>` : ''}
       ${q.multi ? `<button class="chip on press" style="margin-top:10px" ${a.sel.length ? '' : 'disabled aria-disabled="true"'} data-mod="${esc(m.id)}" onclick="sendAns(this.dataset.mod)">Отправить</button>` : ''}</div>`;
   }).join('');
 }
@@ -1098,7 +1138,7 @@ V.modset = () => { const m = MODULES.find(x => x.id === state.modset), st = m &&
    ${st.reset ? `<button class="btn w press" onclick="resetMod('${esc(m.id)}')">Сбросить и начать заново</button>` : ''}`; };
 function openModSet(id){ state.modset = id; go('modset'); }
 function resetMod(id){ const m = MODULES.find(x => x.id === id); if(m && m.store) m.store.clear(); refreshModules(); toast('Сброшено'); }
-function restart(){ state.view='home'; state.history=[]; state.mode='hurry'; state.timeMode='depart'; state.depart=NOW; render('back'); snapFor('home'); showHome(); }
+function restart(){ document.getElementById('clock').textContent = fmt(NOW); state.view='home'; state.history=[]; state.mode='hurry'; state.timeMode='depart'; state.depart=NOW; render('back'); snapFor('home'); showHome(); }
 function say(t){ document.getElementById('live').textContent = t; }
 
 /* ================= ШТОРКА ================= */
@@ -1377,12 +1417,25 @@ function finish(){ stopTrip(); document.getElementById('clock').textContent = fm
 // «Завершить» — в два нажатия, чтобы случайный тап не обрывал поездку
 function endTrip(){
   const b = document.getElementById('stopBtn');
-  if(!b.dataset.armed){ b.dataset.armed = '1'; b.textContent = 'Точно завершить? Нажми ещё раз'; clearTimeout(endTrip._t);
+  if(!b.dataset.armed || performance.now() - b.dataset.armed < 600){ if(b.dataset.armed) return;   // двойной тап — не подтверждение
+    b.dataset.armed = performance.now(); b.textContent = 'Точно завершить? Нажми ещё раз'; clearTimeout(endTrip._t);
     endTrip._t = setTimeout(()=>{ b.dataset.armed=''; b.textContent='Завершить поездку'; }, 3000); return; }
   clearTimeout(endTrip._t); stopTrip(); document.getElementById('clock').textContent = fmt(NOW);
   state.history = trip.hist || ['home']; state.view='route'; render('back'); snap('half'); fitAll(); toast('Поездка завершена'); }
 
 /* ================= СТАРТ ================= */
+// Сохранённое между сеансами (только на этом телефоне): шаблоны, недавние, визиты, отказы, включённость модулей.
+// Всё проверяется при чтении: чужое или битое отбрасывается.
+const APP_KEY = 'gis.app';
+function saveApp(){ try{ localStorage.setItem(APP_KEY, JSON.stringify({ v:1, templates: state.templates, recents: state.recents, visits: state.visits, declined: state.declined, modules: state.modules })); }catch(e){} }
+function loadApp(){ let d; try{ d = JSON.parse(localStorage.getItem(APP_KEY) || 'null'); }catch(e){ d = null; }
+  if(!d || typeof d !== 'object') return;
+  const okT = t => t && typeof t.name === 'string' && t.name && PLACES[t.dest] && typeof t.mode === 'string' && (t.arrive == null || Number.isFinite(t.arrive));
+  if(Array.isArray(d.templates)) state.templates = d.templates.filter(okT).slice(0, 20).map(t => ({ name: t.name.slice(0, 40), dest: t.dest, arrive: t.arrive == null ? null : t.arrive, mode: t.mode, reverse: !!t.reverse }));
+  if(Array.isArray(d.recents)) state.recents = d.recents.filter(k => PLACES[k]).slice(0, 3);
+  for(const f of ['visits', 'declined']) if(d[f] && typeof d[f] === 'object') for(const [k, v] of Object.entries(d[f])) if(PLACES[k] && Number.isFinite(v)) state[f][k] = v;
+  if(d.modules && typeof d.modules === 'object') for(const [k, v] of Object.entries(d.modules)) if(k in state.modules && typeof v === 'boolean') state.modules[k] = v; }
+loadApp();
 for(const id in state.modules) if(!MODULES.some(m => m.id === id)) delete state.modules[id];   // следы удалённых модулей
 APP_READY = true;
 render(); requestAnimationFrame(()=>snapFor(state.view));

@@ -17,7 +17,7 @@ test('сломанный модуль не ломает экран и отклю
 test('выключение модуля без context() пересчитывает прогноз', async p => p.evaluate(() => {
   const base = forecast('walk').mid;
   registerModule({ id:'slow', icon:'🐢', name:'Медленно', desc:'', where:'', on:true, legFactor(l){ return l.type==='walk' ? 2 : 1; } });
-  const on = forecast('walk').mid; toggleMod('slow'); const off = forecast('walk').mid; unregisterModule('slow');
+  const on = forecast('walk').mid; setMod('slow'); const off = forecast('walk').mid; unregisterModule('slow');
   return (on > base * 1.5 && off === base) || `base ${base} on ${on} off ${off}`;
 }));
 test('модуль влияет и на шаг «вход, платформа и поезд»', async p => p.evaluate(() => {
@@ -52,18 +52,18 @@ test('подсказки модулей видны в «Погулять ряд�
 }));
 // ---------- способы передвижения — тоже модули ----------
 test('выключенное такси исчезает отовсюду', async p => p.evaluate(() => {
-  openPlace('baum'); go('compare'); toggleMod('taxi');
+  openPlace('baum'); go('compare'); setMod('taxi');
   const ok = !document.body.innerText.includes('Такси') && !OPTIONS.taxi && document.querySelectorAll('.card').length === 3;
-  toggleMod('taxi'); return ok || 'карточек ' + document.querySelectorAll('.card').length;
+  setMod('taxi'); return ok || 'карточек ' + document.querySelectorAll('.card').length;
 }));
 test('все способы выключены — понятное пустое состояние', async p => p.evaluate(() => {
-  openPlace('baum'); go('compare'); ['metro','walk','taxi','carshare'].forEach(toggleMod);
+  openPlace('baum'); go('compare'); ['metro','walk','taxi','carshare'].forEach(k => setMod(k));
   const ok = document.body.innerText.includes('Нет включённых способов') && !document.querySelectorAll('.card[data-k]').length;
-  ['metro','walk','taxi','carshare'].forEach(toggleMod); return ok || 'нет пустого состояния';
+  ['metro','walk','taxi','carshare'].forEach(k => setMod(k)); return ok || 'нет пустого состояния';
 }));
 test('без метро нет «метро + прогулки» и подсказки о загрузке вагонов', async p => p.evaluate(() => {
-  toggleMod('metro'); walkNearby(); const noStroll = !OPTIONS.stroll && !document.body.innerText.includes('прогулка у Яузы');
-  const noCrowd = !activeModules().some(m => m.id === 'crowd'); toggleMod('metro'); return (noStroll && noCrowd) || 'stroll/crowd остались';
+  setMod('metro'); walkNearby(); const noStroll = !OPTIONS.stroll && !document.body.innerText.includes('прогулка у Яузы');
+  const noCrowd = !activeModules().some(m => m.id === 'crowd'); setMod('metro'); return (noStroll && noCrowd) || 'stroll/crowd остались';
 }));
 test('ночью метро «закрыто», лучший способ — другой', async p => p.evaluate(() => {
   openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=1440+180; render();
@@ -74,25 +74,25 @@ test('прогноз метро к 9:00 не изменился (33 мин, вы
   const f = forecast('metro'), v = verdict('metro'); return (f.mid === 33 && fmt(v.L) === '8:23') || `${f.mid} / ${fmt(v.L)}`;
 }));
 test('шаблон с выключенным способом не ломает главный экран', async p => p.evaluate(() => {
-  resetDemo(); state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro' }); toggleMod('metro'); restart();
-  const ok = document.body.innerText.includes('выключен'); toggleMod('metro'); return ok || 'нет пометки';
+  resetDemo(); state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro' }); setMod('metro'); restart();
+  const ok = document.body.innerText.includes('выключен'); setMod('metro'); return ok || 'нет пометки';
 }));
 test('«Вагон для выхода»: подсказка есть, выключил — пропала, без метро — не работает', async p => p.evaluate(() => {
   openPlace('baum'); go('compare'); pick('metro');
   const on = document.body.innerText.includes('Садись в первые вагоны');
-  toggleMod('cars'); const off = !document.body.innerText.includes('Садись в первые вагоны'); toggleMod('cars');
-  toggleMod('metro'); const dep = !activeModules().some(m => m.id==='cars'); toggleMod('metro');
+  setMod('cars'); const off = !document.body.innerText.includes('Садись в первые вагоны'); setMod('cars');
+  setMod('metro'); const dep = !activeModules().some(m => m.id==='cars'); setMod('metro');
   walkNearby(); pick('stroll'); const silent = !document.body.innerText.includes('Садись в');   // до Электрозаводской данных нет — молчит
   return (on && off && dep && silent) || JSON.stringify({on, off, dep, silent});
 }));
 test('такси выключили на маршруте — честно возвращаем к способам, без подмены', async p => p.evaluate(() => {
-  openPlace('baum'); go('compare'); pick('taxi'); go('modules'); toggleMod('taxi'); back();
-  const ok = state.view==='compare' && !document.body.innerText.includes('Такси до Бауманской'); toggleMod('taxi');
+  openPlace('baum'); go('compare'); pick('taxi'); go('modules'); setMod('taxi'); back();
+  const ok = state.view==='compare' && !document.body.innerText.includes('Такси до Бауманской'); setMod('taxi');
   back(); return (ok && state.view==='place') || 'view ' + state.view + ' hist ' + state.history;
 }));
 test('такси выключили на подтверждении — к способам, «назад» один раз', async p => p.evaluate(() => {
-  restart(); openPlace('baum'); go('compare'); pick('taxi'); go('confirm'); go('modules'); toggleMod('taxi'); back();
-  const ok = state.view==='compare'; back(); toggleMod('taxi'); return (ok && state.view==='place') || 'view ' + state.view;
+  restart(); openPlace('baum'); go('compare'); pick('taxi'); go('confirm'); go('modules'); setMod('taxi'); back();
+  const ok = state.view==='compare'; back(); setMod('taxi'); return (ok && state.view==='place') || 'view ' + state.view;
 }));
 test('способ пропал во время поездки — поездка идёт до конца на своей копии', async p => {
   await p.evaluate(() => { restart(); openPlace('baum'); go('compare'); pick('taxi'); return startTrip(true); });
@@ -101,8 +101,8 @@ test('способ пропал во время поездки — поездк�
     const ok = /Такси|Подача|В пути/.test(mid) && !/NaN/.test(document.body.innerText); return ok || mid; });
 });
 test('«Пешком» выключили на маршруте прогулки — к способам', async p => p.evaluate(() => {
-  restart(); walkNearby(); pick('stroll'); toggleMod('walk'); render();
-  const ok = state.view==='compare'; toggleMod('walk'); return ok || 'view ' + state.view;
+  restart(); walkNearby(); pick('stroll'); setMod('walk'); render();
+  const ok = state.view==='compare'; setMod('walk'); return ok || 'view ' + state.view;
 }));
 test('вариант способа с мусором или разметкой не попадает в приложение', async p => p.evaluate(() => {
   window.__x = 0;
@@ -136,8 +136,8 @@ test('шаблон открывает сразу маршрут сохранён
 test('«Поехали» видна без прокрутки на маршруте', async p => { await p.evaluate(() => { restart(); openPlace('baum'); go('compare'); pick('metro'); }); await p.waitForTimeout(500);
   return p.evaluate(() => { const b = document.getElementById('goBtn').getBoundingClientRect(), ph = document.getElementById('phone').getBoundingClientRect(); return (b.bottom <= ph.bottom && b.top > ph.top) || 'кнопка за краем'; }); });
 test('без «Пешком» нет подсказки о дожде и чипа «Погулять рядом»', async p => p.evaluate(() => {
-  toggleMod('walk'); restart(); const chip = !!document.querySelector('.wchip'); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render();
-  const rain = document.body.innerText.includes('Дождь'); toggleMod('walk'); return (!chip && !rain) || JSON.stringify({chip, rain});
+  setMod('walk'); restart(); const chip = !!document.querySelector('.wchip'); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render();
+  const rain = document.body.innerText.includes('Дождь'); setMod('walk'); return (!chip && !rain) || JSON.stringify({chip, rain});
 }));
 // ---------- калибровка «Мой темп» ----------
 const tripDone = async (p, k) => { await p.evaluate(k => { restart(); openPlace('baum'); go('compare'); pick(k); return startTrip(true); }, k); await p.waitForTimeout(300);
@@ -152,7 +152,9 @@ test('после первой поездки — «Как ты обычно хо
 test('дальше — «Что-то задержало?»: несколько причин, «Всё как обычно» исключает остальные', async p => {
   await tripDone(p, 'metro'); await p.evaluate(() => document.querySelector('[data-c=usual]').click());
   await tripDone(p, 'metro');
-  return p.evaluate(() => { const q = document.body.innerText.includes('Что-то задержало?');
+  return p.evaluate(() => { const offer = document.body.innerText.includes('Ездишь сюда регулярно?') && !document.body.innerText.includes('Что-то задержало?');
+    [...document.querySelectorAll('button')].find(b => b.textContent === 'Не сейчас').click();   // одна карточка за раз: сначала предложение сохранить
+    const q = offer && document.body.innerText.includes('Что-то задержало?');
     document.querySelector('[data-c=wait]').click(); document.querySelector('[data-c=escal]').click();
     const two = state.modAns.pace.sel.length === 2; document.querySelector('[data-c=ok]').click(); const only = state.modAns.pace.sel.join() === 'ok';
     document.querySelector('[data-c=ok]').click(); document.querySelector('[data-c=wait]').click();
@@ -162,7 +164,7 @@ test('дальше — «Что-то задержало?»: несколько �
 test('«Мой темп» выключен — вопроса нет, прогноз общий; настройки и сброс работают', async p => {
   await tripDone(p, 'metro'); await p.evaluate(() => document.querySelector('[data-c=slow]').click());
   return p.evaluate(() => { openPlace('baum'); go('compare'); const tuned = forecast('walk').mid;
-    toggleMod('pace'); const plain = forecast('walk').mid; toggleMod('pace');
+    setMod('pace'); const plain = forecast('walk').mid; setMod('pace');
     go('modules'); openModSet('pace'); const set = document.body.innerText.includes('Пешком') && document.body.innerText.includes('+15%');
     resetMod('pace'); const reset = forecast('walk').mid === plain;
     return (tuned > plain && set && reset) || JSON.stringify({tuned, plain, set, reset}); });
@@ -188,8 +190,8 @@ test('новый способ по инструкции (велосипед) —
   return p.evaluate(route => (route && state.view==='done' && !/NaN|undefined/.test(document.body.innerText)) || 'route ' + route + ' view ' + state.view, route);
 });
 test('«Пробки» выключены — такси и каршеринга нет (зависят от данных), метро и пешком есть', async p => p.evaluate(() => {
-  openPlace('baum'); go('compare'); toggleMod('roads');
-  const ok = !OPTIONS.taxi && !OPTIONS.carshare && !!OPTIONS.metro && !!OPTIONS.walk; toggleMod('roads'); return ok || Object.keys(OPTIONS).join();
+  openPlace('baum'); go('compare'); setMod('roads');
+  const ok = !OPTIONS.taxi && !OPTIONS.carshare && !!OPTIONS.metro && !!OPTIONS.walk; setMod('roads'); return ok || Object.keys(OPTIONS).join();
 }));
 // ---------- навигация ----------
 test('место → поиск → место: на экране место', async p => p.evaluate(() => {
@@ -214,7 +216,7 @@ test('сохранение маршрута и шаблон под поиско�
 test('сброс демо — чистый первый запуск: хранилища, модули, «сломанные», прогноз', async p => p.evaluate(() => {
   const base = forecast('walk').mid;
   state.saveName = 'Спорт'; MODULES.find(m => m.id==='pace').store.set({ asked:true, n:3, walkK:1.3, boardK:1, exitK:1 });
-  toggleMod('taxi'); toggleMod('coffee'); MODULES.find(m => m.id==='crowd').__broken = true; refreshModules();
+  setMod('taxi'); setMod('coffee'); MODULES.find(m => m.id==='crowd').__broken = true; refreshModules();
   const slow = forecast('walk').mid; resetDemo();
   const d = MODULES.find(m => m.id==='pace').data(), mid = forecast('walk').mid;
   const ok = !state.templates.length && !state.recents.length && !state.saveName && !d.asked && d.walkK === 1
@@ -286,6 +288,86 @@ test('сумма минут шагов = обычному времени', async
   const bad = ['metro','taxi','carshare','walk','stroll','loop'].filter(k => forecast(k).legMins.reduce((a,b)=>a+b,0) !== forecast(k).mid);
   return !bad.length || 'не сходится: ' + bad.join(', ');
 }));
+
+// ---------- этап P1: зависимости, время, поездка, сохранение — настоящими нажатиями ----------
+const txt = p => p.evaluate(() => document.body.innerText);
+const tap = async (p, sel) => { await p.click(sel, { timeout: 5000 }); await p.waitForTimeout(650); };
+const tapText = async (p, t) => { await p.locator('button', { hasText: t }).first().click({ timeout: 5000 }); await p.waitForTimeout(650); };
+test('«Пробки» на «Модулях»: предупреждение о такси и каршеринге, «Отмена» и «Выключить»', async p => {
+  await p.evaluate(() => { openPlace('baum'); go('modules'); }); await p.waitForTimeout(650);
+  await tap(p, '.card[data-mod=roads]');
+  const warn = (await txt(p)).includes('Без «Пробки» не будут работать «Такси» и «Каршеринг»');
+  await tapText(p, 'Отмена'); const still = await p.evaluate(() => state.modules.roads);
+  await tap(p, '.card[data-mod=roads]'); await tapText(p, 'Выключить'); const off = await p.evaluate(() => !state.modules.roads && state.modules.taxi);
+  return (warn && still && off) || JSON.stringify({ warn, still, off });
+});
+test('способы без «Пробок»: подсказка «не работают без» и «Включить» возвращает такси', async p => {
+  await p.evaluate(() => { setMod('roads', false); openPlace('baum'); go('compare'); }); await p.waitForTimeout(650);
+  const hint = /Такси и Каршеринг — не работают без «Пробки»/.test(await txt(p));
+  await p.locator('.hint .mlink', { hasText: 'Включить' }).click(); await p.waitForTimeout(300);
+  const back = await p.evaluate(() => !!document.querySelector('.card[data-k=taxi]'));
+  return (hint && back) || JSON.stringify({ hint, back });
+});
+test('пустое состояние: «Включить» включает способ вместе с тем, без чего он не работает', async p => {
+  await p.evaluate(() => { ['metro','walk','taxi','carshare','roads'].forEach(k => setMod(k, false)); openPlace('baum'); go('compare'); }); await p.waitForTimeout(650);
+  const label = (await txt(p)).includes('Включить «Такси» и «Пробки»');
+  await tapText(p, 'Включить «Такси» и «Пробки»');
+  const ok = await p.evaluate(() => !!document.querySelector('.card[data-k=taxi]'));
+  return (label && ok) || JSON.stringify({ label, ok });
+});
+test('прогулки без «Пешком»: предложенная кнопка действительно даёт прогулку', async p => {
+  await p.evaluate(() => { setMod('walk', false); walkNearby(); }); await p.waitForTimeout(650);
+  await p.locator('.offer button.chip.on').first().click(); await p.waitForTimeout(300);
+  const n = await p.evaluate(() => walkKeys().length);
+  return n > 0 || 'прогулок нет';
+});
+test('метро в 0:30 открыто; в 0:50 — честно «закроется раньше, чем дойдёшь»; в 5:40 открыто', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); state.timeMode = 'depart';
+  const at = t => { state.depart = t; render(); return verdict('metro'); };
+  const a = at(1440 + 30), b = at(1440 + 50), c = at(1440 + 340);
+  const card = document.querySelector('.card[data-k=metro]'); at(1440 + 50);
+  const t50 = document.querySelector('.card[data-k=metro]').innerText;
+  return (!a.closed && b.closed && b.word === 'закроется раньше' && !c.closed && /до 1:00/.test(t50)) || JSON.stringify({ a: a.word, b: b.word, c: c.word, t50 });
+}));
+test('двойной тап по «Завершить поездку» не обрывает её; подтверждение — отдельным нажатием', async p => {
+  await p.evaluate(() => { openPlace('baum'); go('compare'); pick('walk'); return startTrip(true); }); await p.waitForTimeout(600);
+  await p.dblclick('#stopBtn'); await p.waitForTimeout(200);
+  const still = await p.evaluate(() => trip.on);
+  await p.waitForTimeout(700); await p.click('#stopBtn'); await p.waitForTimeout(400);
+  const ended = await p.evaluate(() => !trip.on);
+  return (still && ended) || JSON.stringify({ still, ended });
+});
+test('первая поездка «к 9:00» — одна карточка (вопрос о темпе), без предложения сохранить', async p => {
+  await p.evaluate(() => { restart(); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render(); pick('metro'); return startTrip(true); });
+  await p.waitForTimeout(300); await p.evaluate(() => { trip.t = trip.total; }); await p.waitForTimeout(1200);
+  const t = await txt(p);
+  return (t.includes('Как ты обычно ходишь?') && !t.includes('Ездишь сюда регулярно?')) || 'карточки: ' + t.slice(0, 200);
+});
+test('шаблоны, недавние и модули переживают перезагрузку; битая запись не ломает запуск', async p => {
+  await p.evaluate(() => { state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro' }); state.recents = ['baum']; setMod('coffee', true); });
+  await p.reload(); await p.waitForTimeout(500);
+  const kept = await p.evaluate(() => state.templates.length === 1 && state.templates[0].name === 'Работа' && state.recents[0] === 'baum' && state.modules.coffee && document.body.innerText.includes('Работа'));
+  await p.evaluate(() => localStorage.setItem('gis.app', '{"templates":[{"name":"<b>x</b>","dest":"nowhere","mode":5}],"modules":{"ghost":true,"taxi":"да"},"recents":"x"}'));
+  await p.reload(); await p.waitForTimeout(500);
+  const clean = await p.evaluate(() => !state.templates.length && !('ghost' in state.modules) && state.modules.taxi === true && Array.isArray(state.recents));
+  await p.evaluate(() => localStorage.setItem('gis.app', 'не json')); await p.reload(); await p.waitForTimeout(500);
+  const alive = await p.evaluate(() => state.view === 'home'); await p.evaluate(() => localStorage.clear());
+  return (kept && clean && alive) || JSON.stringify({ kept, clean, alive });
+});
+test('после «Не спеша»: шаг «~N мин (обычно a–b)» с a ≤ N ≤ b, в шапке маршрута «по твоему темпу»', async p => {
+  await tripDone(p, 'metro'); await p.evaluate(() => document.querySelector('[data-c=slow]').click());
+  return p.evaluate(() => { openPlace('baum'); go('compare'); state.timeMode='depart'; state.depart = 9*60; render(); pick('walk'); go('route');
+    const bad = [...document.querySelectorAll('.st .m')].map(e => e.textContent).filter(s => { const m = s.match(/~(\d+) мин \(обычно (\d+)–(\d+)\)/); return m && !(+m[2] <= +m[1] && +m[1] <= +m[3]); });
+    const pill = /по твоему темпу/.test(document.querySelector('#body').innerText);
+    return (!bad.length && pill) || JSON.stringify({ bad, pill }); });
+});
+test('выбранный ответ — тёмный чип с aria-pressed; неактивная кнопка — светлая, не «как активная»', async p => {
+  await p.evaluate(() => { openPlace('baum'); go('compare'); pick('metro'); go('save'); }); await p.waitForTimeout(650);
+  const dis = await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent === 'Выбери название'); return b && b.disabled && getComputedStyle(b).backgroundColor; });
+  await tapText(p, 'Работа');
+  const sel = await p.evaluate(() => { const c = [...document.querySelectorAll('.chip')].find(x => x.textContent === 'Работа'); return c.getAttribute('aria-pressed') + ' ' + getComputedStyle(c).backgroundColor; });
+  return (dis === 'rgb(228, 225, 243)' && sel === 'true rgb(26, 22, 64)') || JSON.stringify({ dis, sel });
+});
 
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
