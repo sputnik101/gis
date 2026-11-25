@@ -28,17 +28,17 @@ button{font-family:inherit}
 @media (max-width:500px){.phone{width:100vw;height:100dvh;border-radius:0;box-shadow:none}}
 #map{position:absolute;inset:0}
 /* подпись авторов карты — всегда видна */
-.attrib{position:absolute;left:16px;top:98px;z-index:19;font-size:10.5px;color:#fff;background:rgba(26,22,64,.55);padding:4px 8px;border-radius:8px;transition:top .3s,bottom .3s}
+.attrib{position:absolute;left:16px;top:108px;z-index:19;font-size:10.5px;color:#fff;background:rgba(26,22,64,.55);padding:4px 8px;border-radius:8px;transition:top .3s,bottom .3s}
 .attrib a{color:#fff}
 .attrib.guiding{top:auto;bottom:178px}
 .status{position:absolute;top:0;left:0;right:0;height:36px;display:flex;justify-content:space-between;align-items:center;padding:0 24px;font-size:13px;font-weight:600;color:#fff;z-index:30;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.2)}
-.topbar{position:absolute;top:44px;left:14px;right:14px;display:flex;gap:8px;z-index:20;transition:opacity .25s,transform .25s}
+.topbar{position:absolute;top:44px;left:14px;right:14px;display:flex;gap:8px;z-index:20;transition:opacity .35s ease,transform .35s cubic-bezier(.32,.72,0,1)}
 .topbar.hide{opacity:0;transform:translateY(-12px);pointer-events:none}
 .topbar{flex-wrap:wrap}
 .topbar .brk{flex-basis:100%;height:0}
 .search .ph{color:var(--muted)}
 .wchip{height:40px;border-radius:20px;border:0;background:#fff;box-shadow:var(--s2);padding:0 16px;font:inherit;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:8px;cursor:pointer}
-.attrib.low{top:150px}
+.attrib.low{top:164px}
 /* путь: поиск → место → способы */
 .q{flex:1;height:48px;border-radius:24px;border:1px solid var(--line);background:#fff;padding:0 16px;font:inherit;font-size:15px;color:var(--ink);outline:none}
 .q:focus,.q:focus-visible{outline:none;border:2px solid var(--violet-btn);padding:0 15px}   /* поле ввода в фокусе — фиолетовая рамка, без оранжевого кольца */
@@ -66,19 +66,19 @@ button{font-family:inherit}
 .sx{position:absolute;right:4px;top:4px;width:40px;height:40px;border-radius:20px;border:0;background:transparent;color:var(--ink2);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .sx:hover{background:#F1F0F7}
 .round{width:48px;height:48px;border-radius:24px;background:#fff;display:grid;place-items:center;box-shadow:var(--s2);border:0;cursor:pointer;color:var(--ink);font-size:18px}
-.press{transition:transform .12s ease,box-shadow .12s ease,background .12s}
+.press{transition:transform .18s ease,box-shadow .18s ease,background .18s}
 .press:active{transform:scale(.96);box-shadow:0 1px 3px rgba(20,17,58,.18)!important}
 /* шторка */
 .sheet{position:absolute;left:0;right:0;bottom:0;height:56%;overflow:hidden;background:var(--bg);border-radius:26px 26px 0 0;box-shadow:var(--s3);z-index:25;display:flex;flex-direction:column;touch-action:none;user-select:none;-webkit-user-select:none}
-.sheet.anim{transition:height .35s cubic-bezier(.2,.8,.2,1)}
+.sheet.anim{transition:height .5s cubic-bezier(.32,.72,0,1)}
 .grab{border:0;background:none;padding:12px 0 8px;display:flex;justify-content:center;cursor:grab;width:100%}
 .grab i{width:44px;height:5px;border-radius:3px;background:#8F8BA6}
 .body{flex:1;min-height:0;overflow-y:auto;padding:4px 16px 40px;touch-action:pan-y;scrollbar-width:none;-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(180deg,#000 calc(100% - 36px),transparent)}
 .body::-webkit-scrollbar{display:none}
-.view.in{animation:vin .28s ease}
-@keyframes vin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
-.view.back{animation:vback .28s ease}
-@keyframes vback{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
+.view.in{animation:vin .36s cubic-bezier(.32,.72,0,1)}
+@keyframes vin{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+.view.back{animation:vback .36s cubic-bezier(.32,.72,0,1)}
+@keyframes vback{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
 h1{font-size:20px;font-weight:600;margin:8px 0 4px}
 .sub{color:var(--muted);font-size:13px;margin-bottom:12px}
 .row{display:flex;gap:8px;align-items:center}
@@ -315,7 +315,7 @@ const OPTIONS = {};
 const isOn = id => activeModules().some(m => m.id === id);
 // Шлюз для вариантов способов: ключ, форма шагов, цвета; текст без разметки. Плохой вариант — модуль отключается.
 const LEG_TYPES = ['walk', 'metro', 'car', 'wait'], HEX = /^#[0-9a-f]{3,8}$/i;
-const TEXT_FIELDS = ['detail', 'price', 'verb', 'cta', 'startToast', 'riskWord', 'varyWord', 'delayWhy', 'legIco', 'ico'];
+const TEXT_FIELDS = ['detail', 'price', 'verb', 'cta', 'ctaLate', 'stopLabel', 'endToast', 'startToast', 'riskWord', 'varyWord', 'delayWhy', 'legIco', 'ico'];
 // Ядро работает с проверенной замороженной копией варианта: модуль может менять свой объект,
 // но до экрана это дойдёт только через новую проверку (пересчёт). Значения по умолчанию — в копии, не у модуля.
 const SRC = {};
@@ -493,7 +493,7 @@ registerModule((() => {
            Object.assign({type:'metro', model:'ride', lo:12, hi:15, label:'Метро до Бауманской · ' + stops(5), lm:'В сторону центра. Перед выходом — вибрация'}, ride(LINE)),
            {type:'wait', kind:'Подъём', model:'exit', station:'Бауманская', at:DEST, lo:2, hi:3, label:'Подъём в город', lm:'', tip:'Ты на месте'} ] }, common),
     // «Погулять рядом»: метро + прогулка — нужен и модуль «Пешком»
-    stroll: Object.assign({ name:'Метро + прогулка у Яузы', ico:'Лист', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', purpose:'walk', order:2, requires:['walk'], cta:'Начать прогулку',
+    stroll: Object.assign({ name:'Метро + прогулка у Яузы', ico:'Лист', bg:'#EEF8D2', fg:'#4F690B', price:'≈ 70 ₽', purpose:'walk', order:2, requires:['walk'], cta:'Начать прогулку', stopLabel:'Закончить прогулку', endToast:'Прогулка закончена',
       detail:'метро + 2,5 км пешком',
       pois:[            {e:'Лист', n:'Набережная Яузы', d:'вдоль воды', at:YAUZA, extra:'по пути'},
            {e:'Здание', n:'Елоховский собор', d:'рядом с Бауманской', at:ELOKH, extra:'по пути'} ],
@@ -529,10 +529,10 @@ registerModule((() => {
 // ---- Пешком
 registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешком', desc:'Пешие маршруты и прогулки', where:'Видно в способах и в «Погулять рядом»', on:true,
   options: {
-    walk: { name:'Пешком', ico:'Пешком', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0], purpose:'go', order:4, verb:'Выходи', delayWhy:'если задержишься',
+    walk: { name:'Пешком', ico:'Пешком', bg:'#F1F0F8', fg:'#4A4670', price:'бесплатно', tail:[0,0,0], purpose:'go', order:4, verb:'Выходи', delayWhy:'если задержишься', cta:'Пошли', ctaLate:'Всё равно пойти', stopLabel:'Закончить путь', endToast:'Путь прерван',
       detail:'≈ 10 км',
       legs:[ {type:'walk', geom:'walkAll', lo:115, hi:135, label:'Пешком до Бауманской', lm:'Мимо Измайловской и Семёновской — сесть в метро можно на любой из них', tip:'Ты на месте'} ] },
-    loop: { name:'Просто погулять', ico:'Лист', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true, purpose:'walk', order:1, verb:'Выходи', cta:'Начать прогулку',
+    loop: { name:'Просто погулять', ico:'Лист', bg:'#E3F5EA', fg:'#1A6B40', price:'2,6 км', tail:[0,0,0], noTarget:true, purpose:'walk', order:1, verb:'Выходи', cta:'Начать прогулку', stopLabel:'Закончить прогулку', endToast:'Прогулка закончена',
       detail:'кольцо вдоль Измайловского лесопарка',
       pois:[ {e:'Лист', n:'Опушка леса', d:'тихий участок', at:[37.8115,55.78878], extra:'по пути'},
              {e:'Пин', n:'Скамейки', d:'можно передохнуть', at:[37.82262,55.78883], extra:'по пути'} ],
@@ -647,7 +647,8 @@ registerModule({
 // ---- Кофе по пути. В приложении — кофейни из поиска мест; в прототипе — две точки
 registerModule({
   id:'coffee', requires:['walk'], icon:'Кофе', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'Видно «По пути» на прогулке', on:false,
-  places:{ stroll:[{e:'Кофе', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'}],
+  places:{ walk:[{e:'Кофе', n:'Кофе с собой', d:'у Измайловской', at:[37.7705,55.7883], extra:'+2 мин'}, {e:'Кофе', n:'Кофейня', d:'у Семёновской', at:[37.7224,55.7838], extra:'+3 мин'}],
+           stroll:[{e:'Кофе', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'}],
            loop:[{e:'Кофе', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'}] },
   pois(k){ return this.places[k] || []; }
 });
@@ -979,7 +980,7 @@ V.route = () => {
   // пилюли модулей («по твоему темпу», «нужен зонт») — в той же строке, что итог
   if(!v.closed && !v.never){ const cp = collect('cardPills', k).map(t => `<span class="pill">${esc(t)}</span>`).join('');
     if(cp) head = head.endsWith('</span></div>') ? head.slice(0, -6) + cp + '</div>' : head.replace(/(<span class="pill [^"]*">[^<]*<\/span>)$/, `<div class="row" style="flex-wrap:wrap;gap:8px">$1${cp}</div>`); }
-  const cta = o.cta || (arr && v.never ? 'Всё равно поехать' : 'Поехали');
+  const cta = arr && v.never ? (o.ctaLate || o.cta || 'Всё равно поехать') : (o.cta || 'Поехали');
   // До выхода больше часа: ничего не вызываем сейчас — напоминание за 10 мин; поездку можно проиграть в демо
   const far = arr && v.plan==='until' && v.spare >= 60;
   const remindAt = far ? v.L - 10 : 0;
@@ -1332,18 +1333,18 @@ function showRoute(k){
 // Главный: только «ты здесь». Место: ты и точка назначения, без линии маршрута.
 function clearRoute(){ showRoute.t = (showRoute.t||0)+1; routeKey = null; if(!mapOk) return;
   const e = {type:'FeatureCollection',features:[]}; ['r-walk','r-metro','r-car'].forEach(id=>map.getSource(id).setData(e)); clearMarkers(); }
-function showHome(){ clearRoute(); if(!mapOk) return; addMarker(pinEl('Ты здесь','dark'), HOME); map.flyTo({center:HOME, zoom:13.6, pitch:0, bearing:0, duration:reduced?0:800}); }
+function showHome(){ clearRoute(); if(!mapOk) return; addMarker(pinEl('Ты здесь','dark'), HOME); map.flyTo({center:HOME, zoom:13.6, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
 function showPlace(){ clearRoute(); const pl = PLACES[state.dest]; if(!mapOk || !pl) return; addMarker(pinEl('Ты здесь','dark'), HOME); addMarker(pinEl(pl.pin || pl.name,'m3'), pl.at);
-  map.fitBounds(new maplibregl.LngLatBounds(HOME, HOME).extend(pl.at), {padding:{top:120,left:50,right:50,bottom:300}, pitch:0, bearing:0, duration:reduced?0:800}); }
+  map.fitBounds(new maplibregl.LngLatBounds(HOME, HOME).extend(pl.at), {padding:{top:120,left:50,right:50,bottom:300}, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fitAll(){
   if(!mapOk || !OPTIONS[state.sel]) return; const o = OPTIONS[state.sel];
   const pl = PLACES[state.dest];
   const pts = [HOME].concat(o.noTarget || !pl ? [] : [pl.at], ...o.legs.map(l=>l.coords || (l.geom && BAKED.routes[l.geom]) || (l.stops && l.stops.map(q=>q.at)) || (l.at ? [l.at] : [l.from,l.to].concat(l.via||[]).filter(Boolean))));
   const b = pts.reduce((b,p)=>b.extend(p), new maplibregl.LngLatBounds(pts[0],pts[0]));
-  map.fitBounds(b, {padding:{top:120,left:40,right:40,bottom:(snapY||phone.clientHeight*0.56)+20}, pitch:0, bearing:0, duration:reduced?0:800, maxZoom:15.5});
+  map.fitBounds(b, {padding:{top:120,left:40,right:40,bottom:(snapY||phone.clientHeight*0.56)+20}, pitch:0, bearing:0, duration:reduced?0:1200, essential:false, maxZoom:15.5});
 }
-function flyPoi(i){ const p = visiblePois(state.sel)[i]; snap('peek'); if(mapOk) map.flyTo({center:p.at, zoom:16, pitch:45, duration:reduced?0:900}); toast(p.n + (p.extra ? ' · ' + p.extra : '')); }
+function flyPoi(i){ const p = visiblePois(state.sel)[i]; snap('peek'); if(mapOk) map.flyTo({center:p.at, zoom:16, pitch:45, duration:reduced?0:1300}); toast(p.n + (p.extra ? ' · ' + p.extra : '')); }
 
 function brand(){
   const layers = map.getStyle().layers;
@@ -1363,8 +1364,8 @@ function brand(){
       else if(/boundary|admin/.test(id)) hide(id);
       else if(/rail|transit/.test(id)) set(id,'line-color','#5A5AD8');
       else if(/casing/.test(id)) set(id,'line-color','#5F5FE0');
-      else if(/motorway|trunk|primary|secondary/.test(id)) { set(id,'line-color','#D7F26B'); set(id,'line-opacity',0.75); }
-      else if(/road|street|minor|service|path|pedestrian|tertiary|highway|bridge|tunnel/.test(id)) set(id,'line-color','#9FA0F7');
+      else if(/motorway|trunk|primary|secondary/.test(id)) { set(id,'line-color','#B4B5FA'); set(id,'line-opacity',0.6); }   // крупные дороги — тише маршрута; лайм — только «надёжно»
+      else if(/road|street|minor|service|path|pedestrian|tertiary|highway|bridge|tunnel/.test(id)) { set(id,'line-color','#9192F5'); set(id,'line-opacity',0.7); }
     }
     else if(l.type==='fill-extrusion'){ set(id,'fill-extrusion-color','#8384F4'); set(id,'fill-extrusion-opacity',0.9); }
     else if(l.type==='symbol'){
@@ -1440,7 +1441,7 @@ async function startTrip(demo){
   if(arriveMode() && !o.noTarget){ const sp = state.arrive - trip.endAt;
     goal.className = 'pill ' + (sp >= 0 ? 'g' : 'r'); goal.textContent = sp >= 0 ? 'успеваешь к ' + fmtD(state.arrive) + ' · запас ' + dur(sp) : 'к ' + fmtD(state.arrive) + ' опоздание ~' + dur(-sp); goal.hidden = false;
   } else goal.hidden = true;
-  const stop = document.getElementById('stopBtn'); stop.textContent = 'Завершить поездку'; stop.dataset.armed = '';
+  const stop = document.getElementById('stopBtn'); stop.textContent = stopLabel(); stop.dataset.armed = '';
   setTimeout(()=>{ document.getElementById('gtop').focus({preventScroll:true}); }, 0);
   let last = performance.now();
   const tick = now => { if(!trip.on) return;
@@ -1498,15 +1499,17 @@ function stopTrip(){
 }
 function finish(){ stopTrip(); document.getElementById('clock').textContent = fmt(trip.endAt);
   if(state.dest) state.visits[state.dest] = (state.visits[state.dest]||0) + 1;
-  state.history=[]; state.view='done'; render('in'); snap('half'); if(mapOk) map.easeTo({pitch:30, zoom:16, bearing:0, duration:reduced?0:900}); }
+  state.history=[]; state.view='done'; render('in'); snap('half'); if(mapOk) map.easeTo({pitch:30, zoom:16, bearing:0, duration:reduced?0:1300}); }
+// Подпись кнопки остановки: пешком — «Закончить путь», прогулка — «Закончить прогулку» (задаёт способ, stopLabel)
+const stopLabel = () => (trip.o && trip.o.stopLabel) || 'Завершить поездку';
 // «Завершить» — в два нажатия, чтобы случайный тап не обрывал поездку
 function endTrip(){
   const b = document.getElementById('stopBtn');
   if(!b.dataset.armed || performance.now() - b.dataset.armed < 600){ if(b.dataset.armed) return;   // двойной тап — не подтверждение
-    b.dataset.armed = performance.now(); b.textContent = 'Точно завершить? Нажми ещё раз'; clearTimeout(endTrip._t);
-    endTrip._t = setTimeout(()=>{ b.dataset.armed=''; b.textContent='Завершить поездку'; }, 3000); return; }
+    b.dataset.armed = performance.now(); b.textContent = 'Точно? Нажми ещё раз'; clearTimeout(endTrip._t);
+    endTrip._t = setTimeout(()=>{ b.dataset.armed=''; b.textContent=stopLabel(); }, 3000); return; }
   clearTimeout(endTrip._t); stopTrip(); document.getElementById('clock').textContent = fmt(NOW);
-  state.history = trip.hist || ['home']; state.view='route'; render('back'); snap('half'); fitAll(); toast('Поездка завершена'); }
+  state.history = trip.hist || ['home']; state.view='route'; render('back'); snap('half'); fitAll(); toast((trip.o && trip.o.endToast) || 'Поездка завершена'); }
 
 /* ================= СТАРТ ================= */
 // Сохранённое между сеансами (только на этом телефоне): шаблоны, недавние, визиты, отказы, включённость модулей.

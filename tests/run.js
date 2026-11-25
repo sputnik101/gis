@@ -543,6 +543,27 @@ test('«Недавние»: «Очистить» убирает места, ша
   return (now && after) || JSON.stringify({ now, after });
 });
 
+// ---------- замечания Сергея 25.11 ----------
+test('пешком: «Пошли» и «Закончить путь», прогулка — «Закончить прогулку»; тост по способу', async p => {
+  const a = await p.evaluate(() => { openPlace('baum'); go('compare'); pick('walk'); go('route'); return document.getElementById('goBtn').textContent; });
+  await p.evaluate(() => startTrip(true)); await p.waitForTimeout(500);
+  const stop = await p.evaluate(() => document.getElementById('stopBtn').textContent);
+  await p.click('#stopBtn'); await p.waitForTimeout(700); await p.click('#stopBtn'); await p.waitForTimeout(600);
+  const toastT = await p.evaluate(() => (document.querySelector('.toast') || {}).textContent || '');
+  await p.evaluate(() => { restart(); walkNearby(); pick('loop'); go('route'); return startTrip(true); }); await p.waitForTimeout(500);
+  const stop2 = await p.evaluate(() => document.getElementById('stopBtn').textContent);
+  return (a === 'Пошли' && stop === 'Закончить путь' && /Путь прерван/.test(toastT) && stop2 === 'Закончить прогулку') || JSON.stringify({ a, stop, toastT, stop2 });
+});
+test('«Кофе по пути» включён — кофейни есть и на маршруте «Пешком»', async p => p.evaluate(() => {
+  setMod('coffee', true); openPlace('baum'); go('compare'); pick('walk'); go('route');
+  const n = visiblePois('walk').filter(x => /Коф/.test(x.n)).length; const txt = document.body.innerText.includes('Кофе с собой');
+  return (n === 2 && txt) || JSON.stringify({ n, txt });
+}));
+test('подпись карты не прилипает к «Погулять рядом» (зазор не меньше 12 px)', async p => p.evaluate(() => {
+  restart(); const c = document.querySelector('.wchip').getBoundingClientRect(), a = document.getElementById('attrib').getBoundingClientRect();
+  return (a.top - c.bottom >= 12) || 'зазор ' + Math.round(a.top - c.bottom);
+}));
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
