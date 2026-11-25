@@ -412,6 +412,80 @@ test('экран места: крестик в поле поиска возвр�
   return (noChip && ok) || JSON.stringify({ noChip, ok });
 });
 
+// ---------- добивка после проверки на испорченных копиях (25.11) ----------
+test('лимиты шлюза: не больше 2 подсказок, 2 пилюль, 2 подсказок шага и 6 точек', async p => p.evaluate(() => {
+  const many = n => Array.from({ length: n }, (_, i) => i);
+  registerModule({ id:'spam', icon:'?', name:'S', desc:'', where:'', on:true,
+    banners(){ return many(5).map(i => ({ title:'Б' + i })); }, cardPills(){ return many(5).map(i => 'П' + i); },
+    stepHints(){ return many(5).map(i => ({ text:'Ш' + i })); }, pois(){ return many(10).map(i => ({ n:'Т' + i, at:[37.7 + i/1000, 55.78] })); } });
+  openPlace('baum'); go('compare'); const n = [collect('banners').length, collect('cardPills','metro').length, collect('stepHints', legView('metro', OPTIONS.metro.legs[0]), 500).length, collect('pois','metro').length];
+  unregisterModule('spam'); return n.join() === '2,2,2,6' || 'стало ' + n.join();
+}));
+test('множитель времени шага ограничен 0,5–3', async p => p.evaluate(() => {
+  const base = forecast('walk').mid;
+  registerModule({ id:'huge', icon:'?', name:'H', desc:'', where:'', on:true, legFactor(){ return 100; } }); const hi = forecast('walk').mid;
+  unregisterModule('huge'); registerModule({ id:'tiny', icon:'?', name:'T', desc:'', where:'', on:true, legFactor(){ return 0.01; } }); const lo = forecast('walk').mid; unregisterModule('tiny');
+  return (hi <= base * 3.1 && hi > base * 2 && lo >= base * 0.45 && lo < base * 0.7) || `base ${base} hi ${hi} lo ${lo}`;
+}));
+test('двойной тап по «Маршрут»: второй тап не попадает в карточку способа', async p => {
+  await p.evaluate(() => openPlace('baum')); await p.waitForTimeout(650);
+  await p.locator('button', { hasText: 'Маршрут' }).first().dblclick(); await p.waitForTimeout(650);
+  return p.evaluate(() => state.view === 'compare' || 'экран ' + state.view);
+});
+test('после ночного выезда время в карточках — с «завтра»', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); state.timeMode = 'depart'; state.depart = 1440 + 50; render();
+  return document.querySelector('.card[data-k=taxi]').innerText.includes('завтра') || 'нет «завтра»';
+}));
+test('«Загруженность вагонов»: утром в 8:20 у шага метро есть подсказка', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); pick('metro'); go('route'); return document.body.innerText.includes('вагоны полные') || 'нет подсказки';
+}));
+test('шлюз точек: без координат или имени — отброшено, правильная точка — есть', async p => p.evaluate(() => {
+  registerModule({ id:'pp', icon:'?', name:'P', desc:'', where:'', on:true, pois(){ return [{ n:'Хорошая', at:[37.7, 55.78] }, { n:'Без места' }, { at:[37.7, 55.78] }, { n:'Кривая', at:['a', 1] }]; } });
+  const r = collect('pois', 'walk').map(x => x.n); unregisterModule('pp');
+  return r.join() === 'Хорошая' || 'точки: ' + r.join();
+}));
+test('XSS в подсказке шага и точке не исполняется', async p => p.evaluate(() => {
+  window.__x = 0; const bad = '<img src=x onerror="window.__x=1">';
+  registerModule({ id:'xs', icon:'?', name:'X', desc:'', where:'', on:true, stepHints(){ return [{ text: bad }]; }, pois(){ return [{ n: bad, d: bad, at:[37.7, 55.78] }]; } });
+  openPlace('baum'); go('compare'); pick('walk'); go('route');
+  return new Promise(r => setTimeout(() => { unregisterModule('xs'); r(window.__x === 0 || 'код выполнился'); }, 200));
+}));
+test('после поездки шторка и поиск снова доступны', async p => {
+  await tripDone(p, 'walk'); await p.evaluate(() => restart()); await p.waitForTimeout(650);
+  return p.evaluate(() => (!document.getElementById('sheet').inert && !document.getElementById('topbar').inert) || 'inert остался');
+});
+test('итог: такси к 9:00 — «риск», не «надёжно»; метро — «надёжно»', async p => p.evaluate(() => {
+  openPlace('baum'); go('compare'); state.timeMode = 'arrive'; state.arrive = 540; render();
+  return (verdict('taxi').cls === 'a' && verdict('metro').cls === 'g') || verdict('taxi').word + ' / ' + verdict('metro').word;
+}));
+test('выход из «Погулять рядом» назад возвращает обычный режим', async p => p.evaluate(() => {
+  walkNearby(); back(); openPlace('baum'); go('compare'); return (state.mode === 'hurry' && !!document.querySelector('.card[data-k=metro]')) || 'режим ' + state.mode;
+}));
+test('модуль сообщил о новых данных (refreshModules) — прогноз пересчитан', async p => p.evaluate(() => {
+  window.__slow = 1;
+  registerModule({ id:'fact', icon:'?', name:'F', desc:'', where:'', on:true, context(){ return { k: window.__slow }; }, legFactor(l, f){ return l.type === 'walk' ? f.k : 1; } });
+  openPlace('baum'); go('compare'); const a = forecast('walk').mid; window.__slow = 2; refreshModules(); const b = forecast('walk').mid; unregisterModule('fact');
+  return b > a * 1.5 || `было ${a} стало ${b}`;
+}));
+test('смена времени пересчитывает способ без context() (другие факты не меняются)', async p => p.evaluate(() => {
+  registerModule({ id:'clock2', group:'mode', icon:'?', name:'Часы', desc:'', where:'', on:true,
+    options:{ clock2:{ name:'По часам', purpose:'go', legs:[{ type:'walk', geom:'walkAll', lo:10, hi:12, label:'x' }] } },
+    prepare(T){ const l = this.options.clock2.legs[0]; l.lo = T > 15*60 ? 40 : 10; l.hi = l.lo + 2; } });
+  openPlace('baum'); go('compare'); state.timeMode = 'depart'; state.depart = 14*60; render(); const a = forecast('clock2').mid;
+  state.depart = 16*60; render(); const b = forecast('clock2').mid; unregisterModule('clock2');
+  return (a < 15 && b > 35) || `14:00 ${a} 16:00 ${b}`;
+}));
+test('включить такси на «Модулях», когда «Пробки» выключены, — включаются оба', async p => {
+  await p.evaluate(() => { setMod('roads', false); setMod('taxi', false); openPlace('baum'); go('modules'); }); await p.waitForTimeout(650);
+  await p.click('.card[data-mod=taxi]'); await p.waitForTimeout(650);
+  return p.evaluate(() => (state.modules.taxi && state.modules.roads) || JSON.stringify({ taxi: state.modules.taxi, roads: state.modules.roads }));
+});
+test('каршеринг — бронь только после подтверждения', async p => {
+  await p.evaluate(() => { openPlace('baum'); go('compare'); pick('carshare'); go('route'); }); await p.waitForTimeout(650);
+  await p.click('#goBtn'); await p.waitForTimeout(650);
+  return p.evaluate(() => (state.view === 'confirm' && !trip.on) || 'экран ' + state.view + ' поездка ' + trip.on);
+});
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
