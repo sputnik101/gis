@@ -1,0 +1,9 @@
+{
+  "name": "Своя ГИС — дизайн-система v3",
+  "id": "own-gis-design-system-v3-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] }
+}

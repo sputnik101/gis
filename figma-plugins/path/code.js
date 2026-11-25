@@ -209,7 +209,7 @@ async function getOrBuild(name, build) {
 async function buildResult() {
   const comps = [];
   for (const sel of [false, true]) {
-    const c = compAL('Состояние=' + (sel ? 'Выбран' : 'Обычный'), 'HORIZONTAL', { w: 272, h: 60, px: 10, py: 10, gap: 10, r: 14, bg: sel ? 'lav' : null, stroke: sel ? 'accent' : null });
+    const c = compAL('Состояние=' + (sel ? 'Выбран' : 'Обычный'), 'HORIZONTAL', { w: 272, h: 60, px: 12, py: 12, gap: 12, r: 14, bg: sel ? 'lav' : null, stroke: sel ? 'accent' : null });
     const num = figma.createFrame();
     num.name = 'Кружок'; num.resize(24, 24);
     num.layoutMode = 'HORIZONTAL'; num.primaryAxisSizingMode = 'FIXED'; num.counterAxisSizingMode = 'FIXED';
@@ -258,7 +258,7 @@ async function buildCategory() {
 async function buildBadge() {
   const comps = [];
   for (const [t, bg, fg] of [['Успеешь', 'limeP', 'limeT'], ['Впритык', 'orange', 'orangeT']]) {
-    const c = compAL('Тон=' + t, 'HORIZONTAL', { px: 8, py: 3, r: 10, bg });
+    const c = compAL('Тон=' + t, 'HORIZONTAL', { px: 8, py: 4, r: 10, bg });
     await TX(c, 'успеешь', 'tiny', fg, { name: 'Текст' });
     comps.push(c);
   }
@@ -268,7 +268,7 @@ async function buildBadge() {
   return set;
 }
 async function buildTemplateChip() {
-  const c = compAL('Чип шаблона', 'HORIZONTAL', { px: 12, py: 6, gap: 6, r: 14, bg: 'lav' });
+  const c = compAL('Чип шаблона', 'HORIZONTAL', { px: 12, py: 8, gap: 8, r: 14, bg: 'lav' });
   await TX(c, 'По пути на работу', 'cap', 'lavT', { name: 'Текст' });
   const v = figma.createVector();
   v.name = 'Шеврон';
@@ -311,21 +311,21 @@ function screen(page, name, x) {
   const sb = figma.createFrame();
   sb.name = 'Сайдбар'; sb.resize(320, 800);
   sb.layoutMode = 'VERTICAL'; sb.primaryAxisSizingMode = 'FIXED'; sb.counterAxisSizingMode = 'FIXED';
-  sb.paddingLeft = sb.paddingRight = 24; sb.paddingTop = 28; sb.paddingBottom = 28; sb.itemSpacing = 10;
+  sb.paddingLeft = sb.paddingRight = 24; sb.paddingTop = 28; sb.paddingBottom = 28; sb.itemSpacing = 12;
   sb.fills = [pv('white')];
   s.appendChild(sb); sb.x = 0; sb.y = 0;
   return { s, sb };
 }
 let RES, PIN, CAT, BADGE, TCHIP;
 async function searchHeader(sb, query) {
-  const f = AL(sb, 'HORIZONTAL', { name: 'Поиск', gap: 8, px: 16, py: 10, r: 20, stroke: 'line', align: 'CENTER', fill: true });
+  const f = AL(sb, 'HORIZONTAL', { name: 'Поиск', gap: 8, px: 16, py: 12, r: 20, stroke: 'line', align: 'CENTER', fill: true });
   const i = figma.createEllipse(); i.name = 'Иконка'; i.resize(16, 16); i.fills = [pv('mute')]; i.opacity = 0.3; f.appendChild(i);
   await TX(f, query, 'body', 'ink', { name: 'Запрос' });
-  const cats = AL(sb, 'HORIZONTAL', { name: 'Категории', gap: 6, wrap: true, fill: true });
+  const cats = AL(sb, 'HORIZONTAL', { name: 'Категории', gap: 8, wrap: true, fill: true });
   ['Кофе', 'Поесть', 'Аптека', 'Продукты', 'АЗС'].forEach((c, k) => put(cats, inst(CAT, { 'Состояние': k === 0 ? 'Вкл' : 'Выкл' }, { 'Текст': c })));
 }
 function segment(parent, labels, act) {
-  const f = AL(parent, 'HORIZONTAL', { name: 'Переключатель', pad: 3, r: 20, bg: 'soft', fill: true });
+  const f = AL(parent, 'HORIZONTAL', { name: 'Переключатель', pad: 4, r: 20, bg: 'soft', fill: true });
   labels.forEach((l, i) => put(f, inst(LIB['Сегмент'], { 'Состояние': i === act ? 'Вкл' : 'Выкл' }, { 'Текст': l }), { fill: true }));
   return f;
 }
@@ -337,7 +337,7 @@ function pin(map, n, x, y, selected) {
 }
 function marker(map, name, x, y) { return put(map, LIB[name].createInstance(), { cx: x, cy: y }); }
 async function placeCard(map, title, details, actionText, badge) {
-  const card = AL(map, 'HORIZONTAL', { name: 'Карточка места', gap: 12, px: 18, py: 14, r: 22, bg: 'white', align: 'CENTER', x: 24, y: 700 });
+  const card = AL(map, 'HORIZONTAL', { name: 'Карточка места', gap: 12, px: 16, py: 16, r: 22, bg: 'white', align: 'CENTER', x: 24, y: 700 });
   const info = AL(card, 'VERTICAL', { name: 'Инфо', gap: 4 });
   await TX(info, title, 'big', 'ink');
   await TX(info, details, 'cap', 'accent');
@@ -488,13 +488,13 @@ async function header(s, small, title, sub, extra, timeChip) {
   if (timeChip) {
     const row = AL(h, 'HORIZONTAL', { name: 'Заголовок', gap: 8, align: 'CENTER' });
     await TX(row, title, 'title', 'white');
-    const chip = AL(row, 'HORIZONTAL', { name: 'Кнопка времени', gap: 4, px: 10, py: 2, r: 10, bg: 'glass', align: 'CENTER' });
+    const chip = AL(row, 'HORIZONTAL', { name: 'Кнопка времени', gap: 4, px: 12, py: 2, r: 10, bg: 'glass', align: 'CENTER' });
     await TX(chip, timeChip + ' ▾', 'title', 'white');
     await fx(chip, 'ГИС/Уровень 1');
     LAST_TIME_CHIP = chip;
   } else await TX(h, title, 'title', 'white', { fill: true });
   if (sub) await TX(h, sub, 'cap', 'lav', { fill: true });
-  if (extra) { const r = AL(h, 'HORIZONTAL', { name: 'Погода', gap: 6, align: 'CENTER' }); r.appendChild(icoInst('Дождь', 'lav')); await TX(r, extra, 'cap', 'lav'); }
+  if (extra) { const r = AL(h, 'HORIZONTAL', { name: 'Погода', gap: 8, align: 'CENTER' }); r.appendChild(icoInst('Дождь', 'lav')); await TX(r, extra, 'cap', 'lav'); }
   await TX(s, '8:20', 'small', 'white', { x: 20, y: 10, name: 'Статус-бар' });
   return h;
 }
@@ -536,7 +536,7 @@ async function buildCard2() {
   const comps = [];
   for (const v of Object.keys(V2)) for (const sel of [false, true]) {
     const cls = V2[v], never = v === 'Не успеешь';
-    const c = compAL('Итог=' + v + ', Выбрана=' + (sel ? 'Да' : 'Нет'), 'VERTICAL', { px: 14, py: 12, gap: 10, r: 16, bg: never ? 'soft' : 'white', stroke: sel ? 'accent' : 'line', sw: sel ? 2 : 1 });
+    const c = compAL('Итог=' + v + ', Выбрана=' + (sel ? 'Да' : 'Нет'), 'VERTICAL', { px: 16, py: 12, gap: 12, r: 16, bg: never ? 'soft' : 'white', stroke: sel ? 'accent' : 'line', sw: sel ? 2 : 1 });
     c.counterAxisSizingMode = 'FIXED'; c.resize(328, 100); c.primaryAxisSizingMode = 'AUTO'; c.counterAxisAlignItems = 'MIN'; c.clipsContent = false;
     const best = AL(c, 'HORIZONTAL', { name: 'Лучше всего', px: 8, py: 2, r: 8, bg: 'dark' }); await TX(best, 'Лучше всего', 'tiny', 'white', { name: 'Метка' });
     const top = ROW(c, { name: 'Верх', gap: 12, align: 'CENTER' }); top.layoutSizingHorizontal = 'FILL';
@@ -550,11 +550,11 @@ async function buildCard2() {
     await TX(right, 'выйди до', 'small', 'mute', { name: 'Подпись сверху' });
     await TX(right, '8:27', 'big', 'ink', { name: 'Главное' });
     await TX(right, 'ещё 7 мин', 'small', 'mute', { name: 'Подпись снизу' });
-    const pills = AL(c, 'HORIZONTAL', { name: 'Пилюли', gap: 6, wrap: true }); pills.layoutSizingHorizontal = 'FILL'; pills.primaryAxisSizingMode = 'FIXED';
+    const pills = AL(c, 'HORIZONTAL', { name: 'Пилюли', gap: 8, wrap: true }); pills.layoutSizingHorizontal = 'FILL'; pills.primaryAxisSizingMode = 'FIXED';
     const [bg, fg] = PILLC[cls];
-    const p1 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: итог', px: 10, py: 4, r: 12, bg }); await TX(p1, v.toLowerCase(), 'small', fg, { name: 'Итог · текст' });
-    const p2 = AL(pills, 'HORIZONTAL', { name: 'Пилюля 2', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p2, 'в пути ~29 мин', 'small', 'ink', { name: 'Пилюля 2 · текст' });
-    const p3 = AL(pills, 'HORIZONTAL', { name: 'Пилюля 3', px: 10, py: 4, r: 12, bg: 'soft' }); await TX(p3, 'нужен зонт', 'small', 'ink', { name: 'Пилюля 3 · текст' });
+    const p1 = AL(pills, 'HORIZONTAL', { name: 'Пилюля: итог', px: 12, py: 4, r: 12, bg }); await TX(p1, v.toLowerCase(), 'small', fg, { name: 'Итог · текст' });
+    const p2 = AL(pills, 'HORIZONTAL', { name: 'Пилюля 2', px: 12, py: 4, r: 12, bg: 'soft' }); await TX(p2, 'в пути ~29 мин', 'small', 'ink', { name: 'Пилюля 2 · текст' });
+    const p3 = AL(pills, 'HORIZONTAL', { name: 'Пилюля 3', px: 12, py: 4, r: 12, bg: 'soft' }); await TX(p3, 'нужен зонт', 'small', 'ink', { name: 'Пилюля 3 · текст' });
     CP.appendChild(c); comps.push(c);
   }
   const set = figma.combineAsVariants(comps, CP);
@@ -607,7 +607,7 @@ async function card2(parent, o) {
 
 // ---------- Переключатели ----------
 function seg(parent, labels, act, name) {
-  const s = ROW(parent, { name: name || 'Переключатель', pad: 3, r: 12, bg: 'lav', gap: 0 });
+  const s = ROW(parent, { name: name || 'Переключатель', pad: 4, r: 12, bg: 'lav', gap: 0 });
   s.layoutSizingHorizontal = 'FILL';
   const btns = [];
   labels.forEach((l, i) => {
@@ -618,19 +618,19 @@ function seg(parent, labels, act, name) {
 }
 async function segText(sg, labels, act) { for (let i = 0; i < labels.length; i++) await TX(sg.btns[i], labels[i], i === act ? 'bodyM' : 'body', i === act ? 'ink' : 'lavT'); }
 async function controls(s, y) {
-  const box = AL(s, 'VERTICAL', { name: 'Управление', gap: 10, w: 360, px: 16, x: 0, y });
+  const box = AL(s, 'VERTICAL', { name: 'Управление', gap: 12, w: 360, px: 16, x: 0, y });
   const m = seg(box, ['Тороплюсь', 'Гуляю'], 0, 'Режим'); await segText(m, ['Тороплюсь', 'Гуляю'], 0);
   return { box };
 }
 async function timeChips(parent, mode) {
-  const chips = AL(parent, 'HORIZONTAL', { name: 'Время: быстрый выбор', gap: 6, wrap: true }); chips.layoutSizingHorizontal = 'FILL'; chips.primaryAxisSizingMode = 'FIXED';
+  const chips = AL(parent, 'HORIZONTAL', { name: 'Время: быстрый выбор', gap: 8, wrap: true }); chips.layoutSizingHorizontal = 'FILL'; chips.primaryAxisSizingMode = 'FIXED';
   const list = mode === 'arrive' ? ['8:30', '9:00', '9:30', '10:00'] : ['Сейчас', '8:30', '8:45', '9:00'];
   const on = mode === 'arrive' ? '9:00' : '8:45';
   for (const l of list) chips.appendChild(await pillC(l === on ? 'Активная' : 'Обычная', l));
   return chips;
 }
 async function hint(parent, text) {
-  const h = ROW(parent, { name: 'Подсказка: дождь', gap: 8, px: 12, py: 10, r: 14, bg: 'white', stroke: 'line', align: 'CENTER' }); h.layoutSizingHorizontal = 'FILL';
+  const h = ROW(parent, { name: 'Подсказка: дождь', gap: 8, px: 12, py: 12, r: 14, bg: 'white', stroke: 'line', align: 'CENTER' }); h.layoutSizingHorizontal = 'FILL';
   h.appendChild(icoInst('Дождь', 'accent'));
   const t = await TX(h, text, 'cap', 'ink'); t.layoutGrow = 1; t.textAutoResize = 'HEIGHT';
   await TX(h, 'Модули', 'cap', 'accent', { name: 'Ссылка: модули' });
@@ -652,7 +652,7 @@ async function compareScreen(i, name, title, chipText, cards, extra) {
   const h = await header(s, 'Первомайская ул., 100 → м. Бауманская', title, 'Сейчас 8:20', null, chipText);
   const chip = LAST_TIME_CHIP;
   const c = await controls(s, h.height + 12);
-  const list = AL(s, 'VERTICAL', { name: 'Способы', gap: 14, w: 360, px: 16, x: 0, y: c.box.y + c.box.height + 16 });
+  const list = AL(s, 'VERTICAL', { name: 'Способы', gap: 16, w: 360, px: 16, x: 0, y: c.box.y + c.box.height + 16 });
   list.clipsContent = false;
   if (extra) await extra(list);
   const made = []; for (const o of cards) made.push(await card2(list, o));
@@ -687,10 +687,10 @@ async function p7() {
     C('carshare', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~9:02', v: 'Не успеешь', p2: ['n', 'опоздание ~32 мин'] }),
     C('walk', { top: 'выходи', main: 'сейчас', bottom: 'будешь ~10:31', v: 'Не успеешь', p2: ['n', 'опоздание ~2 ч 1 мин'] })
   ], async list => {
-    banner = AL(list, 'VERTICAL', { name: 'Поздно: действия', gap: 8, px: 14, py: 12, r: 16, bg: 'pinkL', fill: true });
+    banner = AL(list, 'VERTICAL', { name: 'Поздно: действия', gap: 8, px: 16, py: 12, r: 16, bg: 'pinkL', fill: true });
     await TX(banner, 'К 8:30 уже не успеть', 'bodyM', 'pinkT', { fill: true });
     await TX(banner, 'Быстрее всего — метро, будешь около 8:49', 'cap', 'pinkT', { fill: true });
-    const row = AL(banner, 'HORIZONTAL', { name: 'Действия', gap: 6, wrap: true }); row.layoutSizingHorizontal = 'FILL'; row.primaryAxisSizingMode = 'FIXED';
+    const row = AL(banner, 'HORIZONTAL', { name: 'Действия', gap: 8, wrap: true }); row.layoutSizingHorizontal = 'FILL'; row.primaryAxisSizingMode = 'FIXED';
     for (const t of ['Показать к 9:00', 'Самый быстрый', 'Предупредить, что опоздаю']) row.appendChild(await pillC('Кнопка', t));
   });
   return { s: r.s, banner };
@@ -699,7 +699,7 @@ async function p3() {
   const s = phone('P3 · Когда? (шторка)', 2);
   const h = await header(s, 'Первомайская ул., 100 → м. Бауманская', 'Как успеть к', 'Сейчас 8:20', null, '9:00');
   const dim = figma.createRectangle(); dim.name = 'Затемнение'; dim.resize(360, 800); dim.fills = [pv('ink')]; dim.opacity = 0.35; s.appendChild(dim);
-  const sheet = AL(s, 'VERTICAL', { name: 'Шторка: время', gap: 14, w: 360, px: 16, r: 24, bg: 'soft', x: 0, y: 190 });
+  const sheet = AL(s, 'VERTICAL', { name: 'Шторка: время', gap: 16, w: 360, px: 16, r: 24, bg: 'soft', x: 0, y: 190 });
   sheet.paddingTop = 12; sheet.paddingBottom = 24; sheet.bottomLeftRadius = 0; sheet.bottomRightRadius = 0;
   await fx(sheet, 'ГИС/Уровень 3');
   const grab = figma.createRectangle(); grab.name = 'Ручка'; grab.resize(44, 5); grab.cornerRadius = 3; grab.fills = [pv('dash')]; sheet.appendChild(grab); grab.layoutAlign = 'CENTER';
@@ -725,8 +725,8 @@ async function p3() {
 async function route(i, name, small, title, sub, pills, steps, cta) {
   const s = phone(name, i);
   const h = await header(s, '← ' + small, title, sub);
-  const pr = AL(s, 'HORIZONTAL', { name: 'Итог', gap: 6, x: 16, y: h.height + 12 });
-  for (const [cls, text] of pills) { const p = AL(pr, 'HORIZONTAL', { name: 'Пилюля', px: 10, py: 4, r: 12, bg: PILLC[cls][0] }); await TX(p, text, 'small', PILLC[cls][1]); }
+  const pr = AL(s, 'HORIZONTAL', { name: 'Итог', gap: 8, x: 16, y: h.height + 12 });
+  for (const [cls, text] of pills) { const p = AL(pr, 'HORIZONTAL', { name: 'Пилюля', px: 12, py: 4, r: 12, bg: PILLC[cls][0] }); await TX(p, text, 'small', PILLC[cls][1]); }
   let y = pr.y + pr.height + 30;
   const step = 92;
   for (let k = 0; k < steps.length; k++) {
@@ -736,7 +736,7 @@ async function route(i, name, small, title, sub, pills, steps, cta) {
     await TX(s, st.t, 'bodyM', 'ink', { x: 48, y: y - 10, name: 'Шаг' });
     await TX(s, st.m, 'small', 'mute', { x: 48, y: y + 10, name: 'Время шага' });
     if (st.l) {   // ориентир — белая плашка с тонкой рамкой; предупреждение (st.w) — оранжевая
-      const chip = AL(s, 'HORIZONTAL', { name: st.w ? 'Предупреждение' : 'Ориентир', gap: 6, px: 10, py: 6, r: 10, bg: st.w ? 'orange' : 'white', stroke: st.w ? null : 'line', align: 'CENTER', x: 48, y: y + 30 });
+      const chip = AL(s, 'HORIZONTAL', { name: st.w ? 'Предупреждение' : 'Ориентир', gap: 8, px: 12, py: 8, r: 10, bg: st.w ? 'orange' : 'white', stroke: st.w ? null : 'line', align: 'CENTER', x: 48, y: y + 30 });
       chip.appendChild(icoInst(st.ic, st.w ? 'orangeT' : 'accent'));
       const tx = await TX(chip, st.l, 'small', st.w ? 'orangeT' : 'lavT');
       if (chip.width > 296) { chip.primaryAxisSizingMode = 'FIXED'; chip.resize(296, chip.height); tx.layoutGrow = 1; tx.textAutoResize = 'HEIGHT'; }
@@ -747,7 +747,7 @@ async function route(i, name, small, title, sub, pills, steps, cta) {
   return { s, go, back: h };
 }
 function card(parent, name, o) {
-  const c = AL(parent, 'VERTICAL', Object.assign({ name, gap: 10, px: 16, py: 14, r: 16, bg: 'white', stroke: 'line', fill: true }, o || {}));
+  const c = AL(parent, 'VERTICAL', Object.assign({ name, gap: 12, px: 16, py: 16, r: 16, bg: 'white', stroke: 'line', fill: true }, o || {}));
   return c;
 }
 async function kv(parent, a, b, o) {
@@ -822,7 +822,7 @@ async function status(s, color) { await TX(s, '8:20', 'small', color || 'white',
 async function searchField(s, y, text, typed) {
   // ROW — фиксированная ширина 328 (AL с w ужимался по содержимому и обрезал поле)
   const row = ROW(s, { name: 'Поиск', gap: 8, w: 328, x: 16, y, align: 'CENTER' }); row.clipsContent = false;
-  const f = AL(row, 'HORIZONTAL', { name: 'Поле «Куда?»', gap: 10, px: 16, py: 12, r: 22, bg: 'white', align: 'CENTER' }); f.layoutGrow = 1;
+  const f = AL(row, 'HORIZONTAL', { name: 'Поле «Куда?»', gap: 12, px: 16, py: 12, r: 22, bg: 'white', align: 'CENTER' }); f.layoutGrow = 1;
   await fx(f, 'ГИС/Уровень 1');
   f.appendChild(icoInst('Поиск', typed ? 'ink' : 'mute'));
   const t = await TX(f, text, 'body', typed ? 'ink' : 'mute'); t.layoutGrow = 1; t.textAutoResize = 'HEIGHT';
@@ -833,7 +833,7 @@ async function searchField(s, y, text, typed) {
 }
 // Чип «Погулять рядом» — белый, над картой виден
 async function walkChip(s, sf) {
-  const c = AL(s, 'HORIZONTAL', { name: 'Чип: погулять рядом', gap: 6, px: 14, py: 8, r: 18, bg: 'white', align: 'CENTER', x: 16, y: sf.row.y + sf.row.height + 12 });
+  const c = AL(s, 'HORIZONTAL', { name: 'Чип: погулять рядом', gap: 8, px: 16, py: 8, r: 18, bg: 'white', align: 'CENTER', x: 16, y: sf.row.y + sf.row.height + 12 });
   c.clipsContent = false; await fx(c, 'ГИС/Уровень 1');
   c.appendChild(icoInst('Пешком', 'accent')); await TX(c, 'Погулять рядом', 'cap', 'ink');
   return c;
@@ -841,7 +841,7 @@ async function walkChip(s, sf) {
 // Шторка снизу: от y до низа экрана
 function sheetAt(s, y, name) {
   const sh = AL(s, 'VERTICAL', { name: name || 'Шторка', gap: 12, w: 360, px: 16, bg: 'soft', x: 0, y });
-  sh.paddingTop = 10; sh.paddingBottom = 24; sh.topLeftRadius = 24; sh.topRightRadius = 24;
+  sh.paddingTop = 12; sh.paddingBottom = 24; sh.topLeftRadius = 24; sh.topRightRadius = 24;
   sh.primaryAxisSizingMode = 'FIXED'; sh.resize(360, 800 - y); sh.clipsContent = true;
   const hw = AL(sh, 'HORIZONTAL', { name: 'Ручка', justify: 'CENTER', fill: true });
   const h = figma.createRectangle(); h.name = 'Ручка'; h.resize(40, 4); h.cornerRadius = 2; h.fills = [pv('dash')]; hw.appendChild(h);
@@ -865,16 +865,16 @@ async function tripBar(parent, timeText, timeOn) {
   const from = AL(r, 'HORIZONTAL', { name: 'Откуда', gap: 8, px: 4, align: 'CENTER' }); from.layoutGrow = 1; h40(from);   // как в прототипе: текст, не поле
   EL(from, 0, 0, 5, 5, { fill: 'accent', name: 'Точка' });
   const ft = await TX(from, 'Отсюда', 'cap', 'ink'); ft.layoutGrow = 1;
-  const t = AL(r, 'HORIZONTAL', { name: 'Время', gap: 6, px: 14, r: 20, bg: timeOn ? 'accent' : 'lav', align: 'CENTER' }); h40(t);
+  const t = AL(r, 'HORIZONTAL', { name: 'Время', gap: 8, px: 16, r: 20, bg: timeOn ? 'accent' : 'lav', align: 'CENTER' }); h40(t);
   t.appendChild(icoInst('Часы', timeOn ? 'white' : 'accent'));
   await TX(t, timeText + ' ▾', 'cap', timeOn ? 'white' : 'lavT');
   return { r, time: t };
 }
 // Короткая строка способов на карточке места
 async function quickModes(parent) {
-  const r = AL(parent, 'HORIZONTAL', { name: 'Как добраться: коротко', gap: 6, wrap: true }); r.layoutSizingHorizontal = 'FILL'; r.primaryAxisSizingMode = 'FIXED';
+  const r = AL(parent, 'HORIZONTAL', { name: 'Как добраться: коротко', gap: 8, wrap: true }); r.layoutSizingHorizontal = 'FILL'; r.primaryAxisSizingMode = 'FIXED';
   for (const [ic, t] of [['Метро', '33 мин'], ['Машина', 'такси 34 мин'], ['Пешком', '2 ч 11 мин']]) {
-    const c = AL(r, 'HORIZONTAL', { name: t, gap: 6, px: 10, py: 6, r: 12, bg: 'white', stroke: 'line', align: 'CENTER' });
+    const c = AL(r, 'HORIZONTAL', { name: t, gap: 8, px: 12, py: 8, r: 12, bg: 'white', stroke: 'line', align: 'CENTER' });
     c.appendChild(icoInst(ic, 'accent')); await TX(c, t, 'cap', 'ink');
   }
   return r;
@@ -948,7 +948,7 @@ async function a4() {
   const s = phoneAt('А4 · Шторка раскрыта: способы', 1, 1); miniMap(s, { dest: true, route: true }); await status(s);
   const sh = sheetAt(s, 150, 'Шторка: способы');
   const head = ROW(sh, { name: 'Куда', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
-  const back = AL(head, 'HORIZONTAL', { name: 'Свернуть', pad: 6, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
+  const back = AL(head, 'HORIZONTAL', { name: 'Свернуть', pad: 8, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
   const ht = await TX(head, 'м.\u00a0Бауманская', 'big', 'ink'); ht.layoutGrow = 1;
   const tb = await tripBar(sh, 'Выехать сейчас', false);
   const cards = await modeCards(sh, DEPART);
@@ -958,7 +958,7 @@ async function a5() {
   const s = phoneAt('А5 · Способы: прибыть к 9:00', 2, 1); miniMap(s, { dest: true, route: true }); await status(s);
   const sh = sheetAt(s, 150, 'Шторка: способы к 9:00');
   const head = ROW(sh, { name: 'Куда', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
-  const back = AL(head, 'HORIZONTAL', { name: 'Свернуть', pad: 6, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
+  const back = AL(head, 'HORIZONTAL', { name: 'Свернуть', pad: 8, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
   const ht = await TX(head, 'м.\u00a0Бауманская', 'big', 'ink'); ht.layoutGrow = 1;
   const tb = await tripBar(sh, 'Прибыть к 9:00', true);
   const cards = await modeCards(sh, ARRIVE);
@@ -969,7 +969,7 @@ async function a5() {
 async function b3() {
   const s = phoneAt('Б3 · Место на карте', 0, 2); miniMap(s, { dest: true }); await status(s);
   await searchField(s, 40, 'м.\u00a0Бауманская', true);
-  const c = AL(s, 'VERTICAL', { name: 'Карточка места', gap: 10, w: 328, px: 16, py: 16, r: 22, bg: 'white', x: 16, y: 600 });
+  const c = AL(s, 'VERTICAL', { name: 'Карточка места', gap: 12, w: 328, px: 16, py: 16, r: 22, bg: 'white', x: 16, y: 600 });
   await fx(c, 'ГИС/Уровень 3');
   await TX(c, 'м.\u00a0Бауманская', 'title', 'ink', { fill: true });
   await TX(c, 'Арбатско-Покровская линия · 8 км отсюда', 'cap', 'mute', { fill: true });
@@ -979,9 +979,9 @@ async function b3() {
 }
 async function b4(i, name, timeText, timeOn, list) {
   const s = phoneAt(name, i, 2); s.fills = [pv('soft')]; await status(s, 'ink');
-  const top = AL(s, 'VERTICAL', { name: 'Шапка', gap: 10, w: 360, px: 16, x: 0, y: 36 });
+  const top = AL(s, 'VERTICAL', { name: 'Шапка', gap: 12, w: 360, px: 16, x: 0, y: 36 });
   const head = ROW(top, { name: 'Куда', gap: 8, align: 'CENTER' }); head.layoutSizingHorizontal = 'FILL';
-  const back = AL(head, 'HORIZONTAL', { name: 'Назад', pad: 6, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
+  const back = AL(head, 'HORIZONTAL', { name: 'Назад', pad: 8, r: 12, bg: 'white' }); back.appendChild(icoInst('Назад', 'ink'));
   const ht = await TX(head, 'Как добраться до м.\u00a0Бауманская', 'big', 'ink'); ht.layoutGrow = 1; ht.textAutoResize = 'HEIGHT';
   const tb = await tripBar(top, timeText, timeOn);
   const listF = AL(s, 'VERTICAL', { name: 'Способы', gap: 12, w: 360, px: 16, x: 0, y: top.y + top.height + 14 });
