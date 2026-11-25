@@ -564,6 +564,15 @@ test('подпись карты не прилипает к «Погулять р
   return (a.top - c.bottom >= 12) || 'зазор ' + Math.round(a.top - c.bottom);
 }));
 
+test('ориентиры поворотов: на маршруте — список, в пути — «Сейчас»/«Дальше», без метров', async p => {
+  const route = await p.evaluate(() => { openPlace('baum'); go('compare'); pick('metro'); go('route'); return document.querySelector('.steps').innerText; });
+  await p.evaluate(() => { back(); pick('walk'); return startTrip(true); }); await p.waitForTimeout(500);
+  const g = []; for(const t of [0.3, 1.1, 23]){ await p.evaluate(t => { trip.t = t; }, t); await p.waitForTimeout(400); g.push(await p.evaluate(() => document.getElementById('gtop').innerText)); }
+  const ok = /Налево у аптеки «Вита Экспресс» → Направо у цветочного/.test(route) && /Сейчас направо от подъезда/.test(g[0]) && /Сейчас налево у «Пятёрочки»/.test(g[1])
+    && /Дальше налево у «Дежурной аптеки»/.test(g[2]) && !/Поворотов/.test(g.join()) && !/\d+\s?м\b/.test(g.join(' ').replace(/\d+\s?мин/g, ''));
+  return ok || JSON.stringify({ route: route.slice(0, 120), g });
+});
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
