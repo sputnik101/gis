@@ -211,9 +211,76 @@ test('сохранение маршрута и шаблон под поиско�
   go('save'); state.saveName='Работа'; saveTemplate(); saveReverse(false); restart();
   return (state.templates.length===1 && document.body.innerText.includes('выйди до')) || 'шаблонов ' + state.templates.length;
 }));
-test('сброс демо — чистый первый запуск', async p => p.evaluate(() => {
-  state.saveName = 'Спорт'; resetDemo(); return (!state.templates.length && !state.recents.length && !state.saveName) || 'не сброшено';
+test('сброс демо — чистый первый запуск: хранилища, модули, «сломанные», прогноз', async p => p.evaluate(() => {
+  const base = forecast('walk').mid;
+  state.saveName = 'Спорт'; MODULES.find(m => m.id==='pace').store.set({ asked:true, n:3, walkK:1.3, boardK:1, exitK:1 });
+  toggleMod('taxi'); toggleMod('coffee'); MODULES.find(m => m.id==='crowd').__broken = true; refreshModules();
+  const slow = forecast('walk').mid; resetDemo();
+  const d = MODULES.find(m => m.id==='pace').data(), mid = forecast('walk').mid;
+  const ok = !state.templates.length && !state.recents.length && !state.saveName && !d.asked && d.walkK === 1
+    && state.modules.taxi && !state.modules.coffee && !MODULES.find(m => m.id==='crowd').__broken && slow > base && mid === base;
+  return ok || `base ${base} slow ${slow} after ${mid} taxi ${state.modules.taxi} coffee ${state.modules.coffee} asked ${d.asked}`;
 }));
+// ---------- этап P0: шлюз, копии, хранилище ----------
+test('модуль меняет свой вариант позже, без пересчёта — на экран это не попадает (XSS)', async p => p.evaluate(() => {
+  window.__x = 0; openPlace('baum'); go('compare');
+  const o = MODULES.find(m => m.id==='walk').options.walk; const was = o.detail;
+  o.detail = '<img src=x onerror="window.__x=1">'; render();
+  return new Promise(r => setTimeout(() => { o.detail = was; r(window.__x === 0 && !document.body.innerHTML.includes('onerror') || 'код выполнился'); }, 200));
+}));
+test('ядро работает с замороженной копией варианта; значения по умолчанию — в копии', async p => p.evaluate(() => {
+  const m = MODULES.find(x => x.id==='walk'), src = m.options.walk;
+  const frozen = Object.isFrozen(OPTIONS.walk) && Object.isFrozen(OPTIONS.walk.legs[0]) && OPTIONS.walk !== src;
+  return frozen || 'не заморожено';
+}));
+test('шлюз: нулевое время, не-текст, битый tail, шаг без подписи — вариант отброшен, без undefined/NaN', async p => p.evaluate(() => {
+  const bad = { zero:{ name:'Ноль', purpose:'go', legs:[{ type:'walk', geom:'walkAll', lo:0, hi:0, label:'x' }] },
+    numtxt:{ name:'Число', purpose:'go', price:5, legs:[{ type:'walk', geom:'walkAll', lo:1, hi:2, label:'x' }] },
+    tail:{ name:'Хвост', purpose:'go', tail:[1, NaN], legs:[{ type:'walk', geom:'walkAll', lo:1, hi:2, label:'x' }] },
+    nolabel:{ name:'Без подписи', purpose:'go', legs:[{ type:'walk', geom:'walkAll', lo:1, hi:2 }] } };
+  const res = [];
+  for(const [k, o] of Object.entries(bad)){
+    registerModule({ id:'g' + k, group:'mode', icon:'?', name:'G', desc:'', where:'', on:true, options:{ [k]:o } });
+    openPlace('baum'); go('compare'); res.push(!OPTIONS[k] && MODULES.find(m => m.id==='g' + k).__broken); unregisterModule('g' + k); }
+  // вариант без detail и price — допустим, но без «undefined»
+  registerModule({ id:'gmin', group:'mode', icon:'?', name:'G', desc:'', where:'', on:true, options:{ gmin:{ name:'Минимум', purpose:'go', legs:[{ type:'walk', geom:'walkAll', lo:5, hi:7, label:'пешком' }] } } });
+  openPlace('baum'); go('compare'); const c = document.querySelector('.card[data-k=gmin]'); const txt = c ? c.innerText : '';
+  unregisterModule('gmin');
+  return (res.every(Boolean) && c && !/undefined|NaN/.test(txt)) || 'отброшены: ' + res.join(',') + ' · ' + txt;
+}));
+test('шаг для модуля — глубокая копия: модуль не портит станции маршрута', async p => p.evaluate(() => {
+  const before = JSON.stringify(OPTIONS.metro.legs);
+  registerModule({ id:'mut', icon:'?', name:'Порча', desc:'', where:'', on:true,
+    stepHints(l){ try{ l.stations && l.stations.reverse(); l.parts && l.parts.push({ upto:99 }); }catch(e){} return []; } });
+  openPlace('baum'); go('compare'); pick('metro'); go('route'); unregisterModule('mut');
+  const src = MODULES.find(m => m.id==='metro').options.metro.legs.find(l => l.stations);
+  return (JSON.stringify(OPTIONS.metro.legs) === before && src.stations[0] === 'Первомайская') || 'данные испорчены';
+}));
+test('способ без context() пересчитывается при смене времени', async p => p.evaluate(() => {
+  registerModule({ id:'clock', group:'mode', icon:'?', name:'Часы', desc:'', where:'', on:true,
+    options:{ clock:{ name:'По часам', purpose:'go', legs:[{ type:'walk', geom:'walkAll', lo:10, hi:12, label:'x' }] } },
+    prepare(T){ const l = this.options.clock.legs[0]; l.lo = T > 12*60 ? 40 : 10; l.hi = l.lo + 2; } });
+  openPlace('baum'); go('compare'); state.timeMode = 'depart'; state.depart = 8*60; render(); const a = forecast('clock').mid;
+  state.depart = 14*60; render(); const b = forecast('clock').mid; unregisterModule('clock');
+  return (a < 15 && b > 35) || `утро ${a} день ${b}`;
+}));
+test('битое хранилище «Мой темп» после перезагрузки — значения по умолчанию, прогноз не меняется', async p => {
+  const base = await p.evaluate(() => forecast('walk').mid);
+  const results = [];
+  for(const bad of ['{"asked":true,"walkK":null,"n":1}', '{"walkK":"быстро","n":null}', '{"walkK":0.01,"boardK":50}', 'не json', '[1,2]']){
+    await p.evaluate(v => localStorage.setItem('gis.mod.pace', v), bad); await p.reload(); await p.waitForTimeout(400);
+    results.push(await p.evaluate(() => { const d = MODULES.find(m => m.id==='pace').data(); const s = MODULES.find(m => m.id==='pace').settings({}).rows.map(r => r[1]).join(' ');
+      return [forecast('walk').mid, d.walkK, /NaN|null|undefined|−100/.test(s)]; })); }
+  await p.evaluate(() => localStorage.clear());
+  const ok = results.every(r => r[0] === base && r[1] === 1 && !r[2]);
+  return ok || JSON.stringify(results) + ' base ' + base;
+});
+test('корректное хранилище «Мой темп» переживает перезагрузку', async p => {
+  await p.evaluate(() => localStorage.setItem('gis.mod.pace', '{"asked":true,"n":2,"walkK":1.15,"boardK":1,"exitK":1}'));
+  await p.reload(); await p.waitForTimeout(400);
+  const k = await p.evaluate(() => MODULES.find(m => m.id==='pace').data().walkK); await p.evaluate(() => localStorage.clear());
+  return k === 1.15 || 'walkK ' + k;
+});
 // ---------- прогноз ----------
 test('сумма минут шагов = обычному времени', async p => p.evaluate(() => {
   const bad = ['metro','taxi','carshare','walk','stroll','loop'].filter(k => forecast(k).legMins.reduce((a,b)=>a+b,0) !== forecast(k).mid);
