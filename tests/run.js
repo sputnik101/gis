@@ -404,6 +404,14 @@ test('320 px: длинное слово без пробелов из модул�
     return !bad.length || [...new Set(bad)].slice(0, 6).join(', '); });
 });
 
+test('экран места: крестик в поле поиска возвращает на главный, «Погулять рядом» снова видно', async p => {
+  await p.evaluate(() => openPlace('baum')); await p.waitForTimeout(650);
+  const noChip = await p.evaluate(() => !document.querySelector('.wchip'));
+  await p.click('.sx'); await p.waitForTimeout(650);
+  const ok = await p.evaluate(() => state.view === 'home' && !state.dest && !!document.querySelector('.wchip') && document.querySelector('.search .ph') && state.recents.includes('baum'));
+  return (noChip && ok) || JSON.stringify({ noChip, ok });
+});
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
