@@ -1108,7 +1108,7 @@ function phone2(name, col) { const s = figma.createFrame(); s.name = name; s.res
 async function search2(s, place) {
   const row = ROW(s, { name: 'Поиск', gap: 8, w: 328, x: 16, y: 40, align: 'CENTER' }); row.clipsContent = false;
   const f = AL(row, 'HORIZONTAL', { name: place ? 'Поле: место (тап — сменить)' : 'Поле «Куда?»', gap: 10, px: 16, r: 24, bg: 'white', align: 'CENTER' }); f.layoutGrow = 1;
-  f.counterAxisSizingMode = 'FIXED'; f.resize(10, 48); f.clipsContent = false; await fx(f, 'ГИС/Уровень 1');
+  f.counterAxisSizingMode = 'FIXED'; f.resize(200, 48); f.layoutSizingHorizontal = 'FILL'; f.clipsContent = false; await fx(f, 'ГИС/Уровень 1');
   f.appendChild(icoInst('Поиск', place ? 'ink' : 'mute'));
   const t = await TX(f, place || 'Куда?', place ? 'bodyM' : 'body', place ? 'ink' : 'mute'); t.layoutGrow = 1;
   if (place) { const x = AL(f, 'HORIZONTAL', { name: 'Закрыть место', pad: 10, r: 20, align: 'CENTER' }); x.appendChild(icoInst('Закрыть', 'ink')); f.paddingRight = 4; }
@@ -1118,7 +1118,7 @@ async function search2(s, place) {
 }
 async function walkChip2(s) {
   const c = AL(s, 'HORIZONTAL', { name: 'Чип: погулять рядом', gap: 6, px: 14, r: 20, bg: 'white', align: 'CENTER', x: 16, y: 100 });
-  c.counterAxisSizingMode = 'FIXED'; c.resize(10, 40); c.clipsContent = false; await fx(c, 'ГИС/Уровень 1');
+  c.counterAxisSizingMode = 'FIXED'; c.resize(160, 40); c.primaryAxisSizingMode = 'AUTO'; c.clipsContent = false; await fx(c, 'ГИС/Уровень 1');
   c.appendChild(icoInst('Пешком', 'ink')); await TX(c, 'Погулять рядом', 'cap', 'ink'); return c;
 }
 // Строка шаблона / недавнего
@@ -1141,7 +1141,8 @@ async function leaveCard(parent, title, text, urgent) {
   await TX(c, 'Маршрут', 'bodyM', 'accent'); return c;
 }
 async function homeScreen(col, name, o) {
-  const s = phone2(name, col); miniMap(s); await status(s); await search2(s); await walkChip2(s);
+  const s = phone2(name, col); miniMap(s);
+  await TX(s, o.time || '8:20', 'small', 'white', { x: 20, y: 10, name: 'Статус-бар' }); await search2(s); await walkChip2(s);
   const sh = sheetAt(s, 330, 'Шторка: главный');
   if (o.card) await leaveCard(sh, o.card[0], o.card[1], o.card[2]);
   await secRow(sh, 'Мои маршруты');
@@ -1171,7 +1172,7 @@ async function t5() {
   const d = AL(sh, 'HORIZONTAL', { name: 'Дни', gap: 6, fill: true }); d.primaryAxisSizingMode = 'FIXED';
   for (const [i, n] of ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'].entries()) {
     const c = AL(d, 'HORIZONTAL', { name: 'День: ' + n + (i < 5 ? ' · выбран' : ''), px: 8, r: 20, bg: i < 5 ? 'ink' : 'white', stroke: i < 5 ? null : 'line', align: 'CENTER', justify: 'CENTER' });
-    c.counterAxisSizingMode = 'FIXED'; c.primaryAxisSizingMode = 'FIXED'; c.resize(42, 40); await TX(c, n, i < 5 ? 'bodyM' : 'body', i < 5 ? 'white' : 'ink');
+    c.counterAxisSizingMode = 'FIXED'; c.primaryAxisSizingMode = 'FIXED'; c.resize(40, 40); await TX(c, n, i < 5 ? 'bodyM' : 'body', i < 5 ? 'white' : 'ink');
   }
   await TX(sh, 'В эти дни напомню, когда выходить', 'small', 'mute', { fill: true });
   const c = card(sh, 'Что сохраним'); await kv(c, 'Время', 'прибыть к 9:00'); await kv(c, 'Способ', 'Метро');
@@ -1219,8 +1220,8 @@ async function t7() {
   await figma.setCurrentPageAsync(PG);
   const all = [await t1(),
     await homeScreen(1, 'T2 · Главный 8:20: «Через 3 мин выходить»', { card: ['Через 3 мин выходить', 'Работа: метро, выйди до 8:23 · дождь с 8:40'], right: 'выйди до\n8:23' }),
-    await homeScreen(2, 'T3 · Главный 8:23: «Пора выходить»', { card: ['Пора выходить', 'Работа: метро, выйди до 8:23 · дождь с 8:40', true], right: 'выходи\nсейчас' }),
-    await homeScreen(3, 'T4 · Суббота: плашки нет, «к 9:00 · пн»', { right: 'к 9:00\nпн' }),
+    await homeScreen(2, 'T3 · Главный 8:23: «Пора выходить»', { card: ['Пора выходить', 'Работа: метро, выйди до 8:23 · дождь с 8:40', true], right: 'выходи\nсейчас', time: '8:23' }),
+    await homeScreen(3, 'T4 · Суббота: плашки нет, «к 9:00 · пн»', { right: 'к 9:00\nпн', time: 'сб 8:20' }),
     await t5(), await t6(), await t7()];
   for (const f of all) await TX(PG, f.name, 'big', 'ink', { x: f.x, y: f.y - 36 });
   const note = AL(PG, 'VERTICAL', { name: 'Пояснение', w: 1240, x: 0, y: 840, gap: 6 });
