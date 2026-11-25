@@ -781,7 +781,7 @@ V.home = () => {
       <div class="r">${t.reverse ? '' : tplTime(t)}</div></button>`).join('');
   const R = state.recents.map(k => `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">${ic('История')}</div><div class="tx"><b>${PLACES[k].name}</b><div class="m">${PLACES[k].sub}</div></div></button>`).join('');
   return `<h1 class="sr" tabindex="-1">Куда едем?</h1>${homeCards()}
-    ${T ? `<div class="sec">Мои маршруты</div>${T}` : ''}${R ? `<div class="sec">Недавние</div>${R}` : ''}`;
+    ${T ? `<div class="sec">Мои маршруты</div>${T}` : ''}${R ? `<div class="sec row" style="justify-content:space-between;align-items:center"><span>Недавние</span><button class="mlink" aria-label="Очистить недавние места" onclick="clearRecents()">Очистить</button></div>${R}` : ''}`;
 };
 // Ближайший маршрут на сегодня (по шаблонам со временем прибытия) — для модулей главного экрана (homeCards)
 function nextTrip(){ let best = null;
@@ -1216,6 +1216,8 @@ V.modset = () => { const m = MODULES.find(x => x.id === state.modset), st = m &&
 function modPick(b){ const m = MODULES.find(x => x.id === b.dataset.mod); if(!m) return; call(m, 'onPick', [b.dataset.id]); refreshModules(); }
 function openModSet(id){ state.modset = id; go('modset'); }
 function resetMod(id){ const m = MODULES.find(x => x.id === id); if(m && m.store) m.store.clear(); refreshModules(); toast('Сброшено'); }
+// Очистить «Недавние»: места пропадают из списка, сохранённые маршруты и визиты остаются
+function clearRecents(){ state.recents = []; restart(); toast('Недавние очищены'); say('Недавние очищены'); }
 // Демо: передвинуть «сейчас» и день недели — всё пересчитывается
 function setDemoNow(t, day){ NOW = t; TODAY = day; state.depart = NOW; document.getElementById('clock').textContent = fmt(NOW); refreshModules(); }
 // Закрыть место: на главный (с «Погулять рядом» и шаблонами); место остаётся в недавних

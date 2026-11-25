@@ -535,6 +535,14 @@ test('«Модули»: служебные («Пробки», «Мой темп�
   return (hidden && shown) || JSON.stringify({ hidden, shown });
 }));
 
+test('«Недавние»: «Очистить» убирает места, шаблоны остаются, после перезагрузки пусто', async p => {
+  await p.evaluate(() => { state.recents = ['baum']; state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro', days:[] }); restart(); }); await p.waitForTimeout(650);
+  await p.locator('button', { hasText: 'Очистить' }).click(); await p.waitForTimeout(650);
+  const now = await p.evaluate(() => !state.recents.length && state.templates.length === 1 && ![...document.querySelectorAll('#body .sec')].some(e => e.textContent.startsWith('Недавние')));
+  await p.reload(); await p.waitForTimeout(600); const after = await p.evaluate(() => !state.recents.length); await p.evaluate(() => localStorage.clear());
+  return (now && after) || JSON.stringify({ now, after });
+});
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
