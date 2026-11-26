@@ -376,8 +376,8 @@ test('второй шаблон к тому же месту другим спо�
   return (can && no) || JSON.stringify({ can, no });
 }));
 test('клавиатура: Enter в поиске открывает первое место, Escape — назад, «Сохранено» можно закрыть', async p => {
-  await p.evaluate(() => go('find')); await p.waitForTimeout(650);
-  await p.fill('#q', 'Бау'); await p.waitForTimeout(200); await p.press('#q', 'Enter'); await p.waitForTimeout(650);
+  await stubNet(p); await p.evaluate(() => go('find')); await p.waitForTimeout(650);
+  await p.fill('#q', 'Бау'); await p.waitForTimeout(200); await p.press('#q', 'Enter'); await p.waitForTimeout(300); await p.press('#q', 'Enter'); await p.waitForTimeout(650);
   const place = await p.evaluate(() => state.view === 'place' && state.dest === 'baum');
   await p.evaluate(() => go('compare')); await p.waitForTimeout(650); await p.keyboard.press('Escape'); await p.waitForTimeout(650);
   const esc = await p.evaluate(() => state.view === 'place');
@@ -604,10 +604,62 @@ test('поля ввода не мельче 16 px — Safari на iPhone не п
   return !small.length || 'мелкие: ' + small.join();
 }));
 
+// ---------- живые маршруты (сеть подменена: поиск и пешие маршруты отвечают заглушками) ----------
+const stubNet = p => p.evaluate(() => {
+  const D = (a, b) => { const R=6371000, r=Math.PI/180, dLa=(b[1]-a[1])*r, dLo=(b[0]-a[0])*r; const x=Math.sin(dLa/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(x)); };
+  const PL = { 'парковая': [{ name:'13-я Парковая улица, 40', display_name:'40, 13-я Парковая улица, Северное Измайлово, Москва', lat:'55.808451', lon:'37.8126106' }],
+    'милашенкова': [{ name:'улица Милашенкова, 4А к1', display_name:'4А к1, улица Милашенкова, Бутырский район, Москва', lat:'55.824654', lon:'37.5896941' }],
+    'измайловская': [{ name:'Поликлиника №175', display_name:'Поликлиника №175, Измайлово, Москва', lat:'55.7882', lon:'37.7865' }] };
+  window.__net = { fail:false, calls:[] };
+  window.fetch = async url => { url = String(url); __net.calls.push(url);
+    const ok = j => ({ ok:true, status:200, json: async () => j });
+    if(url.includes('nominatim')){ const q = decodeURIComponent(url.split('q=')[1]).toLowerCase(); const k = Object.keys(PL).find(k => q.includes(k)); return ok(k ? PL[k] : []); }
+    if(url.includes('routed-foot')){ if(__net.fail) throw new Error('offline');
+      const pts = url.split('/foot/')[1].split('?')[0].split(';').map(s => s.split(',').map(Number));
+      if(url.includes('/table/')) return ok({ code:'Ok', distances:[pts.map(p => D(pts[0], p) * 1.25)] });
+      return ok({ code:'Ok', routes:[{ distance: D(pts[0], pts[1]) * 1.25, geometry:{ coordinates:[pts[0], pts[1]] } }] }); }
+    throw new Error('нет сети в тестах'); };
+});
+const liveSetup = async (p, dest, fail) => { await stubNet(p); if(fail) await p.evaluate(() => { __net.fail = true; });
+  await p.evaluate(async () => { startPickHome(); state.q = '13-я Парковая 40'; await doFind(); pickFound(0); });
+  await p.waitForTimeout(700);
+  return p.evaluate(async dest => { go('find'); state.q = dest; doFind.last = 0; await doFind(); pickFound(0);
+    const k = state.dest; await LIVE.pending[k]; await new Promise(r => setTimeout(r, 50)); return k; }, dest); };
+test('живые: первый запуск просит «Откуда», адрес сохраняется на телефоне', async p => { await stubNet(p);
+  const before = await p.evaluate(() => document.body.innerText.includes('Откуда ты обычно выходишь?'));
+  await p.evaluate(async () => { startPickHome(); state.q = '13-я Парковая 40'; await doFind(); pickFound(0); });
+  await p.waitForTimeout(700); const after = await p.evaluate(() => ({ home: LIVE.home && LIVE.home.name, txt: document.body.innerText.includes('13-я Парковая улица, 40'), saved: !!JSON.parse(localStorage.getItem('gis.live')).home }));
+  return (before && after.home && after.txt && after.saved) || JSON.stringify({ before, after }); });
+test('живые: Милашенкова — метро с двумя пересадками, только «Метро» и «Пешком», время ~1 ч', async p => {
+  const k = await liveSetup(p, 'Милашенкова 4А');
+  return p.evaluate(k => { go('compare'); const keys = goKeys(), o = OPTIONS.live;
+    const tr = o ? o.legs.filter(l => l.model === 'transfer').map(l => l.label) : [];
+    const rides = o ? o.legs.filter(l => l.type === 'metro').map(l => l.stations[0] + '→' + l.stations[l.stations.length-1]) : [];
+    const mid = o ? forecast('live').mid : 0;
+    return (keys.join() === 'live' && tr.length === 2 && rides[0].startsWith('Щёлковская') && mid > 52 && mid < 75 && !/undefined|NaN/.test(document.body.innerText)) || JSON.stringify({ keys, tr, rides, mid }); }, k); });
+test('живые: поликлиника рядом — без пересадок, около 25–35 мин; демо до Бауманской не задето', async p => {
+  await liveSetup(p, 'Измайловская поликлиника');
+  return p.evaluate(() => { go('compare'); const o = OPTIONS.live, mid = forecast('live').mid, tr = o.legs.filter(l => l.model === 'transfer').length;
+    closePlace && closePlace(); openPlace('baum'); go('compare'); const demo = goKeys().join();
+    return (tr === 0 && mid > 22 && mid < 36 && demo.includes('metro') && !demo.includes('live')) || JSON.stringify({ tr, mid, demo }); }); });
+test('живые: пешие маршруты не загрузились — «время примерное», маршрут всё равно есть', async p => {
+  const k = await liveSetup(p, 'Милашенкова 4А', true);
+  return p.evaluate(() => { go('compare'); const t = document.body.innerText; return (!!OPTIONS.live && /время примерное/.test(t)) || t.slice(0, 300); }); });
+test('живые: шаблон на работу переживает перезагрузку и считает «выйди до»', async p => {
+  const k = await liveSetup(p, 'Милашенкова 4А');
+  await p.evaluate(k => { state.templates.push({ name:'Работа', dest:k, arrive:10*60, mode:'live', reverse:false, days:[] }); saveApp(); }, k);
+  await p.reload(); await p.waitForTimeout(800);
+  return p.evaluate(() => { const t = document.body.innerText; return (/Работа/.test(t) && /выйди до|сейчас/i.test(t) && !!LIVE.routes[state.templates[0].dest]) || t.slice(0, 300); }); });
+test('живые: на маршруте — шаги «Переход», линии в цвете, ведение стартует', async p => {
+  await liveSetup(p, 'Милашенкова 4А');
+  return p.evaluate(async () => { go('compare'); pick('live'); go('route'); const t = document.body.innerText;
+    const ok = /Переход на/.test(t) && /Метро до Фонвизинская|Метро до/.test(t) && OPTIONS.live.legs.filter(l => l.colour).every(l => /^#/.test(l.colour));
+    return ok || t.slice(0, 400); }); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
-  for(const t of T){
+  for(const t of T.filter(t => !process.env.ONLY || t.name.includes(process.env.ONLY))){
     const p = await b.newPage({ viewport: { width: 430, height: 900 } });
     const errs = []; p.on('pageerror', e => errs.push(e.message));
     await p.goto(file); await p.waitForTimeout(600);
