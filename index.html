@@ -281,7 +281,7 @@ const ic = (name, size) => `<svg class="i" viewBox="0 0 20 20" width="${size||20
 const icn = (v, size) => ICON[v] ? ic(v, size) : esc(v);
 
 const state = { arrive: 9*60, mode:'hurry', sel:null, modules:{}, view:'home', history:[], timeMode:'depart', depart:NOW,
-  dest:null, templates:[], recents:[], visits:{}, declined:{}, modAns:{}, q:'', found:null, finding:false, findErr:null, pickHome:false, fromHere:false, locating:false };   // первый запуск: ни шаблонов, ни истории
+  dest:null, templates:[], recents:[], visits:{}, declined:{}, modAns:{}, q:'', found:null, finding:false, findErr:null, pickHome:false, fromHere:false, locating:false, fromOpen:false };   // первый запуск: ни шаблонов, ни истории
 // Места поиска. Маршруты в прототипе есть только до м. Бауманская.
 const PLACES = {
   baum: { name:'м.\u00a0Бауманская', pin:'М Бауманская', sub:'Арбатско-Покровская линия', km:'8 км', ico:'Метро', ok:true, at:DEST },
@@ -763,13 +763,13 @@ function geoWatch(on){ if(!navigator.geolocation) return;
   if(!on && GEO.watch != null){ navigator.geolocation.clearWatch(GEO.watch); GEO.watch = null; } }
 // «Откуда»: дом или где я сейчас (маршрут от текущей точки не сохраняется — он на один раз)
 async function useHere(){ const k = state.dest; if(!isLive(k)) return;
-  state.locating = true; render();
+  state.locating = true; state.fromOpen = false; render();
   try{ const p = await geoOnce(); LIVE.here = { at:p }; LIVE.hereRoutes = {}; state.fromHere = true; LIVE.ver++;
     state.locating = false; render(); showPlace();
-    await buildLiveRoute(k); if(state.dest === k){ state.sel = goKeys()[0] || null; render(); } }
+    await buildLiveRoute(k); if(state.dest === k){ state.sel = goKeys()[0] || null; if(state.view === 'place') placeReady(); else { render(); showSel(); } } }
   catch(e){ state.locating = false; state.fromHere = false;
     toast(GEO.denied ? 'Доступ к геолокации запрещён — считаю от дома. Разрешить можно в настройках браузера' : 'Не получилось определить, где ты — считаю от дома'); render(); } }
-function useHome(){ state.fromHere = false; SYNC_KEY = null; render(); showPlace(); }
+function useHome(){ state.fromHere = false; state.fromOpen = false; SYNC_KEY = null; state.sel = goKeys()[0] || null; render(); if(state.view === 'compare') showSel(); else showPlace(); }
 
 /* ----- Поиск мест (Nominatim) ----- */
 async function geocode(q){
@@ -1011,7 +1011,7 @@ function tplTime(t){   // «выйди до 8:23» для шаблона; не �
   return out;
 }
 const homeStart = () => LIVE.home
-  ? `<div class="sec row" style="justify-content:space-between;align-items:center"><span>Откуда</span><button class="mlink" aria-label="Изменить, откуда ты выходишь" onclick="startPickHome()">Изменить</button></div><div class="lrow"><div class="ico" aria-hidden="true">${ic('Дом')}</div><div class="tx"><b>${esc(LIVE.home.name)}</b><div class="m">Отсюда считаются маршруты</div></div></div>`
+  ? `<div class="sec">Откуда</div><button class="lrow press" aria-label="Откуда: ${esc(LIVE.home.name)}. Изменить" onclick="startPickHome()"><div class="ico" aria-hidden="true">${ic('Дом')}</div><div class="tx"><b>${esc(LIVE.home.name)}</b><div class="m">Отсюда считаются маршруты · изменить</div></div></button>`
   : `<div class="hint startcard"><span aria-hidden="true">${ic('Дом')}</span> <span style="flex:1"><b>Откуда ты обычно выходишь?</b><br>Укажи адрес — и маршруты будут считаться от него</span><button class="mlink" onclick="startPickHome()">Указать</button></div>`;
 V.home = () => {
   if(!state.templates.length && !state.recents.length) return `<h1 class="sr" tabindex="-1">Куда едем?</h1>${homeStart()}`;
@@ -1095,6 +1095,18 @@ V.place = () => {
    ${from}${status ? `<div class="m" role="status" style="margin-bottom:12px">${status}</div>` : ''}
    <div class="btns">${none ? `<button class="btn p press" onclick="useHome()">Посчитать от дома</button>` : `<button class="btn p press" ${wait ? (busy ? 'disabled' : `onclick="retryLive()"`) : `onclick="go('compare')"`}>${wait && !busy ? 'Попробовать ещё раз' : 'Маршрут'}</button>`}</div>`;
 };
+/* ----- Откуда — на экране способов: «Дом ▾» / «Где я сейчас ▾», выбор — под строкой ----- */
+const fromBtn = () => !isLive(state.dest) || !LIVE.home ? `<span class="from"><i aria-hidden="true"></i>Отсюда</span>`
+  : `<button class="from press" aria-expanded="${!!state.fromOpen}" aria-label="Откуда: ${state.fromHere ? 'где я сейчас' : 'дом'}. Изменить" onclick="state.fromOpen=!state.fromOpen;render()">${ic(state.fromHere ? 'Навигатор' : 'Дом', 16)}<span style="flex:1;text-align:left">${state.fromHere ? 'Где я сейчас' : 'Дом'}</span><span aria-hidden="true">▾</span></button>`;
+const fromChips = () => isLive(state.dest) && LIVE.home && state.fromOpen ? `<div class="chips" role="group" aria-label="Откуда" style="margin-top:-8px">
+     <button class="chip from press ${state.fromHere ? '' : 'sel'}" aria-pressed="${!state.fromHere}" onclick="useHome()">${ic('Дом', 16)}Дом</button>
+     <button class="chip from press ${state.fromHere ? 'sel' : ''}" aria-pressed="${!!state.fromHere}" onclick="useHere()">${ic('Навигатор', 16)}Где я сейчас</button></div>` : '';
+function liveWait(){ if(!isLive(state.dest)) return '';
+  const R = liveRoute(state.dest), busy = state.locating || !!livePending(state.dest);
+  if(busy) return `<div class="m" role="status" style="margin:0 4px 12px">${state.locating ? 'Определяю, где ты…' : 'Считаю маршрут…'}</div>`;
+  if(R && R.none) return `<div class="offer"><div class="t">${esc(R.none)}</div><div class="btns" style="margin-top:12px"><button class="btn p press" onclick="useHome()">Посчитать от дома</button></div></div>`;
+  if(!R) return `<div class="offer"><div class="t">Маршрут не построился</div><div class="m" style="margin:4px 0 12px">Проверь интернет и попробуй ещё раз</div><button class="btn p press" onclick="retryLive()">Попробовать ещё раз</button></div>`;
+  return ''; }
 /* ----- Способы: та же шторка раскрыта ----- */
 V.compare = () => {
   const walkMode = state.mode==='walk', arr = arriveMode();
@@ -1113,9 +1125,9 @@ V.compare = () => {
   const wait = waiting.length && need.length && keys.length ? `<div class="hint"><span aria-hidden="true">${icn(MODULES.find(m => m.id === need[0]).icon)}</span> <span><b>${esc(waiting.map(m => m.name).join(' и '))}</b> — не работа${waiting.length > 1 ? 'ют' : 'ет'} без ${esc(namesList(need))}</span><button class="mlink" data-ids="${esc(need.join(','))}" onclick="enableMods(this.dataset.ids.split(','))">Включить</button></div>` : '';
   const w = wait + collect('banners').map((b,i) => `<div class="hint"><span aria-hidden="true">${icn(b.icon)}</span> <span><b>${esc(b.title)}</b>${b.text ? ' — ' + esc(b.text) : ''}</span>${i===0 ? modsLink() : ''}</div>`).join('');
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">${destName()}</h1></div>
-  <div class="tripbar"><span class="from"><i aria-hidden="true"></i>Отсюда</span>${timeBtn()}</div>
+  <div class="tripbar">${fromBtn()}${timeBtn()}</div>${fromChips()}${liveWait()}
   ${late}
-  ${keys.length ? keys.map(k=>card(k, k===best && !allLate)).join('') : `<div class="offer"><div class="t">Нет включённых способов</div><div class="m" style="margin:4px 0 12px">${walkMode ? 'Для прогулок нужен способ передвижения' : 'Включи хотя бы один способ передвижения'}</div>${offerModes(walkMode ? 'walk' : 'go')}</div>`}
+  ${keys.length ? keys.map(k=>card(k, k===best && !allLate)).join('') : isLive(state.dest) ? '' : `<div class="offer"><div class="t">Нет включённых способов</div><div class="m" style="margin:4px 0 12px">${walkMode ? 'Для прогулок нужен способ передвижения' : 'Включи хотя бы один способ передвижения'}</div>${offerModes(walkMode ? 'walk' : 'go')}</div>`}
   ${w}
   <div class="note">Время, цены и ориентиры в прототипе примерные. «Самое позднее» — так в 19 поездках из 20.</div>`;
 };
@@ -1156,7 +1168,7 @@ function card(k, isBest){
   return `<button class="card press ${compact?'late':''}" data-k="${k}" onclick="pick('${k}')">
     ${isBest ? '<div class="best">Лучше всего</div>' : ''}
     <div class="top"><div class="ico" aria-hidden="true">${icn(o.ico)}</div>
-      <div style="flex:1;min-width:0"><div class="t">${esc(o.name)}</div><div class="m">${esc(o.detail)}${o.noTarget?'':' · ' + esc(o.price)}</div></div>
+      <div style="flex:1;min-width:0"><div class="t">${esc(o.name)}</div><div class="m">${esc(o.detail)}${o.noTarget || !o.price ? '' : ' · ' + esc(o.price)}</div></div>
       <div class="right">${right}</div></div>
     <div class="win">${pills.join('')}</div></button>`;
 }
@@ -1373,19 +1385,23 @@ function useTemplate(i){ const t = state.templates[i];
   if(!state.sel){ toast('Сохранённый способ сейчас недоступен — выбери другой'); go('compare'); return; }
   // в одно касание: сразу маршрут сохранённым способом; «назад» — к остальным способам
   state.history.push('home'); state.view = 'compare'; showRoute(state.sel); go('route'); fitAll(); }
-function retryLive(){ const k = state.dest; if(!isLive(k)) return; buildLiveRoute(k).then(() => { if(state.dest === k && state.view === 'place') render(); }).catch(() => {}); render(); }
+function retryLive(){ const k = state.dest; if(!isLive(k)) return; buildLiveRoute(k).then(() => { if(state.dest !== k) return; if(state.view === 'place') placeReady(); else { state.sel = goKeys()[0] || null; render(); showSel(); } }).catch(() => render()); render(); }
 function openPlace(k){
   if(isLive(k) && !LIVE.home){ toast('Сначала укажи, откуда ты обычно выходишь'); state.view = state.history.pop() || 'home'; startPickHome(); return; }
   if(state.dest !== k) state.fromHere = false;
-  if(isLive(k) && !liveRoute(k)) buildLiveRoute(k).then(() => { if(state.dest === k && state.view === 'place'){ state.sel = goKeys()[0] || null; render(); } }).catch(() => { if(state.dest === k && state.view === 'place') render(); });
+  if(isLive(k) && !liveRoute(k)) buildLiveRoute(k).then(() => { if(state.dest === k && state.view === 'place') placeReady(); }).catch(() => { if(state.dest === k && state.view === 'place') render(); });
   if(!PLACES[k].ok){ toast('В прототипе маршруты есть только до м. Бауманская'); return; }
   state.dest = k; state.mode = 'hurry'; syncCtx(); state.sel = goKeys()[0] || null; state.timeMode = 'depart'; state.depart = NOW; state.q = '';
   state.recents = [k].concat(state.recents.filter(x=>x!==k)).slice(0,3);
-  if(state.view==='find'){                        // «назад» из места — туда, откуда открыли поиск, а не в поиск
-    state.view = state.history.pop() || 'home';
-    if(state.view==='place'){ render('in'); snapFor('place'); showPlace(); return; }   // поиск из шторки места → то же место, новое содержимое
-  }
-  go('place'); showPlace(); }
+  // «назад» со способов — туда, откуда открыли поиск: ни поиск, ни прошлое место в истории не оставляем
+  if(state.view==='find') state.view = state.history.pop() || 'home';
+  while(['place', 'compare'].includes(state.view)) state.view = state.history.pop() || 'home';
+  if(isLive(k) && !liveRoute(k)){ go('place'); showPlace(); return; }   // маршрут считается — короткая шторка «Считаю маршрут…», потом сама уйдёт к способам
+  go('compare'); state.sel = goKeys()[0] || null; showSel(); }
+// маршрут посчитался, пока человек смотрел на «Считаю маршрут…» — сразу к способам (шторку места в историю не кладём)
+function placeReady(){ const R = liveRoute(state.dest); if(!R || R.none){ render(); return; }
+  state.view = 'compare'; state.sel = goKeys()[0] || null; render('in'); snapFor('compare'); showSel(); }
+function showSel(){ if(state.sel){ showRoute(state.sel); fitAll(); } else showPlace(); }
 function walkNearby(){ state.mode = 'walk'; state.dest = null; state.timeMode = 'depart'; state.depart = NOW; syncCtx(); state.sel = walkKeys()[0] || null;
   if(state.sel){ showRoute(state.sel); fitAll(); } go('compare'); }
 function resetDemo(){

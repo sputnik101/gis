@@ -88,11 +88,11 @@ test('«Вагон для выхода»: подсказка есть, выкл�
 test('такси выключили на маршруте — честно возвращаем к способам, без подмены', async p => p.evaluate(() => {
   openPlace('baum'); go('compare'); pick('taxi'); go('modules'); setMod('taxi'); back();
   const ok = state.view==='compare' && !document.body.innerText.includes('Такси до Бауманской'); setMod('taxi');
-  back(); return (ok && state.view==='place') || 'view ' + state.view + ' hist ' + state.history;
+  back(); return (ok && state.view==='home') || 'view ' + state.view + ' hist ' + state.history;   // место открывается сразу способами — «назад» на главный
 }));
 test('такси выключили на подтверждении — к способам, «назад» один раз', async p => p.evaluate(() => {
   restart(); openPlace('baum'); go('compare'); pick('taxi'); go('confirm'); go('modules'); setMod('taxi'); back();
-  const ok = state.view==='compare'; back(); setMod('taxi'); return (ok && state.view==='place') || 'view ' + state.view;
+  const ok = state.view==='compare'; back(); setMod('taxi'); return (ok && state.view==='home') || 'view ' + state.view;
 }));
 test('способ пропал во время поездки — поездка идёт до конца на своей копии', async p => {
   await p.evaluate(() => { restart(); openPlace('baum'); go('compare'); pick('taxi'); return startTrip(true); });
@@ -194,9 +194,10 @@ test('«Пробки» выключены — такси и каршеринга
   const ok = !OPTIONS.taxi && !OPTIONS.carshare && !!OPTIONS.metro && !!OPTIONS.walk; setMod('roads'); return ok || Object.keys(OPTIONS).join();
 }));
 // ---------- навигация ----------
-test('место → поиск → место: на экране место', async p => p.evaluate(() => {
+test('место → поиск → место: сразу способы, «назад» — на главный, без цепочки старых мест', async p => p.evaluate(() => {
   restart(); openPlace('baum'); go('find'); openPlace('baum');
-  return (state.view==='place' && document.querySelector('h1').textContent.includes('Бауманская')) || 'view ' + state.view;
+  const ok = state.view==='compare' && document.querySelector('h1').textContent.includes('Бауманская'); back();
+  return (ok && state.view==='home') || 'view ' + state.view;
 }));
 test('прогулка → поездка → завершить → назад ×2 без ошибок', async p => {
   await p.evaluate(() => { restart(); walkNearby(); pick('loop'); return startTrip(); });
@@ -378,9 +379,10 @@ test('второй шаблон к тому же месту другим спо�
 test('клавиатура: Enter в поиске открывает первое место, Escape — назад, «Сохранено» можно закрыть', async p => {
   await stubNet(p); await p.evaluate(() => go('find')); await p.waitForTimeout(650);
   await p.fill('#q', 'Бауманская улица'); await p.waitForTimeout(200); await p.press('#q', 'Enter'); await p.waitForTimeout(300); await p.press('#q', 'Enter'); await p.waitForTimeout(650);
-  const place = await p.evaluate(() => state.view === 'place' && state.dest === 'baum');
-  await p.evaluate(() => go('compare')); await p.waitForTimeout(650); await p.keyboard.press('Escape'); await p.waitForTimeout(650);
-  const esc = await p.evaluate(() => state.view === 'place');
+  const place = await p.evaluate(() => state.view === 'compare' && state.dest === 'baum');
+  await p.keyboard.press('Escape'); await p.waitForTimeout(650);
+  const esc = await p.evaluate(() => state.view === 'home');
+  await p.evaluate(() => openPlace('baum')); await p.waitForTimeout(650);
   await p.evaluate(() => { go('compare'); pick('metro'); go('save'); state.saveName = 'Работа'; saveTemplate(); }); await p.waitForTimeout(650);
   const hasBack = await p.evaluate(() => !!document.querySelector('#body .back-btn'));
   await p.keyboard.press('Escape'); await p.waitForTimeout(650);
@@ -404,11 +406,11 @@ test('320 px: длинное слово без пробелов из модул�
     return !bad.length || [...new Set(bad)].slice(0, 6).join(', '); });
 });
 
-test('экран места: крестик в поле поиска возвращает на главный, «Погулять рядом» снова видно', async p => {
+test('место открывается сразу способами; «назад» — на главный, «Погулять рядом» снова видно', async p => {
   await p.evaluate(() => openPlace('baum')); await p.waitForTimeout(650);
-  const noChip = await p.evaluate(() => !document.querySelector('.wchip'));
-  await p.click('.sx'); await p.waitForTimeout(650);
-  const ok = await p.evaluate(() => state.view === 'home' && !state.dest && !!document.querySelector('.wchip') && document.querySelector('.search .ph') && state.recents.includes('baum'));
+  const noChip = await p.evaluate(() => state.view === 'compare' && !!state.sel && document.getElementById('topbar').classList.contains('hide'));
+  await p.click('#body .back-btn'); await p.waitForTimeout(650);
+  const ok = await p.evaluate(() => state.view === 'home' && !!document.querySelector('.wchip') && !!document.querySelector('.search .ph') && state.recents.includes('baum'));
   return (noChip && ok) || JSON.stringify({ noChip, ok });
 });
 
@@ -427,10 +429,10 @@ test('множитель времени шага ограничен 0,5–3', as
   unregisterModule('huge'); registerModule({ id:'tiny', icon:'?', name:'T', desc:'', where:'', on:true, legFactor(){ return 0.01; } }); const lo = forecast('walk').mid; unregisterModule('tiny');
   return (hi <= base * 3.1 && hi > base * 2 && lo >= base * 0.45 && lo < base * 0.7) || `base ${base} hi ${hi} lo ${lo}`;
 }));
-test('двойной тап по «Маршрут»: второй тап не попадает в карточку способа', async p => {
-  await p.evaluate(() => openPlace('baum')); await p.waitForTimeout(650);
-  await p.locator('button', { hasText: 'Маршрут' }).first().dblclick(); await p.waitForTimeout(650);
-  return p.evaluate(() => state.view === 'compare' || 'экран ' + state.view);
+test('двойной тап по месту в недавних: способы открываются один раз', async p => {
+  await p.evaluate(() => { openPlace('baum'); back(); }); await p.waitForTimeout(650);
+  await p.locator('.lrow', { hasText: 'Бауманская' }).first().dblclick(); await p.waitForTimeout(650);
+  return p.evaluate(() => (state.view === 'compare' && state.history.join() === 'home') || 'экран ' + state.view + ' ' + state.history);
 });
 test('после ночного выезда время в карточках — с «завтра»', async p => p.evaluate(() => {
   openPlace('baum'); go('compare'); state.timeMode = 'depart'; state.depart = 1440 + 50; render();
@@ -596,7 +598,7 @@ test('домик «На главный» с глубоких экранов; г�
     return { fromHomeModules, cmp, rt, sv }; });
   await p.waitForTimeout(650); await p.click('.home-btn'); await p.waitForTimeout(650);
   const home = await p.evaluate(() => state.view === 'home' && !state.dest && !state.history.length && !!document.querySelector('.wchip'));
-  return (!r.fromHomeModules && r.cmp && r.rt && r.sv && home) || JSON.stringify({ r, home });
+  return (!r.fromHomeModules && !r.cmp && r.rt && r.sv && home) || JSON.stringify({ r, home });   // способы открываются с главного — «назад» и так туда
 });
 
 test('поля ввода не мельче 16 px — Safari на iPhone не приближает страницу при вводе', async p => p.evaluate(() => {
@@ -693,7 +695,15 @@ test('живые: поиск «Метро измайловская» — одн�
     return (rows.length === 1 && /м.\sИзмайловская/.test(rows[0]) && /Арбатско-Покровская/.test(rows[0])) || JSON.stringify(rows); }); });
 test('живые: кнопки «Откуда» — иконка и текст в одну строку', async p => {
   await liveSetup(p, 'Милашенкова 4А');
+  await p.evaluate(() => { state.fromOpen = true; render(); });
   return p.evaluate(() => { const bs = [...document.querySelectorAll('.chip.from')]; return (bs.length === 2 && bs.every(b => b.getBoundingClientRect().height <= 46)) || JSON.stringify(bs.map(b => b.getBoundingClientRect().height)); }); });
+
+test('живые: «Откуда» на главном — вся строка кнопка, открывает смену адреса', async p => {
+  await liveSetup(p, 'Милашенкова 4А');
+  await p.evaluate(() => { state.dest = null; restart(); }); await p.waitForTimeout(700);
+  const b = await p.$('button.lrow[aria-label^="Откуда"]'); if(!b) return 'нет кнопки';
+  await b.click(); await p.waitForTimeout(700);
+  return p.evaluate(() => (state.view === 'find' && state.pickHome) || state.view); });
 
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
