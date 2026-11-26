@@ -589,6 +589,16 @@ test('ориентир на карте: подпись появляется на
   }));
 });
 
+test('домик «На главный» с глубоких экранов; где «назад» и так на главный — его нет', async p => {
+  const r = await p.evaluate(() => { const has = () => !!document.querySelector('.home-btn');
+    go('modules'); const fromHomeModules = has(); back();
+    openPlace('baum'); go('compare'); const cmp = has(); pick('metro'); go('route'); const rt = has(); go('save'); const sv = has();
+    return { fromHomeModules, cmp, rt, sv }; });
+  await p.waitForTimeout(650); await p.click('.home-btn'); await p.waitForTimeout(650);
+  const home = await p.evaluate(() => state.view === 'home' && !state.dest && !state.history.length && !!document.querySelector('.wchip'));
+  return (!r.fromHomeModules && r.cmp && r.rt && r.sv && home) || JSON.stringify({ r, home });
+});
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;

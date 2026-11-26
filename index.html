@@ -138,6 +138,7 @@ svg.i{display:block;flex:none}
 /* Кнопки как в Фигме: главная — плоская чернильная, вторичная — белая с рамкой, без тяжёлых теней */
 .btn.p,.btn.d{background:var(--ink);color:#fff;box-shadow:var(--s1)}
 .btn.w{background:#fff;color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+.home-btn{margin:0 0 0 auto}
 .back-btn{border:0;background:#fff;font-size:20px;color:var(--ink);cursor:pointer;width:44px;height:44px;border-radius:14px;box-shadow:var(--s1);flex:none;display:grid;place-items:center;margin-right:4px}
 .steps{position:relative;margin:8px 0 16px}
 .st{display:flex;gap:12px;padding:8px 0;position:relative}
@@ -1172,6 +1173,7 @@ function render(anim){
   body.innerHTML = `<div class="view ${anim==='back'?'back':anim==='in'?'in':''}">${glue(V[state.view]())}</div>`;
   if(anim) { body.scrollTop = 0; lockNav(); const h = body.querySelector('h1'); if(h) h.focus({preventScroll:true}); }
   if(state.view==='time') setupWheel();
+  addHomeBtn();
   sheet.classList.toggle('nomask', state.view==='route');
   if(fk){ const t = [...body.querySelectorAll('button,input,[tabindex]')].find(el => keyOf(el) === fk) || body.querySelector('h1'); if(t) t.focus({preventScroll:true}); }
   renderTop();
@@ -1256,6 +1258,14 @@ function resetMod(id){ const m = MODULES.find(x => x.id === id); if(m && m.store
 function clearRecents(){ state.recents = []; restart(); toast('Недавние очищены'); say('Недавние очищены'); }
 // Демо: передвинуть «сейчас» и день недели — всё пересчитывается
 function setDemoNow(t, day){ NOW = t; TODAY = day; state.depart = NOW; document.getElementById('clock').textContent = fmt(NOW); refreshModules(); }
+// «На главный» из любой точки: домик справа в шапке экрана. Не показываем, где «назад» и так ведёт на главный, и на выборе времени
+function addHomeBtn(){
+  if(['home','find','time','place','done'].includes(state.view)) return;
+  const h = state.history; if(!h.length || (h.length === 1 && h[0] === 'home')) return;
+  const row = body.querySelector('.view > .row'); if(!row || !row.querySelector('.back-btn')) return;
+  const b = document.createElement('button'); b.className = 'back-btn home-btn press'; b.setAttribute('aria-label', 'На главный'); b.innerHTML = ic('Дом'); b.onclick = goHome;
+  row.appendChild(b); }
+function goHome(){ Object.assign(state, { dest:null, sel:null, saveName:null, saveDays:null, justSaved:null, modOff:null, modMore:false }); restart(); say('Главный экран'); }
 // Закрыть место: на главный (с «Погулять рядом» и шаблонами); место остаётся в недавних
 function closePlace(){ state.dest = null; state.sel = null; restart(); say('Место закрыто'); }
 function restart(){ document.getElementById('clock').textContent = fmt(NOW); state.view='home'; state.history=[]; state.mode='hurry'; state.timeMode='depart'; state.depart=NOW; render('back'); snapFor('home'); showHome(); }
