@@ -705,6 +705,47 @@ test('живые: «Откуда» на главном — вся строка �
   await b.click(); await p.waitForTimeout(700);
   return p.evaluate(() => (state.view === 'find' && state.pickHome) || state.view); });
 
+// ---------- блокеры ревью 26.11: маршрут с пересадки, хранилище, цикл, вечер и полночь ----------
+const stubAt = (p, lon, lat) => p.evaluate(([lon, lat]) => { const f0 = window.fetch;
+  window.fetch = async url => String(url).includes('nominatim') ? { ok:true, status:200, json: async () => [{ name:'Точка', display_name:'Точка, Москва', lat:String(lat), lon:String(lon) }] } : f0(url); }, [lon, lat]);
+test('блокер 1: путь не начинается и не кончается пересадкой (Зябликово ⇄ Красногвардейская), экран не пустой', async p => {
+  await stubNet(p);
+  await p.evaluate(async () => { LIVE.home = { name:'дом', at:[37.77, 55.57] }; saveLive(); });
+  const r = await p.evaluate(async () => { addLivePlace('pq1', { name:'Запад', at:[37.35, 55.735] }); openPlace('pq1'); await LIVE.pending['pq1']; await new Promise(r => setTimeout(r, 50));
+    const R = LIVE.routes.pq1, segs = R && R.metro ? R.metro.segs : [];
+    return { view: state.view, keys: goKeys(), first: segs[0] && !segs[0].transfer, last: segs.length && !segs[segs.length-1].transfer, cards: document.querySelectorAll('.card').length }; });
+  return (r.view === 'compare' && r.keys.includes('live') && r.first && r.last && r.cards > 0) || JSON.stringify(r); });
+test('блокер 1: перебор точек по Москве — ни один путь не начинается и не кончается пересадкой', async p => p.evaluate(() => {
+  let bad = 0, n = 0;
+  for(let la = 55.57; la <= 55.9; la += 0.03) for(let lo = 37.38; lo <= 37.85; lo += 0.04){ const A = [lo, la];
+    const nA = nearStations(A), w = {}; nA.forEach(x => w[x.i] = x.d * 1.3 / 80);
+    for(const B of [[37.62, 55.75], [37.45, 55.86], [37.8, 55.65]]){ const nB = nearStations(B), w2 = {}; nB.forEach(x => w2[x.i] = x.d * 1.3 / 80);
+      const mp = metroPath(w, w2); n++; if(mp && (mp.segs[0].transfer || mp.segs[mp.segs.length-1].transfer)) bad++; } }
+  return bad === 0 || `плохих ${bad} из ${n}`; }));
+test('блокер 4: битый или старый маршрут в хранилище — отброшен, приложение открывается', async p => {
+  await p.evaluate(() => { const sig = '37.81261,55.80845';
+    localStorage.setItem('gis.live', JSON.stringify({ v:1, home:{ name:'дом', at:[37.81261, 55.80845] }, places:{ pabc:{ name:'Место', sub:'', at:[37.6, 55.75] }, pdef:{ name:'Другое', sub:'', at:[37.6, 55.76] } },
+      routes:{ pabc:{ from:sig, v:METRO_VER, at:Date.now(), metro:{ segs:[] } }, pdef:{ from:sig, v:'старая', at:Date.now(), walk:{ m:100, coords:[[37.6,55.76],[37.61,55.76]] } } } }));
+    localStorage.setItem('gis.app', JSON.stringify({ v:1, templates:[{ name:'Работа', dest:'pabc', arrive:540, mode:'live', days:[] }], recents:['pabc'], visits:{}, declined:{}, modules:{} })); });
+  await p.reload(); await p.waitForTimeout(800);
+  return p.evaluate(() => ((!LIVE.routes.pabc || (routeOk(LIVE.routes.pabc) && LIVE.routes.pabc.metro.segs.length)) && !LIVE.routes.pdef && /Работа/.test(document.body.innerText)) || JSON.stringify(Object.keys(LIVE.routes))); });   // битый отброшен; шаблон мог пересчитать маршрут заново
+test('блокер 3: «Где я сейчас» остался включённым — шаблон считает от дома, без бесконечных запросов', async p => {
+  const k = await liveSetup(p, 'Милашенкова 4А'); await stubGeo(p, 37.7799, 55.7877);
+  return p.evaluate(async k => { await useHere(); goHome(); delete LIVE.routes[k];
+    state.templates.push({ name:'Работа', dest:k, arrive:600, mode:'live', reverse:false, days:[] });
+    const n0 = __net.calls.length; useTemplate(state.templates.length - 1); await new Promise(r => setTimeout(r, 800));
+    const calls = __net.calls.length - n0, first = OPTIONS.live && OPTIONS.live.legs[0].label;
+    return (calls < 10 && state.view === 'route' && /Щёлковская/.test(first) && !state.fromHere) || JSON.stringify({ calls, view: state.view, first, fromHere: state.fromHere }); }, k); });
+test('блокер 2: вечером «Прибыть к 9:00» — это завтра, «Выйти в 8:30» не превращается в «сейчас»', async p => p.evaluate(() => {
+  setDemoNow(21*60, 2); openPlace('baum'); go('time'); setTimeMode('arrive'); chipTime(540); applyTime();
+  const arr = state.arrive, v = verdict(goKeys()[0]).cls; go('time'); setTimeMode('depart'); chipTime(510); applyTime();
+  return (arr === 540 + 1440 && v !== 'r' && state.depart === 510 + 1440) || JSON.stringify({ arr, v, dep: state.depart }); }));
+test('блокер 2: полночь — «завтра 0:30» становится «сегодня 0:30»; шаблон вечером показывает следующий раз', async p => p.evaluate(() => {
+  setDemoNow(23*60 + 50, 2); state.timeMode = 'arrive'; state.arrive = normDay(30); const before = state.arrive; clockTick(5);
+  const after = state.arrive; state.templates = [{ name:'Работа', dest:'baum', arrive:540, mode:'metro', reverse:false, days:[] }]; setDemoNow(21*60, 2); restart();
+  const card = document.body.innerText;
+  return (before === 1470 && after === 30 && /к 9:00\s*завтра/.test(card)) || JSON.stringify({ before, after, card: card.slice(0, 200) }); }));
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
