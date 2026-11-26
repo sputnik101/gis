@@ -165,6 +165,7 @@ svg.i{display:block;flex:none}
 .homecard{background:#EEEDFE;border-color:#EEEDFE;color:var(--ink);font-size:14px;margin:4px 0 16px}.homecard b{font-weight:600}
 .homecard.w{background:#FFE3CF;border-color:#FFE3CF}
 .startcard{background:#EEEDFE;border-color:#EEEDFE;color:var(--ink);font-size:14px;margin:4px 0 16px}.startcard b{font-weight:600}
+.chip.from{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}.chip.from.sel{padding-left:16px}.chip.from.sel::before{display:none}.chip.from .i{flex:none}
 .chips.days{gap:8px}.chips.days .chip{min-width:42px;padding:0 8px}.chips.days .chip.sel::before{display:none}.chips.days .chip.sel{padding-left:8px}
 .hint>span:nth-child(2){flex:1}
 .mlink{border:0;background:none;color:var(--violet-d);font:inherit;font-weight:600;cursor:pointer;min-height:44px;padding:0 4px}
@@ -739,12 +740,12 @@ function loadLive(){ let d; try{ d = JSON.parse(localStorage.getItem(LIVE_KEY) |
   if(okP(d.home)) LIVE.home = { name: d.home.name.slice(0, 80), at: d.home.at };
   if(d.places && typeof d.places === 'object') for(const [k, p] of Object.entries(d.places)) if(/^p[a-z0-9]{1,24}$/.test(k) && okP(p)) addLivePlace(k, p);
   if(d.routes && typeof d.routes === 'object') for(const [k, r] of Object.entries(d.routes)) if(PLACES[k] && r && r.from && LIVE.home && r.from === homeSig()) LIVE.routes[k] = r; }
-function saveLive(){ try{ const places = {}; for(const k in LIVE.places) places[k] = { name: LIVE.places[k].name, sub: LIVE.places[k].sub, at: LIVE.places[k].at };
+function saveLive(){ try{ const places = {}; for(const k in LIVE.places) places[k] = { name: LIVE.places[k].name, sub: LIVE.places[k].sub, at: LIVE.places[k].at, metro: LIVE.places[k].metro };
   localStorage.setItem(LIVE_KEY, JSON.stringify({ v:1, home: LIVE.home, places, routes: LIVE.routes })); }catch(e){} }
 const homeSig = () => LIVE.home ? LIVE.home.at.map(x => x.toFixed(5)).join(',') : '';
 function addLivePlace(k, p){ const sub = typeof p.sub === 'string' ? p.sub.slice(0, 80) : '';
-  LIVE.places[k] = { name: p.name.slice(0, 80), sub, at: p.at };
-  PLACES[k] = { name: esc(p.name.slice(0, 80)), pin: p.name.slice(0, 40), sub: esc(sub), km: '', ico:'Пин', ok:true, live:true, at: p.at };
+  LIVE.places[k] = { name: p.name.slice(0, 80), sub, at: p.at, metro: !!p.metro };
+  PLACES[k] = { name: esc(p.name.slice(0, 80)), pin: p.name.slice(0, 40), sub: esc(sub), km: '', ico: p.metro ? 'Метро' : 'Пин', ok:true, live:true, at: p.at };
   if(LIVE.home) PLACES[k].km = kmText(dist(LIVE.home.at, p.at)); }
 const kmText = m => m < 1000 ? Math.round(m / 10) * 10 + ' м' : (m / 1000).toFixed(m < 10000 ? 1 : 0).replace('.', ',') + ' км';
 const isLive = k => !!(k && PLACES[k] && PLACES[k].live);
@@ -785,10 +786,13 @@ async function geocodeOnce(q){
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
   try{ const r = await fetch(url, { signal: ctl.signal }); if(!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
-    return j.filter(x => x && x.lat && x.lon).map(x => { const parts = String(x.display_name || '').split(', '), ad = x.address || {};
+    const rows = j.filter(x => x && x.lat && x.lon).map(x => { const parts = String(x.display_name || '').split(', '), ad = x.address || {};
       const name = x.name || (ad.road ? ad.road + (ad.house_number ? ', ' + ad.house_number : '') : parts.slice(0, 2).join(', '));
       const sub = [ad.suburb || ad.city_district || '', ad.city || ad.town || ''].filter(Boolean).join(', ') || parts.slice(1, 4).join(', ');
-      return { name, sub, at:[+(+x.lon).toFixed(6), +(+x.lat).toFixed(6)] }; }); }
+      const stop = x.type === 'bus_stop' || x.type === 'tram_stop' || x.type === 'platform';
+      return { name, sub: (stop ? 'остановка' + (sub ? ' · ' : '') : '') + sub, at:[+(+x.lon).toFixed(6), +(+x.lat).toFixed(6)], stop }; });
+    // одно и то же место в OSM бывает несколькими объектами (остановки «Метро „Измайловская“» с разных сторон улицы) — одна строка
+    return rows.filter((r, i) => !rows.slice(0, i).some(q => q.name === r.name && dist(q.at, r.at) < 600)); }
   finally{ clearTimeout(to); } }
 
 /* ----- Пешком: OSRM, запасной вариант — по прямой ×1,3 ----- */
@@ -1042,7 +1046,7 @@ function findHtml(){
   const q = (state.q||'').trim().toLowerCase(), home = !!state.pickHome;
   const found = state.finding ? `<div class="m" style="margin:12px 4px">Ищу…</div>`
     : state.findErr ? `<div class="m" style="margin:12px 4px">${esc(state.findErr)}</div>`
-    : state.found ? (state.found.length ? state.found.map((f, i) => `<button class="lrow press" onclick="pickFound(${i})"><div class="ico" aria-hidden="true">${ic(home ? 'Дом' : 'Пин')}</div><div class="tx"><b>${esc(f.name)}</b><div class="m">${esc(f.sub)}${!home && LIVE.home ? ' · ' + kmText(dist(LIVE.home.at, f.at)) : ''}</div></div></button>`).join('')
+    : state.found ? (state.found.length ? state.found.map((f, i) => `<button class="lrow press" onclick="pickFound(${i})"><div class="ico" aria-hidden="true">${ic(home ? 'Дом' : f.metro ? 'Метро' : f.stop ? 'Автобус' : 'Пин')}</div><div class="tx"><b>${esc(f.name)}</b><div class="m">${esc(f.sub)}${!home && LIVE.home ? ' · ' + kmText(dist(LIVE.home.at, f.at)) : ''}</div></div></button>`).join('')
         : `<div class="m" style="margin:12px 4px">Ничего не нашлось. Попробуй иначе: «Милашенкова 4А» или «Красная площадь»</div>`) : '';
   if(home) return (q ? found || `<div class="m" style="margin:12px 4px">Нажми «Найти»</div>` : `<div class="m" style="margin:12px 4px">Например, «13-я Парковая 40». Адрес хранится только на этом телефоне</div>`);
   if(!q) return state.recents.length ? `<div class="sec">Недавние</div>` + state.recents.map(k=>placeRow(k)).join('') : `<div class="m" style="margin:12px 4px">Адрес или место в Москве — и нажми «Найти»</div>`;
@@ -1053,10 +1057,17 @@ function placeRow(k){ const p = PLACES[k];
   return `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">${icn(p.ico)}</div><div class="tx"><b>${p.name}</b><div class="m">${p.sub}${p.km ? ' · ' + p.km : ''}</div></div></button>`; }
 // Enter: первый раз — найти; результаты уже на экране — открыть первый
 function findEnter(){ if(state.found && state.foundQ === (state.q || '').trim()){ const b = document.querySelector('#res button'); if(b){ b.click(); return; } } doFind(); }
+// Станции метро ищем у себя: в OSM у станции много объектов, а у нас — одна строка с линиями
+const normName = t => t.toLowerCase().replace(/ё/g, 'е').replace(/[«»"]/g, '').replace(/(^|\s)(метро|станция|ст\.|м\.)(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
+function findStations(q){ const n = normName(q); if(n.length < 3) return [];
+  const by = {}; for(const s of MET.s){ const sn = normName(s.n); if(sn.startsWith(n) || (n.length >= 5 && sn.includes(n))) (by[s.n] = by[s.n] || []).push(s); }
+  return Object.entries(by).slice(0, 4).map(([n, ss]) => ({ name:'м.\u00a0' + n, sub: [...new Set(ss.map(s => (MET.lines[s.line] || ['', 'линия ' + s.line])[1]))].join(', '), at: ss[0].at, metro:true, bare: normName(n) })); }
 async function doFind(){ const q = (state.q || '').trim(); if(q.length < 3 || state.finding) return;
   if(doFind.last && Date.now() - doFind.last < 1100) return; doFind.last = Date.now();   // правило Nominatim: не чаще раза в секунду
   state.finding = true; state.findErr = null; findList();
-  try{ state.found = await geocode(q); state.foundQ = q; }
+  const local = findStations(q);
+  try{ const g = await geocode(q);   // станция нашлась у нас — остановки и входы с её именем не нужны
+    state.found = local.concat(g.filter(r => !local.some(l => normName(r.name).includes(l.bare) && (r.stop || /метро|станци/i.test(r.name))))).slice(0, 6); state.foundQ = q; }
   catch(e){ state.found = []; state.foundQ = q; state.findErr = 'Поиск не ответил — проверь интернет и попробуй ещё раз'; }
   state.finding = false; findList(); }
 function pickFound(i){ const f = state.found && state.found[i]; if(!f) return;
@@ -1064,7 +1075,7 @@ function pickFound(i){ const f = state.found && state.found[i]; if(!f) return;
     for(const k in LIVE.places) PLACES[k].km = kmText(dist(f.at, PLACES[k].at));
     saveLive(); state.pickHome = false; state.q = ''; state.found = null; toast('Откуда: ' + f.name); back(); showHome(); warmTemplates(); return; }
   const k = 'p' + Math.abs(Math.round(f.at[0] * 1e5) * 7 + Math.round(f.at[1] * 1e5) * 13).toString(36);
-  addLivePlace(k, { name: f.name.replace(/[<>"\\]/g, ''), sub: f.sub, at: f.at }); saveLive(); state.found = null; openPlace(k); }
+  addLivePlace(k, { name: f.name.replace(/[<>"\\]/g, ''), sub: f.sub, at: f.at, metro: f.metro }); saveLive(); state.found = null; openPlace(k); }
 function startPickHome(){ state.pickHome = true; state.q = ''; state.found = null; state.findErr = null; go('find'); }
 // маршруты для сохранённых живых мест — заранее, чтобы «Мои маршруты» и «Пора выходить» знали время
 function warmTemplates(){ if(!LIVE.home) return;
@@ -1077,8 +1088,8 @@ V.place = () => {
   const p = PLACES[state.dest];   // только место и решение «едем?» — способы со временем на следующем шаге
   const R = p.live ? liveRoute(state.dest) : null, busy = p.live && (state.locating || !!livePending(state.dest)), wait = p.live && (!R || busy), none = R && R.none && !busy;
   const from = p.live && LIVE.home ? `<div class="chips" role="group" aria-label="Откуда" style="margin-bottom:12px"><span class="m" style="align-self:center;margin-right:4px">Откуда:</span>
-     <button class="chip press ${state.fromHere ? '' : 'sel'}" aria-pressed="${!state.fromHere}" onclick="useHome()">${ic('Дом', 16)} Дом</button>
-     <button class="chip press ${state.fromHere ? 'sel' : ''}" aria-pressed="${!!state.fromHere}" onclick="useHere()">${ic('Навигатор', 16)} Где я сейчас</button></div>` : '';
+     <button class="chip from press ${state.fromHere ? '' : 'sel'}" aria-pressed="${!state.fromHere}" onclick="useHome()">${ic('Дом', 16)}Дом</button>
+     <button class="chip from press ${state.fromHere ? 'sel' : ''}" aria-pressed="${!!state.fromHere}" onclick="useHere()">${ic('Навигатор', 16)}Где я сейчас</button></div>` : '';
   const status = state.locating ? 'Определяю, где ты…' : busy ? 'Считаю маршрут…' : none ? esc(R.none) : wait ? 'Маршрут не построился — проверь интернет' : '';
   return `<h1 tabindex="-1">${p.name}</h1><div class="sub" style="margin-bottom:16px">${p.sub}${p.km && !state.fromHere ? ' · ' + p.km + ' от дома' : ''}</div>
    ${from}${status ? `<div class="m" role="status" style="margin-bottom:12px">${status}</div>` : ''}

@@ -377,7 +377,7 @@ test('второй шаблон к тому же месту другим спо�
 }));
 test('клавиатура: Enter в поиске открывает первое место, Escape — назад, «Сохранено» можно закрыть', async p => {
   await stubNet(p); await p.evaluate(() => go('find')); await p.waitForTimeout(650);
-  await p.fill('#q', 'Бау'); await p.waitForTimeout(200); await p.press('#q', 'Enter'); await p.waitForTimeout(300); await p.press('#q', 'Enter'); await p.waitForTimeout(650);
+  await p.fill('#q', 'Бауманская улица'); await p.waitForTimeout(200); await p.press('#q', 'Enter'); await p.waitForTimeout(300); await p.press('#q', 'Enter'); await p.waitForTimeout(650);
   const place = await p.evaluate(() => state.view === 'place' && state.dest === 'baum');
   await p.evaluate(() => go('compare')); await p.waitForTimeout(650); await p.keyboard.press('Escape'); await p.waitForTimeout(650);
   const esc = await p.evaluate(() => state.view === 'place');
@@ -684,6 +684,16 @@ test('живые: в пути стало не успеть — «уже не у�
     state.arrive = Math.floor(realNowMin()) + 10; await new Promise(r => setTimeout(r, 2300));
     const g2 = document.getElementById('ggoal').textContent; await new Promise(r => setTimeout(r, 1200)); stopTrip(); return { g1, g2, buzz }; });
   return (/успеваешь|впритык/.test(r.g1) && /не успеть/.test(r.g2) && r.buzz === 1) || JSON.stringify(r); });
+
+test('живые: поиск «Метро измайловская» — одна станция с линией, без трёх одинаковых остановок', async p => {
+  await stubNet(p);
+  return p.evaluate(async () => { const f0 = window.fetch; window.fetch = async url => String(url).includes('nominatim')
+      ? { ok:true, status:200, json: async () => [1,2,3].map(i => ({ name:'Метро «Измайловская»', type:'bus_stop', category:'highway', display_name:'Метро «Измайловская», Измайлово, Москва', lat: String(55.788 + i*0.0002), lon: String(37.779 + i*0.002), address:{ suburb:'район Измайлово', city:'Москва' } })) } : f0(url);
+    go('find'); state.q = 'Метро измайловская'; await doFind(); const rows = [...document.querySelectorAll('#res .lrow')].map(b => b.innerText.replace(/\n/g, ' | '));
+    return (rows.length === 1 && /м.\sИзмайловская/.test(rows[0]) && /Арбатско-Покровская/.test(rows[0])) || JSON.stringify(rows); }); });
+test('живые: кнопки «Откуда» — иконка и текст в одну строку', async p => {
+  await liveSetup(p, 'Милашенкова 4А');
+  return p.evaluate(() => { const bs = [...document.querySelectorAll('.chip.from')]; return (bs.length === 2 && bs.every(b => b.getBoundingClientRect().height <= 46)) || JSON.stringify(bs.map(b => b.getBoundingClientRect().height)); }); });
 
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
