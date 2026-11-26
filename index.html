@@ -18,7 +18,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}   /* атрибут hidden сильнее классов вроде .pill{display:inline-flex} */
 .sheet.tight .body{padding-bottom:20px;-webkit-mask-image:none;mask-image:none}   /* шторка по содержимому — без запаса и затухания снизу */
-html,body{margin:0;height:100%;background:#E9E7F7;font-family:Inter,Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+html,body{margin:0;height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%;background:#E9E7F7;font-family:Inter,Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
 body{display:flex;align-items:center;justify-content:center}
 button{font-family:inherit}
 :focus-visible{outline:3px solid #F2A93B;outline-offset:2px}
@@ -40,7 +40,8 @@ button{font-family:inherit}
 .wchip{height:40px;border-radius:20px;border:0;background:#fff;box-shadow:var(--s2);padding:0 16px;font:inherit;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:8px;cursor:pointer}
 .attrib.low{top:164px}
 /* путь: поиск → место → способы */
-.q{flex:1;height:48px;border-radius:24px;border:1px solid var(--line);background:#fff;padding:0 16px;font:inherit;font-size:15px;color:var(--ink);outline:none}
+.q{flex:1;height:48px;border-radius:24px;border:1px solid var(--line);background:#fff;padding:0 16px;font:inherit;font-size:16px;   /* 16 px: меньше — Safari и браузеры на iPhone сами приближают страницу при вводе */
+  color:var(--ink);outline:none}
 .q:focus,.q:focus-visible{outline:none;border:2px solid var(--violet-btn);padding:0 15px}   /* поле ввода в фокусе — фиолетовая рамка, без оранжевого кольца */
 .sec{font-size:13px;color:var(--muted);margin:12px 0 8px}
 .lrow{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:8px;font:inherit;color:inherit;text-align:left;cursor:pointer;min-height:56px}

@@ -599,6 +599,11 @@ test('домик «На главный» с глубоких экранов; г�
   return (!r.fromHomeModules && r.cmp && r.rt && r.sv && home) || JSON.stringify({ r, home });
 });
 
+test('поля ввода не мельче 16 px — Safari на iPhone не приближает страницу при вводе', async p => p.evaluate(() => {
+  go('find'); const small = [...document.querySelectorAll('input,textarea,select')].filter(e => parseFloat(getComputedStyle(e).fontSize) < 16).map(e => e.id || e.className);
+  return !small.length || 'мелкие: ' + small.join();
+}));
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
