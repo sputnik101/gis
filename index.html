@@ -250,8 +250,16 @@ h1{text-wrap:balance}
    Геометрия — настоящая, из OpenStreetMap (выгрузка 22.11.2026): дом по адресу (Nominatim),
    линия 3 по путям (relation 1472298), входы в метро, пешие и автомобильные маршруты (routing.openstreetmap.de).
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
-let NOW = 8*60+20;                         // «сейчас» в прототипе (демо можно двигать в «Модулях»)
-let TODAY = (new Date().getDay() + 6) % 7;   // день недели: 0 — пн … 6 — вс
+// Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
+const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
+// время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
+const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
+const mskParts = () => { const o = {}; if(MSK) for(const x of MSK.formatToParts(new Date())) o[x.type] = x.value; return o; };
+const realNowMin = () => { const o = mskParts(); if(o.hour == null){ const d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; } return (+o.hour % 24) * 60 + +o.minute + +o.second / 60; };
+const realToday = () => { const i = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].indexOf(mskParts().weekday); return i >= 0 ? i : (new Date().getDay() + 6) % 7; };
+let REAL_CLOCK = !DEMO_CLOCK;
+let NOW = REAL_CLOCK ? Math.floor(realNowMin()) : 8*60+20;   // «сейчас» в минутах суток
+let TODAY = realToday();   // день недели (по Москве): 0 — пн … 6 — вс
 const DAYS = ['пн','вт','ср','чт','пт','сб','вс'];
 // «пн–пт», «пн, ср, пт», «каждый день»; пусто — любой день
 function daysText(d){ if(!d || !d.length) return ''; if(d.length === 7) return 'каждый день';
@@ -272,7 +280,7 @@ const ic = (name, size) => `<svg class="i" viewBox="0 0 20 20" width="${size||20
 const icn = (v, size) => ICON[v] ? ic(v, size) : esc(v);
 
 const state = { arrive: 9*60, mode:'hurry', sel:null, modules:{}, view:'home', history:[], timeMode:'depart', depart:NOW,
-  dest:null, templates:[], recents:[], visits:{}, declined:{}, modAns:{}, q:'', found:null, finding:false, findErr:null, pickHome:false };   // первый запуск: ни шаблонов, ни истории
+  dest:null, templates:[], recents:[], visits:{}, declined:{}, modAns:{}, q:'', found:null, finding:false, findErr:null, pickHome:false, fromHere:false, locating:false };   // первый запуск: ни шаблонов, ни истории
 // Места поиска. Маршруты в прототипе есть только до м. Бауманская.
 const PLACES = {
   baum: { name:'м.\u00a0Бауманская', pin:'М Бауманская', sub:'Арбатско-Покровская линия', km:'8 км', ico:'Метро', ok:true, at:DEST },
@@ -302,7 +310,7 @@ function setCtx(T){
 // Контекст для текущего выбора времени. Кэш по ключу выбора — считаем один раз на изменение.
 let SYNC_KEY = null;
 function syncCtx(){
-  const key = [state.dest, LIVE.ver, state.mode, state.timeMode, state.arrive, state.depart, JSON.stringify(state.modules), MODULES.map(m=>m.id + (m.__broken?'!':'')).join(',')].join('|');
+  const key = [state.dest, LIVE.ver, state.fromHere, NOW, state.mode, state.timeMode, state.arrive, state.depart, JSON.stringify(state.modules), MODULES.map(m=>m.id + (m.__broken?'!':'')).join(',')].join('|');
   if(key === SYNC_KEY) return; SYNC_KEY = key;
   rebuildOptions(); CTX.key = null;   // варианты пересобраны (другое место) — подготовить их заново
   if(!arriveMode()){ setCtx(dep() + TRIP_ANCHOR); return; }
@@ -430,7 +438,7 @@ var APP_READY = false;   // до первого экрана модули тол
 function refreshModules(){ SYNC_KEY = null; CTX.key = null; if(FC) for(const x in FC) delete FC[x]; if(APP_READY) render(); }
 const usable = m => m && state.modules[m.id] && !m.__broken;
 // включён, не сломан и включены модули, без которых он не нужен (requires)
-const activeModules = () => MODULES.filter(m => usable(m) && (m.requires || []).every(id => usable(MODULES.find(x => x.id === id))));
+const activeModules = () => MODULES.filter(m => usable(m) && !(m.demo && isLive(state.dest)) && (m.requires || []).every(id => usable(MODULES.find(x => x.id === id))));
 const facts = m => (CTX.mods && CTX.mods[m.id]) || {};
 // Модуль может опереться на другой включённый модуль (через requires): use('roads').at(T)
 // Модуль опирается на другой только через this.use(id) и только если объявил его в requires
@@ -670,7 +678,7 @@ registerModule({
 });
 // ---- Погода в пути. В приложении данные — из погодного сервиса; в прототипе: дождь сегодня 8:40–13:00
 registerModule({
-  id:'weather', icon:'Дождь', name:'Погода в пути', desc:'Дождь и гололёд — в прогнозе и подсказках', where:'Учитывается во времени пешком', on:true,
+  id:'weather', demo:true, icon:'Дождь', name:'Погода в пути', desc:'Дождь и гололёд — в прогнозе и подсказках', where:'Учитывается во времени пешком', on:true,
   data:{ rain:[8*60+40, 13*60] },
   context(T){ const [a, b] = this.data.rain; return { rain: T + 25 > a && T - 12 < b, from:a }; },   // поездка ~[T−12; T+25] задевает дождь
   legFactor(l, f){ return f.rain && l.type==='walk' ? 1.06 : 1; },                                       // пешком на 6% дольше
@@ -679,12 +687,12 @@ registerModule({
 });
 // ---- Загруженность вагонов. В приложении — данные о загрузке поездов; в прототипе: утром в 8:30–8:50 полные
 registerModule({
-  id:'crowd', requires:['metro'], icon:'Толпа', name:'Загруженность вагонов', desc:'Когда в поездах свободнее', where:'Подсказка в шаге метро', on:true,
+  id:'crowd', demo:true, requires:['metro'], icon:'Толпа', name:'Загруженность вагонов', desc:'Когда в поездах свободнее', where:'Подсказка в шаге метро', on:true,
   stepHints(l, t){ return l.type==='metro' && t >= 8*60+25 && t < 8*60+55 ? [{ icon:'Толпа', text:'в 8:30–8:50 вагоны полные — в первые вагоны свободнее не будет' }] : []; }
 });
 // ---- Кофе по пути. В приложении — кофейни из поиска мест; в прототипе — две точки
 registerModule({
-  id:'coffee', requires:['walk'], icon:'Кофе', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'Видно «По пути» на прогулке', on:false,
+  id:'coffee', demo:true, requires:['walk'], icon:'Кофе', name:'Кофе по пути', desc:'Кофейни на прогулке', where:'Видно «По пути» на прогулке', on:false,
   places:{ walk:[{e:'Кофе', n:'Кофе с собой', d:'у Измайловской', at:[37.7705,55.7883], extra:'+2 мин'}, {e:'Кофе', n:'Кофейня', d:'у Семёновской', at:[37.7224,55.7838], extra:'+3 мин'}],
            stroll:[{e:'Кофе', n:'Кофе с собой', d:'у Электрозаводской', at:[37.7040,55.7815], extra:'+2 мин'}],
            loop:[{e:'Кофе', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'}] },
@@ -723,7 +731,7 @@ const MET = (() => {
   return { s, adj, lines: METRO.l };
 })();
 const LIVE_KEY = 'gis.live', WALK_MPM = 80;   // скорость пешком: 80 м/мин ≈ 4,8 км/ч (сверено с Яндексом на 3 маршрутах); свой темп — модуль «Мой темп»
-const LIVE = { home:null, places:{}, routes:{}, ver:0, pending:{} };
+const LIVE = { home:null, places:{}, routes:{}, ver:0, pending:{}, here:null, hereRoutes:{} };   // here — «где я сейчас» (только в памяти)
 function loadLive(){ let d; try{ d = JSON.parse(localStorage.getItem(LIVE_KEY) || 'null'); }catch(e){ d = null; }
   if(!d || typeof d !== 'object') return;
   const okAt = a => Array.isArray(a) && a.length === 2 && a.every(Number.isFinite) && a[0] > 36 && a[0] < 39 && a[1] > 55 && a[1] < 57;
@@ -741,7 +749,26 @@ function addLivePlace(k, p){ const sub = typeof p.sub === 'string' ? p.sub.slice
 const kmText = m => m < 1000 ? Math.round(m / 10) * 10 + ' м' : (m / 1000).toFixed(m < 10000 ? 1 : 0).replace('.', ',') + ' км';
 const isLive = k => !!(k && PLACES[k] && PLACES[k].live);
 // Точка «откуда» на карте: живой дом — для живых мест и главного; демо-дом — для демо-маршрутов
-const startPt = () => LIVE.home && state.mode !== 'walk' && (!state.dest || isLive(state.dest)) ? LIVE.home.at : HOME;
+const startPt = () => state.mode !== 'walk' && (!state.dest || isLive(state.dest)) && (state.fromHere && LIVE.here ? LIVE.here.at : LIVE.home && LIVE.home.at) || HOME;
+const startName = () => state.fromHere && LIVE.here ? 'Ты здесь' : LIVE.home ? 'Дом' : 'Ты здесь';
+
+/* ----- Геолокация: только по действию человека (кнопка «Где я сейчас», старт пути) ----- */
+const GEO = { pos:null, acc:null, at:0, watch:null, denied:false };
+const geoFix = p => { GEO.pos = [+p.coords.longitude.toFixed(6), +p.coords.latitude.toFixed(6)]; GEO.acc = p.coords.accuracy; GEO.at = Date.now(); };
+function geoOnce(ms = 10000){ return new Promise((res, rej) => { if(!navigator.geolocation) return rej(new Error('нет геолокации'));
+  navigator.geolocation.getCurrentPosition(p => { geoFix(p); res(GEO.pos); }, e => { if(e.code === 1) GEO.denied = true; rej(e); }, { enableHighAccuracy:true, timeout:ms, maximumAge:30000 }); }); }
+function geoWatch(on){ if(!navigator.geolocation) return;
+  if(on && GEO.watch == null) GEO.watch = navigator.geolocation.watchPosition(geoFix, e => { if(e.code === 1) GEO.denied = true; }, { enableHighAccuracy:true, maximumAge:5000 });
+  if(!on && GEO.watch != null){ navigator.geolocation.clearWatch(GEO.watch); GEO.watch = null; } }
+// «Откуда»: дом или где я сейчас (маршрут от текущей точки не сохраняется — он на один раз)
+async function useHere(){ const k = state.dest; if(!isLive(k)) return;
+  state.locating = true; render();
+  try{ const p = await geoOnce(); LIVE.here = { at:p }; LIVE.hereRoutes = {}; state.fromHere = true; LIVE.ver++;
+    state.locating = false; render(); showPlace();
+    await buildLiveRoute(k); if(state.dest === k){ state.sel = goKeys()[0] || null; render(); } }
+  catch(e){ state.locating = false; state.fromHere = false;
+    toast(GEO.denied ? 'Доступ к геолокации запрещён — считаю от дома. Разрешить можно в настройках браузера' : 'Не получилось определить, где ты — считаю от дома'); render(); } }
+function useHome(){ state.fromHere = false; SYNC_KEY = null; render(); showPlace(); }
 
 /* ----- Поиск мест (Nominatim) ----- */
 async function geocode(q){
@@ -799,15 +826,17 @@ function metroPath(wFrom, wTo){   // wFrom/wTo: {станция: минуты п
   return { total: best, first: chain[0].i, last: end, segs: segs.filter(s => s.transfer || s.st.length > 1 || segs.length === 1) }; }
 // кандидаты — ближайшие станции по прямой (до 2,5 км, не меньше трёх)
 function nearStations(p){ const xs = MET.s.map(s => ({ i:s.i, d:dist(p, s.at) })).sort((a, b) => a.d - b.d);
-  return xs.filter((x, k) => x.d < 2500 || k < 3).slice(0, 10); }
+  return xs.filter((x, k) => x.d < 2500 || (k < 3 && x.d < 5000)).slice(0, 10); }
 
 /* ----- Построить маршрут до места k (асинхронно, результат — в LIVE.routes[k]) ----- */
 async function buildLiveRoute(k){
-  if(!LIVE.home || !isLive(k)) return null;
-  if(LIVE.pending[k]) return LIVE.pending[k];
+  const here = !!(state.fromHere && LIVE.here), pk = k + (here ? '@' : '');
+  if(!(here || LIVE.home) || !isLive(k)) return null;
+  if(LIVE.pending[pk]) return LIVE.pending[pk];
   const run = (async () => {
-    const A = LIVE.home.at, B = PLACES[k].at, direct = dist(A, B), R = { from: homeSig(), at: Date.now(), exact:true };
+    const A = here ? LIVE.here.at : LIVE.home.at, B = PLACES[k].at, direct = dist(A, B), R = { from: here ? 'here' : homeSig(), at: Date.now(), exact:true };
     const nA = nearStations(A), nB = nearStations(B);
+    if(!nA.length && direct > 4500){ R.none = 'Рядом с тобой нет метро, а пешком далеко — маршрут посчитаю от дома'; (here ? LIVE.hereRoutes : LIVE.routes)[k] = R; LIVE.ver++; SYNC_KEY = null; return R; }
     const [tA, tB] = await Promise.all([walkTable(A, nA.map(x => MET.s[x.i].at)), walkTable(B, nB.map(x => MET.s[x.i].at))]);
     const wFrom = {}, wTo = {}; nA.forEach((x, j) => wFrom[x.i] = tA.m[j] / WALK_MPM); nB.forEach((x, j) => wTo[x.i] = tB.m[j] / WALK_MPM);
     const mp = direct > 900 ? metroPath(wFrom, wTo) : null;
@@ -815,9 +844,13 @@ async function buildLiveRoute(k){
       const [w1, w2] = await Promise.all([walkPath(A, MET.s[mp.first].at), walkPath(MET.s[mp.last].at, B)]);
       R.metro = { w1, w2, segs: mp.segs }; R.exact = R.exact && w1.exact && w2.exact; }
     if(direct < 4500){ const w = await walkPath(A, B); R.walk = w; R.exact = R.exact && w.exact; }
-    if(!R.metro && !R.walk) R.walk = await walkPath(A, B);
-    LIVE.routes[k] = R; LIVE.ver++; saveLive(); SYNC_KEY = null; return R; })();
-  LIVE.pending[k] = run; try{ return await run; } finally{ delete LIVE.pending[k]; } }
+    if(!R.metro && !R.walk && direct < 15000) R.walk = await walkPath(A, B);
+    if(!R.metro && !R.walk) R.none = 'Отсюда маршрута на метро нет';
+    if(here) LIVE.hereRoutes[k] = R; else { LIVE.routes[k] = R; saveLive(); }
+    LIVE.ver++; SYNC_KEY = null; return R; })();
+  LIVE.pending[pk] = run; try{ return await run; } finally{ delete LIVE.pending[pk]; } }
+const liveRoute = k => state.fromHere && LIVE.here ? LIVE.hereRoutes[k] : LIVE.routes[k];
+const livePending = k => LIVE.pending[k + (state.fromHere && LIVE.here ? '@' : '')];
 
 /* ----- Модуль: варианты для живых мест ----- */
 const inflect = name => name.split(' ').map(w => w.replace(/ая$/, 'ую').replace(/ия$/, 'ию')).join(' ');   // «Большая кольцевая линия» → «Большую кольцевую линию»
@@ -825,7 +858,7 @@ const LIVE_PERIODS = [[0,60,'поздно вечером',7],[60,330,'ночью
 const livePeriod = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; const p = LIVE_PERIODS.find(p => m >= p[0] && m < p[1]); return { key:p[0], name:p[2], iv:p[3] }; };
 const LIVE_COMMON = { verb:'Выходи', riskWord:'есть риск', varyWord:'бывает дольше', delayWhy:'если поезд задержится', tail:[0.03, 3, 10] };
 function liveOptions(k){
-  const R = LIVE.routes[k]; if(!R) return {};
+  const R = liveRoute(k); if(!R || R.none) return {};
   const o = {}, approx = R.exact ? '' : ' · время примерное', pl = PLACES[k];
   const wl = (m, extra) => { const t = m / WALK_MPM; return Object.assign({ type:'walk', lo: +(t * 0.92).toFixed(1), hi: +(t * 1.12 + 0.5).toFixed(1) }, extra); };
   if(R.metro){ const M = R.metro, first = MET.s[M.segs[0].st[0]], legs = [];
@@ -851,8 +884,8 @@ function liveOptions(k){
   return o; }
 registerModule({ id:'live', group:'mode', live:true, icon:'Пин', name:'Маршруты по Москве', desc:'Метро и пешком до любого места — по карте OpenStreetMap', where:'Способы для мест из поиска', on:true,
   _k:null, _ver:-1, _o:{},
-  get options(){ const k = isLive(state.dest) ? state.dest : null;
-    if(k !== this._k || LIVE.ver !== this._ver){ this._k = k; this._ver = LIVE.ver; this._o = k ? liveOptions(k) : {}; }
+  get options(){ const k = isLive(state.dest) ? state.dest + (state.fromHere && LIVE.here ? '@' : '') : null;
+    if(k !== this._k || LIVE.ver !== this._ver){ this._k = k; this._ver = LIVE.ver; this._o = k ? liveOptions(state.dest) : {}; }
     return this._o; },
   prepare(T){
     const P = livePeriod(T), peak = P.iv === 2, morningPeak = P.key === 420, iv = P.iv || 7;
@@ -956,16 +989,16 @@ const isSaved = () => state.templates.some(t => t.dest===state.dest && t.mode===
 /* ----- Главный экран: поиск. Под ним — мои маршруты и недавние (если есть) ----- */
 // План шаблона на сегодня: прогноз и итог, как если бы человек выбрал это время; выбор затем возвращается
 function tplPlan(t){
-  const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode };
-  Object.assign(state, { dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
+  const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode, fromHere:state.fromHere };
+  Object.assign(state, { fromHere:false, dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
   syncCtx();
   const r = OPTIONS[t.mode] ? { f: forecast(t.mode), v: verdict(t.mode), name: OPTIONS[t.mode].name, verb: goVerb(t.mode), why: collect('banners').map(b => b.title) } : null;
   Object.assign(state, keep); SYNC_KEY = null; syncCtx();
   return r; }
 function tplTime(t){   // «выйди до 8:23» для шаблона; не сегодня — когда понадобится
   if(t.arrive != null && !tplToday(t)) return `<div class="m">к ${fmt(t.arrive)}</div><b>${nextDay(t)}</b>`;
-  const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode };
-  Object.assign(state, { dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
+  const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode, fromHere:state.fromHere };
+  Object.assign(state, { fromHere:false, dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
   syncCtx();
   if(!OPTIONS[t.mode]){ Object.assign(state, keep); SYNC_KEY = null; syncCtx(); return `<div class="m">способ</div><b>выключен</b>`; }
   const f = forecast(t.mode), v = verdict(t.mode);
@@ -1042,10 +1075,14 @@ function findList(){ const r = document.getElementById('res'); if(r) r.innerHTML
 V.place = () => {
   if(!state.dest){ state.view = 'home'; return V.home(); }
   const p = PLACES[state.dest];   // только место и решение «едем?» — способы со временем на следующем шаге
-  const wait = p.live && !LIVE.routes[state.dest];
-  return `<h1 tabindex="-1">${p.name}</h1><div class="sub" style="margin-bottom:16px">${p.sub}${p.km ? ' · ' + p.km + ' отсюда' : ''}</div>
-   ${wait ? `<div class="m" role="status" style="margin-bottom:12px">${LIVE.pending[state.dest] ? 'Считаю маршрут…' : 'Маршрут не построился — проверь интернет'}</div>` : ''}
-   <div class="btns"><button class="btn p press" ${wait ? (LIVE.pending[state.dest] ? 'disabled' : `onclick="retryLive()"`) : `onclick="go('compare')"`}>${wait && !LIVE.pending[state.dest] ? 'Попробовать ещё раз' : 'Маршрут'}</button></div>`;
+  const R = p.live ? liveRoute(state.dest) : null, busy = p.live && (state.locating || !!livePending(state.dest)), wait = p.live && (!R || busy), none = R && R.none && !busy;
+  const from = p.live && LIVE.home ? `<div class="chips" role="group" aria-label="Откуда" style="margin-bottom:12px"><span class="m" style="align-self:center;margin-right:4px">Откуда:</span>
+     <button class="chip press ${state.fromHere ? '' : 'sel'}" aria-pressed="${!state.fromHere}" onclick="useHome()">${ic('Дом', 16)} Дом</button>
+     <button class="chip press ${state.fromHere ? 'sel' : ''}" aria-pressed="${!!state.fromHere}" onclick="useHere()">${ic('Навигатор', 16)} Где я сейчас</button></div>` : '';
+  const status = state.locating ? 'Определяю, где ты…' : busy ? 'Считаю маршрут…' : none ? esc(R.none) : wait ? 'Маршрут не построился — проверь интернет' : '';
+  return `<h1 tabindex="-1">${p.name}</h1><div class="sub" style="margin-bottom:16px">${p.sub}${p.km && !state.fromHere ? ' · ' + p.km + ' от дома' : ''}</div>
+   ${from}${status ? `<div class="m" role="status" style="margin-bottom:12px">${status}</div>` : ''}
+   <div class="btns">${none ? `<button class="btn p press" onclick="useHome()">Посчитать от дома</button>` : `<button class="btn p press" ${wait ? (busy ? 'disabled' : `onclick="retryLive()"`) : `onclick="go('compare')"`}>${wait && !busy ? 'Попробовать ещё раз' : 'Маршрут'}</button>`}</div>`;
 };
 /* ----- Способы: та же шторка раскрыта ----- */
 V.compare = () => {
@@ -1320,7 +1357,7 @@ function saveReverse(yes){
 function useTemplate(i){ const t = state.templates[i];
   if(t && isLive(t.dest) && !LIVE.routes[t.dest]){ if(!LIVE.home){ startPickHome(); return; } toast('Считаю маршрут…'); buildLiveRoute(t.dest).then(() => useTemplate(i)).catch(() => toast('Маршрут не построился — проверь интернет')); return; }
   if(t.reverse){ toast('В прототипе обратный путь пока не строится'); return; }
-  Object.assign(state, { dest:t.dest, mode:'hurry', timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? t.arrive : state.arrive, depart:NOW });
+  Object.assign(state, { fromHere:false, dest:t.dest, mode:'hurry', timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? t.arrive : state.arrive, depart:NOW });
   syncCtx(); state.sel = OPTIONS[t.mode] && !verdict(t.mode).closed ? t.mode : null;
   if(!state.sel){ toast('Сохранённый способ сейчас недоступен — выбери другой'); go('compare'); return; }
   // в одно касание: сразу маршрут сохранённым способом; «назад» — к остальным способам
@@ -1328,7 +1365,8 @@ function useTemplate(i){ const t = state.templates[i];
 function retryLive(){ const k = state.dest; if(!isLive(k)) return; buildLiveRoute(k).then(() => { if(state.dest === k && state.view === 'place') render(); }).catch(() => {}); render(); }
 function openPlace(k){
   if(isLive(k) && !LIVE.home){ toast('Сначала укажи, откуда ты обычно выходишь'); state.view = state.history.pop() || 'home'; startPickHome(); return; }
-  if(isLive(k) && !LIVE.routes[k]) buildLiveRoute(k).then(() => { if(state.dest === k && state.view === 'place'){ state.sel = goKeys()[0] || null; render(); } }).catch(() => { if(state.dest === k && state.view === 'place') render(); });
+  if(state.dest !== k) state.fromHere = false;
+  if(isLive(k) && !liveRoute(k)) buildLiveRoute(k).then(() => { if(state.dest === k && state.view === 'place'){ state.sel = goKeys()[0] || null; render(); } }).catch(() => { if(state.dest === k && state.view === 'place') render(); });
   if(!PLACES[k].ok){ toast('В прототипе маршруты есть только до м. Бауманская'); return; }
   state.dest = k; state.mode = 'hurry'; syncCtx(); state.sel = goKeys()[0] || null; state.timeMode = 'depart'; state.depart = NOW; state.q = '';
   state.recents = [k].concat(state.recents.filter(x=>x!==k)).slice(0,3);
@@ -1455,7 +1493,7 @@ function resetMod(id){ const m = MODULES.find(x => x.id === id); if(m && m.store
 // Очистить «Недавние»: места пропадают из списка, сохранённые маршруты и визиты остаются
 function clearRecents(){ state.recents = []; restart(); toast('Недавние очищены'); say('Недавние очищены'); }
 // Демо: передвинуть «сейчас» и день недели — всё пересчитывается
-function setDemoNow(t, day){ NOW = t; TODAY = day; state.depart = NOW; document.getElementById('clock').textContent = fmt(NOW); refreshModules(); }
+function setDemoNow(t, day){ REAL_CLOCK = false; NOW = t; TODAY = day; state.depart = NOW; document.getElementById('clock').textContent = fmt(NOW); refreshModules(); }
 // «На главный» из любой точки: домик справа в шапке экрана. Не показываем, где «назад» и так ведёт на главный, и на выборе времени
 function addHomeBtn(){
   if(['home','find','time','place','done'].includes(state.view)) return;
@@ -1565,7 +1603,7 @@ function showRoute(k){
     const fc = t => ({type:'FeatureCollection', features: routeLegs.filter(x=>x.l.type===t).map(x=>({type:'Feature',geometry:{type:'LineString',coordinates:x.c},properties: HEX.test(x.l.colour || '') ? { c: x.l.colour } : {}}))});
     map.getSource('r-walk').setData(fc('walk')); map.getSource('r-metro').setData(fc('metro')); map.getSource('r-car').setData(fc('car'));
     clearMarkers();
-    addMarker(pinEl('Дом','dark'), startPt());
+    addMarker(pinEl(startName(),'dark'), startPt());
     const pl = PLACES[state.dest]; if(!o.noTarget && pl) addMarker(pinEl(pl.pin || pl.name,'m3'), pl.at);
     routeLegs.filter(x=>x.l.model==='transfer').forEach(x=>addMarker(pinEl('Пересадка · ' + x.l.station,'poi-pin'), x.l.at));
     routeLegs.filter(x=>x.l.stops).forEach(x=>x.l.stops.slice(1,-1).forEach(q=>{ const d=document.createElement('div'); d.className='st-dot'; addMarker(d, q.at, 'center'); }));
@@ -1577,7 +1615,7 @@ function showRoute(k){
 function clearRoute(){ showRoute.t = (showRoute.t||0)+1; routeKey = null; if(!mapOk) return;
   const e = {type:'FeatureCollection',features:[]}; ['r-walk','r-metro','r-car'].forEach(id=>map.getSource(id).setData(e)); clearMarkers(); }
 function showHome(){ clearRoute(); if(!mapOk) return; addMarker(pinEl(LIVE.home ? 'Дом' : 'Ты здесь','dark'), startPt()); map.flyTo({center:startPt(), zoom:13.6, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
-function showPlace(){ clearRoute(); const pl = PLACES[state.dest]; if(!mapOk || !pl) return; addMarker(pinEl(LIVE.home && pl.live ? 'Дом' : 'Ты здесь','dark'), startPt()); addMarker(pinEl(pl.pin || pl.name,'m3'), pl.at);
+function showPlace(){ clearRoute(); const pl = PLACES[state.dest]; if(!mapOk || !pl) return; addMarker(pinEl(pl.live ? startName() : 'Ты здесь','dark'), startPt()); addMarker(pinEl(pl.pin || pl.name,'m3'), pl.at);
   map.fitBounds(new maplibregl.LngLatBounds(startPt(), startPt()).extend(pl.at), {padding:{top:120,left:50,right:50,bottom:300}, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fitAll(){
@@ -1671,14 +1709,24 @@ async function startTrip(demo){
   if(state.sel !== k || state.view !== view0){ trip.on = false; render(); return; }   // ушёл с экрана — поездку не начинаем (и такси без подтверждения не вызываем)
   const o = JSON.parse(JSON.stringify(OPTIONS[k]));      // поездка идёт на своей копии: выключение модуля её не ломает
   trip.k = k; trip.o = o; state.modAns = {};
+  // Живой маршрут и человек у его начала — ведём по настоящей точке и часам; иначе — демонстрация, как раньше
+  trip.real = false;
+  if(isLive(state.dest) && !demo && REAL_CLOCK && navigator.geolocation){
+    if(btn) btn.textContent = 'Ищу, где ты…';
+    try{ const p = await geoOnce(8000); const s0 = routeLegs[0] && routeLegs[0].c[0];
+      if(s0 && dist(p, s0) < 1500){ trip.real = true; geoWatch(true); }
+      else toast('Ты не у начала маршрута — покажу, как будет, в ускоренном виде'); }
+    catch(e){ toast(GEO.denied ? 'Без геолокации — покажу путь по времени' : 'Не нашёл, где ты — покажу путь по времени'); }
+    if(state.sel !== k){ trip.on = false; geoWatch(false); render(); return; } }
   if(!demo && o.startToast) toast(o.startToast);
   document.getElementById('topbar').classList.add('hide'); document.getElementById('topbar').inert = true;
   sheet.inert = true; snap('hidden'); document.getElementById('guide').classList.add('on');
   document.getElementById('attrib').classList.add('guiding');
-  Object.assign(trip, { t:0, buzzed:false, lastLeg:-1, smoothBrg: mapOk ? map.getBearing() : 0, lastSet:0, lastHtml:'' });
+  Object.assign(trip, { t:0, buzzed:false, lastLeg:-1, smoothBrg: mapOk ? map.getBearing() : 0, lastSet:0, lastHtml:'', li:0, legT0:0, t0:Date.now(), late:null });
+  document.getElementById('speedBtn').hidden = trip.real;
   trip.legs = o.legs.map((l,i)=>legMin(k,i));
   { let t0 = tripStart(k); trip.hints = o.legs.map((l,i) => { const h = collect('stepHints', legView(k, l, 'guide'), t0); t0 += trip.legs[i]; return h; }); }   // подсказки модулей на каждый шаг
-  trip.total = trip.legs.reduce((s,m)=>s+m,0); trip.startAt = tripStart(k); trip.endAt = trip.startAt + trip.total;
+  trip.total = trip.legs.reduce((s,m)=>s+m,0); trip.startAt = trip.real ? Math.floor(realNowMin()) : tripStart(k); trip.endAt = trip.startAt + trip.total;
   document.getElementById('geta').textContent = fmt(trip.endAt);
   const goal = document.getElementById('ggoal');
   if(arriveMode() && !o.noTarget){ const sp = state.arrive - trip.endAt;
@@ -1689,10 +1737,46 @@ async function startTrip(demo){
   let last = performance.now();
   const tick = now => { if(!trip.on) return;
     const dt = Math.min(0.1, (now-last)/1000); last = now;   // после фоновой вкладки не перескакиваем
-    trip.t += dt/SIM_SECONDS_PER_MIN*trip.speed; update(dt);
+    if(trip.real) realStep(); else trip.t += dt/SIM_SECONDS_PER_MIN*trip.speed;
+    update(dt);
     if(trip.t>=trip.total){ finish(); return; } trip.raf=requestAnimationFrame(tick); };
   trip.raf = requestAnimationFrame(tick);
 }
+/* ----- Ведение по настоящей точке (живые маршруты) -----
+   Пешком — по GPS: проекция точки на линию шага. Под землёй GPS нет — по часам; выйти из шага раньше,
+   если точка уже у следующего пешего участка; задержались дольше 1,6 плана — идём дальше сами. */
+function project(L, p){   // ближайшая точка линии шага: доля пути и расстояние, м
+  const c = L.c; let best = { d:Infinity, f:0 }, acc = 0;
+  for(let i = 1; i < c.length; i++){ const a = c[i-1], b = c[i], seg = L.seg[i-1] || 0;
+    const kx = Math.cos(a[1] * Math.PI / 180), ax = (b[0]-a[0]) * kx, ay = b[1]-a[1], px = (p[0]-a[0]) * kx, py = p[1]-a[1];
+    const u = ax || ay ? Math.max(0, Math.min(1, (px*ax + py*ay) / (ax*ax + ay*ay))) : 0;
+    const q = [a[0] + (b[0]-a[0]) * u, a[1] + (b[1]-a[1]) * u], d = dist(p, q);
+    if(d < best.d) best = { d, f: L.tot ? (acc + seg * u) / L.tot : 1 };
+    acc += seg; }
+  return best; }
+function realStep(){
+  const o = trip.o, now = (Date.now() - trip.t0) / 60000, fresh = GEO.pos && Date.now() - GEO.at < 20000 && (GEO.acc == null || GEO.acc < 120);
+  if(fresh) for(let j = o.legs.length - 1; j > trip.li; j--){   // уже у следующего пешего участка — шаги до него пройдены
+    if(o.legs[j].type !== 'walk' || !routeLegs[j]) continue; const pr = project(routeLegs[j], GEO.pos);
+    if(pr.d < 50 && (pr.f > 0.05 || j === trip.li + 1)){ trip.li = j; trip.legT0 = now; break; } }
+  for(;;){ const li = trip.li, l = o.legs[li], lm = trip.legs[li], el = now - trip.legT0, lastLeg = li === o.legs.length - 1;
+    let f;
+    if(l.type === 'walk' && fresh && routeLegs[li]){ const pr = project(routeLegs[li], GEO.pos); f = pr.d < 80 ? pr.f : Math.min(0.99, el / lm); if(pr.d < 80 && pr.f > 0.97) f = 1; }
+    else f = l.type === 'walk' ? Math.min(1, el / lm) : (el > lm * 1.6 ? 1 : Math.min(0.99, el / lm));
+    if(f >= 1 && !lastLeg){ trip.li++; trip.legT0 = now; continue; }
+    trip.t = trip.legs.slice(0, li).reduce((a, b) => a + b, 0) + Math.min(1, f) * lm;
+    if(f >= 1 && lastLeg) trip.t = trip.total;
+    return; } }
+// Успеваешь ли: прогноз прибытия от настоящего времени и пройденной части; стало «не успеть» — сказать один раз
+function realGoal(){
+  const o = trip.o, nowR = realNowMin(), eta = nowR + Math.max(0, trip.total - trip.t);
+  document.getElementById('geta').textContent = fmt(Math.round(eta));
+  if(!(arriveMode() && !o.noTarget)) return;
+  const sp = state.arrive - eta, st = sp >= 2 ? 'g' : sp >= 0 ? 'a' : 'r', goal = document.getElementById('ggoal');
+  goal.className = 'pill ' + st; goal.hidden = false;
+  goal.textContent = st === 'g' ? 'успеваешь к ' + fmtD(state.arrive) + ' · запас ' + dur(Math.floor(sp)) : st === 'a' ? 'к ' + fmtD(state.arrive) + ' — впритык, не задерживайся' : 'к ' + fmtD(state.arrive) + ' уже не успеть · опоздание ~' + dur(Math.ceil(-sp));
+  if(trip.late !== st){ if(st === 'r' && trip.late){ try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){} say('К ' + fmt(state.arrive) + ' уже не успеваешь, опоздание примерно ' + Math.ceil(-sp) + ' минут'); }
+    else if(st === 'a' && trip.late === 'g') say('Впритык — не задерживайся'); trip.late = st; } }
 const KIND = { walk:'Пешком', car:'В пути', metro:'Метро' };
 // Подсказка модулей по ходу шага (следующий поворот и т.п.); пересчёт — когда пройдено ещё 0,5% шага
 function guideHints(li, l, f){ const key = li + ':' + Math.floor(f * 200); if(trip.gkey === key) return trip.ghtml || ''; trip.gkey = key;
@@ -1715,7 +1799,8 @@ function update(dt){
   for(; li<o.legs.length-1; li++){ const m = trip.legs[li]; if(trip.t < acc+m) break; acc+=m; }
   const l = o.legs[li], lm = trip.legs[li], f = Math.min(1,(trip.t-acc)/lm), leg = routeLegs[li];
   const left = Math.max(0, Math.ceil(trip.total-trip.t));
-  document.getElementById('clock').textContent = fmt(Math.floor(trip.startAt + trip.t));
+  document.getElementById('clock').textContent = fmt(Math.floor(trip.real ? realNowMin() : trip.startAt + trip.t));
+  if(trip.real && (!trip.goalAt || performance.now() - trip.goalAt > 1000)){ trip.goalAt = performance.now(); realGoal(); }
   document.getElementById('gleft').textContent = left ? 'ещё ' + dur(left) : 'почти на месте';
   let html, alert=false;
   if(l.type==='metro'){
@@ -1748,14 +1833,14 @@ function update(dt){
 }
 function toggleSpeed(){ trip.speed = trip.speed===1 ? 5 : 1; document.getElementById('speedBtn').textContent = 'Демо: ×' + trip.speed; }
 function stopTrip(){
-  trip.on=false; cancelAnimationFrame(trip.raf);
+  trip.on=false; cancelAnimationFrame(trip.raf); geoWatch(false); trip.real = false; document.getElementById('speedBtn').hidden = false;
   if(trip.me){ trip.me.remove(); trip.me=null; } if(trip.tip){ trip.tip.remove(); trip.tip=null; } if(trip.mark){ trip.mark.remove(); trip.mark=null; } trip.markId=''; trip.gkey='';
   trip.speed = 1; trip.smoothBrg = 0; document.getElementById('speedBtn').textContent = 'Демо: ×1';
   document.getElementById('guide').classList.remove('on'); document.getElementById('attrib').classList.remove('guiding');
   const tb = document.getElementById('topbar'); tb.classList.remove('hide'); tb.inert = false; sheet.inert = false;
   if(mapOk) map.getSource('r-me').setData({type:'FeatureCollection',features:[]});
 }
-function finish(){ stopTrip(); document.getElementById('clock').textContent = fmt(trip.endAt);
+function finish(){ const wasReal = trip.real; stopTrip(); document.getElementById('clock').textContent = fmt(wasReal ? Math.floor(realNowMin()) : trip.endAt);
   if(state.dest) state.visits[state.dest] = (state.visits[state.dest]||0) + 1;
   state.history=[]; state.view='done'; render('in'); snap('half'); if(mapOk) map.easeTo({pitch:30, zoom:16, bearing:0, duration:reduced?0:1300}); }
 // Подпись кнопки остановки: пешком — «Закончить путь», прогулка — «Закончить прогулку» (задаёт способ, stopLabel)
@@ -1784,6 +1869,12 @@ function loadApp(){ let d; try{ d = JSON.parse(localStorage.getItem(APP_KEY) || 
 loadLive(); loadApp();
 for(const id in state.modules) if(!MODULES.some(m => m.id === id)) delete state.modules[id];   // следы удалённых модулей
 APP_READY = true; warmTemplates();
+document.getElementById('clock').textContent = fmt(NOW);
+// настоящие часы: раз в минуту — новое «сейчас» (выход «сейчас» сдвигается вместе с ним)
+setInterval(() => { if(!REAL_CLOCK) return; const m = Math.floor(realNowMin()); if(m === NOW) return;
+  const wasNow = state.depart === NOW; NOW = m; TODAY = realToday(); if(wasNow) state.depart = NOW;
+  if(trip.on) return; document.getElementById('clock').textContent = fmt(NOW);
+  if(['home', 'place', 'compare', 'route'].includes(state.view)) render(); }, 15000);
 document.addEventListener('keydown', e => { if(e.key !== 'Escape' || e.defaultPrevented || trip.on) return;
   if(state.view === 'save' && state.justSaved){ state.justSaved = null; back(); return; }
   if(state.history.length && state.view !== 'home') back(); });

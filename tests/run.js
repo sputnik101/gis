@@ -656,13 +656,42 @@ test('живые: на маршруте — шаги «Переход», лин�
     const ok = /Переход на/.test(t) && /Метро до Фонвизинская|Метро до/.test(t) && OPTIONS.live.legs.filter(l => l.colour).every(l => /^#/.test(l.colour));
     return ok || t.slice(0, 400); }); });
 
+const stubGeo = (p, lon, lat) => p.evaluate(([lon, lat]) => { window.__geo = [lon, lat];
+  const fix = () => ({ coords:{ longitude: window.__geo[0], latitude: window.__geo[1], accuracy:10 } });
+  Object.defineProperty(navigator, 'geolocation', { configurable:true, value:{ getCurrentPosition(ok){ setTimeout(() => ok(fix()), 10); }, watchPosition(ok){ const id = setInterval(() => ok(fix()), 200); return id; }, clearWatch(id){ clearInterval(id); } } }); }, [lon, lat]);
+test('живые: «Где я сейчас» — маршрут от текущей точки; шаблоны остаются от дома', async p => {
+  const k = await liveSetup(p, 'Милашенкова 4А'); await stubGeo(p, 37.7799, 55.7877);   // у Измайловской
+  return p.evaluate(async k => { await useHere(); const R = liveRoute(k), first = OPTIONS.live && OPTIONS.live.legs[0].label;
+    useHome(); const home = OPTIONS.live.legs[0].label;
+    return (state.dest === k && /Измайловская/.test(first) && /Щёлковская/.test(home)) || JSON.stringify({ first, home }); }, k); });
+test('живые: «Где я сейчас» из другого города — честно «нет метро», кнопка «от дома»', async p => {
+  await liveSetup(p, 'Милашенкова 4А'); await stubGeo(p, 24.94, 60.17);   // Хельсинки
+  return p.evaluate(async () => { await useHere(); const t = document.body.innerText; return (/нет метро/.test(t) && /Посчитать от дома/.test(t) && !OPTIONS.live) || t.slice(0, 300); }); });
+test('живые: ведение по GPS — идём к метро, шаги сменяются сами, видно «успеваешь/впритык»', async p => {
+  await liveSetup(p, 'Измайловская поликлиника'); await stubGeo(p, 37.8126106, 55.808451);
+  const r = await p.evaluate(async () => { REAL_CLOCK = true; state.timeMode = 'arrive'; state.arrive = Math.floor(realNowMin()) + 60; SYNC_KEY = null;
+    go('compare'); pick('live'); go('route'); await new Promise(r => setTimeout(r, 700)); await startTrip(); await new Promise(r => setTimeout(r, 1500));
+    const a = { real: trip.real, li: trip.li, goal: document.getElementById('ggoal').textContent };
+    const L = routeLegs[0]; window.__geo = L.c[L.c.length - 1];   // дошли до станции
+    await new Promise(r => setTimeout(r, 1500)); a.li2 = trip.li; a.view = document.getElementById('gtop').innerText.slice(0, 60); stopTrip(); return a; });
+  return (r.real && r.li === 0 && r.li2 >= 1 && /успеваешь/.test(r.goal)) || JSON.stringify(r); });
+
+test('живые: в пути стало не успеть — «уже не успеть · опоздание», один раз вибрация', async p => {
+  await liveSetup(p, 'Измайловская поликлиника'); await stubGeo(p, 37.8126106, 55.808451);
+  const r = await p.evaluate(async () => { REAL_CLOCK = true; state.timeMode = 'arrive'; state.arrive = Math.floor(realNowMin()) + 40; SYNC_KEY = null;
+    go('compare'); pick('live'); go('route'); await new Promise(r => setTimeout(r, 700)); await startTrip(); await new Promise(r => setTimeout(r, 1300));
+    const g1 = document.getElementById('ggoal').textContent; let buzz = 0; navigator.vibrate = () => { buzz++; return true; };
+    state.arrive = Math.floor(realNowMin()) + 10; await new Promise(r => setTimeout(r, 2300));
+    const g2 = document.getElementById('ggoal').textContent; await new Promise(r => setTimeout(r, 1200)); stopTrip(); return { g1, g2, buzz }; });
+  return (/успеваешь|впритык/.test(r.g1) && /не успеть/.test(r.g2) && r.buzz === 1) || JSON.stringify(r); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
   for(const t of T.filter(t => !process.env.ONLY || t.name.includes(process.env.ONLY))){
     const p = await b.newPage({ viewport: { width: 430, height: 900 } });
     const errs = []; p.on('pageerror', e => errs.push(e.message));
-    await p.goto(file); await p.waitForTimeout(600);
+    await p.goto(file + '?demo'); await p.waitForTimeout(600);
     let res; try { res = await t.fn(p); } catch(e){ res = e.message.split('\n')[0]; }
     await p.waitForTimeout(100);
     const ok = res === true && !errs.length;
