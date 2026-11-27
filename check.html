@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Своя ГИС · проверка связи</title>
+<style>
+:root{--violet:#6C6CF0;--violet-btn:#5555DD;--lime:#D7F26B;--ink:#1A1640;--ink2:#4A4670;--muted:#6B6787;--bg:#F3F2EE;--line:#E1DED6;--ok:#1A6B40;--okbg:#E3F5EA;--bad:#B3261E;--badbg:#FCE8E6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:24px;margin:0 0 6px}
+.sub{color:var(--ink2);margin:0 0 18px}
+.row{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px}
+.dot{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;background:var(--bg);color:var(--muted)}
+.ok .dot{background:var(--okbg);color:var(--ok)}
+.bad .dot{background:var(--badbg);color:var(--bad)}
+.t{font-weight:600}
+.m{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.st{margin-left:auto;flex:none;font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+.ok .st{color:var(--ok)} .bad .st{color:var(--bad)}
+.sum{border-radius:16px;padding:14px;margin:16px 0;background:#fff;border:1px solid var(--line)}
+button{font:inherit;font-weight:600;border:0;border-radius:14px;padding:13px 18px;cursor:pointer}
+.main{background:var(--violet-btn);color:#fff;width:100%}
+.sec{background:#fff;color:var(--ink);border:1px solid var(--line);width:100%;margin-top:8px}
+.foot{color:var(--muted);font-size:12px;margin-top:18px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Проверка связи</h1>
+  <p class="sub">Проверяем, какие серверы открываются из твоей сети. Займёт до 10 секунд. Потом нажми «Скопировать результат» и пришли его нам.</p>
+  <div id="list"></div>
+  <div class="sum" id="sum">Проверяем…</div>
+  <button class="main" id="copy" disabled>Скопировать результат</button>
+  <button class="sec" onclick="run()">Проверить ещё раз</button>
+  <p class="foot">Проверка ничего не отправляет: страница только пробует открыть каждый адрес и смотрит, ответил ли он.</p>
+</main>
+<script>
+const VER = '0.5.1';
+// что проверяем: [название для человека, зачем это приложению, как проверять, адрес]
+const CHECKS = [
+  ['Само приложение', 'страница и встроенные данные', 'fetch', 'index.html'],
+  ['Библиотека карты — своя копия', 'рисует карту, лежит рядом с приложением', 'fetch', 'vendor/maplibre-gl.js'],
+  ['Библиотека карты — unpkg.com', 'запасной источник той же библиотеки', 'fetch', 'https://unpkg.com/maplibre-gl@4.7.1/package.json'],
+  ['Карта — OpenFreeMap, стиль', 'как выглядит карта', 'fetch', 'https://tiles.openfreemap.org/styles/liberty'],
+  ['Карта — OpenFreeMap, кусочки карты', 'сами улицы и дома', 'fetch', 'https://tiles.openfreemap.org/planet'],
+  ['Карта — OpenStreetMap, картинки', 'возможная запасная карта', 'img', 'https://tile.openstreetmap.org/10/619/320.png'],
+  ['Маршруты пешком', 'routing.openstreetmap.de', 'fetch', 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/37.6176,55.7558;37.6200,55.7570?overview=false'],
+  ['Поиск адресов', 'nominatim.openstreetmap.org', 'fetch', 'https://nominatim.openstreetmap.org/search?q=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&format=json&limit=1'],
+  ['Ориентиры и парки — основной', 'overpass-api.de', 'fetch', 'https://overpass-api.de/api/status'],
+  ['Ориентиры и парки — запасной', 'maps.mail.ru', 'fetch', 'https://maps.mail.ru/osm/tools/overpass/api/status'],
+];
+const TIMEOUT = 8000;
+let results = [];
+
+async function probe(kind, url){
+  const t0 = performance.now(), ms = () => Math.round(performance.now() - t0);
+  if(kind === 'img') return new Promise(res => {
+    const img = new Image(), to = setTimeout(() => { img.src = ''; res({ ok:false, why:'нет ответа за 8 с', ms: ms() }); }, TIMEOUT);
+    img.onload = () => { clearTimeout(to); res({ ok:true, ms: ms() }); };
+    img.onerror = () => { clearTimeout(to); res({ ok:false, why:'не открылось', ms: ms() }); };
+    img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(); });
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), TIMEOUT);
+  try{
+    const r = await fetch(url, { signal: ctl.signal, cache:'no-store' });
+    return r.ok ? { ok:true, ms: ms() } : { ok:false, why:'ответ ' + r.status, ms: ms() };
+  }catch(e){
+    if(ctl.signal.aborted) return { ok:false, why:'нет ответа за 8 с', ms: ms() };
+    // сервер мог ответить, но без разрешения читать ответ — тогда «достучались» проверяем вслепую
+    try{ await fetch(url, { mode:'no-cors', signal: ctl.signal, cache:'no-store' }); return { ok:true, ms: ms(), blind:true }; }
+    catch(e2){ return { ok:false, why: ctl.signal.aborted ? 'нет ответа за 8 с' : 'не открылось', ms: ms() }; }
+  }finally{ clearTimeout(to); }
+}
+
+function row(c, r){
+  const cls = !r ? '' : r.ok ? 'ok' : 'bad', mark = !r ? '…' : r.ok ? '✓' : '✕';
+  const st = !r ? 'проверяем' : r.ok ? 'открылось · ' + r.ms + ' мс' : r.why;
+  return `<div class="row ${cls}"><div class="dot">${mark}</div><div><div class="t">${c[0]}</div><div class="m">${c[1]}</div></div><div class="st">${st}</div></div>`;
+}
+function draw(){ document.getElementById('list').innerHTML = CHECKS.map((c, i) => row(c, results[i])).join(''); }
+
+function summary(){
+  const bad = i => results[i] && !results[i].ok;
+  const lines = [];
+  if(bad(0)) lines.push('Не открывается даже само приложение — похоже, проблема с сетью целиком.');
+  else{
+    const lib = !bad(1) || !bad(2), map = !bad(3) && !bad(4);
+    if(!lib) lines.push('Библиотека карты не загрузилась ни из одного места — карта не появится.');
+    if(!map) lines.push('Сервер карты OpenFreeMap недоступен — карта не появится.' + (bad(5) ? '' : ' Картинки OpenStreetMap открываются — их можно сделать запасной картой.'));
+    if(bad(6)) lines.push('Маршруты пешком не строятся — время будет примерным.');
+    if(bad(7)) lines.push('Поиск адресов недоступен — останутся только станции метро и сохранённые места.');
+    if(bad(8) && bad(9)) lines.push('Ориентиры недоступны — парки для прогулок всё равно есть, они встроены.');
+    if(!lines.length) lines.push('Всё открывается. Если карты всё равно нет — пришли скриншот экрана приложения.');
+  }
+  document.getElementById('sum').innerHTML = lines.join('<br>');
+}
+
+function report(){
+  const c = navigator.connection || {};
+  return ['Своя ГИС ' + VER + ' · проверка связи · ' + new Date().toLocaleString('ru-RU'),
+    'Сеть: ' + (c.type || '—') + ' / ' + (c.effectiveType || '—') + (navigator.onLine ? '' : ' · браузер считает, что офлайн'),
+    'Браузер: ' + navigator.userAgent, '',
+    ...CHECKS.map((ch, i) => { const r = results[i]; return (r && r.ok ? '✓ ' : '✕ ') + ch[0] + ' — ' + (r ? (r.ok ? r.ms + ' мс' + (r.blind ? ' (вслепую)' : '') : r.why) : '—'); })].join('\n');
+}
+
+async function run(){
+  results = []; draw(); document.getElementById('sum').textContent = 'Проверяем…'; document.getElementById('copy').disabled = true;
+  await Promise.all(CHECKS.map(async (c, i) => { results[i] = await probe(c[2], c[3]); draw(); }));
+  summary(); document.getElementById('copy').disabled = false;
+}
+document.getElementById('copy').onclick = async () => {
+  const txt = report(), b = document.getElementById('copy');
+  try{ await navigator.clipboard.writeText(txt); b.textContent = 'Скопировано — вставь в сообщение'; }
+  catch(e){ prompt('Скопируй текст:', txt); }
+  setTimeout(() => b.textContent = 'Скопировать результат', 2500);
+};
+run();
+</script>
+</body>
+</html>

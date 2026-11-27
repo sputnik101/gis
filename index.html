@@ -4,8 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Своя ГИС · живой прототип · Москва</title>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<!-- Библиотека карты: сначала своя копия из vendor/ (в России unpkg.com бывает недоступен), не нашлась — с unpkg -->
+<link rel="stylesheet" href="vendor/maplibre-gl.css" onerror="this.onerror=null;this.href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'">
+<script src="vendor/maplibre-gl.js"></script>
+<script>if(!window.maplibregl) document.write('<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"><\/script>');</script>
 <style>
 :root{
   --violet:#6C6CF0; --violet-btn:#5555DD; --violet-d:#4B4BC8; --lime:#D7F26B;
@@ -218,6 +220,7 @@ svg.i{display:block;flex:none}
 .card .t,.card .m,.pill,.lm,.lmk,.hint,.tx b,.tx .m,.offer .t,.offer .m,h1,.sub{overflow-wrap:anywhere;hyphens:auto}
 .pill{max-width:100%;white-space:normal}
 h1{text-wrap:balance}
+.fallback .fbcheck{display:inline-block;margin-top:6px;color:var(--lime);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .fallback span{background:rgba(26,22,64,.45);padding:8px 16px;border-radius:14px;margin-top:-180px}
 .shake{animation:shake .5s}
 @keyframes shake{0%,100%{transform:none}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
@@ -228,7 +231,7 @@ h1{text-wrap:balance}
 <body>
 <div class="phone" id="phone">
   <div id="map" aria-label="Карта Москвы"></div>
-  <div class="fallback" id="fallback"><span>Карта появится, когда будет интернет</span></div>
+  <div class="fallback" id="fallback"><span>Карта не загрузилась — маршруты и прогулки работают<br><a class="fbcheck" href="check.html" target="_blank" rel="noopener">Проверить связь</a></span></div>
   <div class="status" aria-hidden="true"><span id="clock">8:20</span><span>● ● ▮</span></div>
   <div class="attrib" id="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · маршруты OSRM</div>
 
@@ -262,7 +265,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.5', APP_DATE = '27.11.2026';
+const APP_VERSION = '0.5.1', APP_DATE = '27.11.2026';
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -1877,7 +1880,8 @@ function initMap(){
   try{
     map = new maplibregl.Map({ container:'map', style:'https://tiles.openfreemap.org/styles/liberty', center:[37.74,55.785], zoom:12.3, attributionControl:false });
   }catch(e){ showFallback(); return; }                 // нет WebGL
-  const loadTimer = setTimeout(()=>{ if(!mapOk) showFallback(); }, 15000);
+  const loadTimer = setTimeout(()=>{ if(!mapOk) showFallback(); }, 10000);
+  map.on('error', () => { if(!mapOk) showFallback(); });   // стиль или подложка не открылись (сервер недоступен из сети человека) — говорим сразу, не ждём
   map.on('load', () => {
     clearTimeout(loadTimer); mapOk = true; document.getElementById('fallback').style.display='none';
     brand(); addRouteLayers();
