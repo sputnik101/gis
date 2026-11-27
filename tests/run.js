@@ -774,6 +774,21 @@ test('пешком — всегда, даже дальше трёх часов; 
     return (keys.includes('livewalk') && /больше трёх часов/.test(w.detail) && t.length === 2 && /у аптеки «Вита Экспресс»/.test(t[0][2]) && /Направо на Измайловский проспект/.test(txt) && !/\d+\s*м\b/.test(t.map(x => x[2]).join(' ')))
       || JSON.stringify({ keys, detail: w && w.detail, t, txt: txt.slice(0, 300) }); }); });
 
+test('«Погулять рядом» — от того места, где ты сейчас: кольца 20/40/60 мин через парк, «По пути» — парк', async p => {
+  await p.goto(p.url().replace('?demo', '')); await p.waitForTimeout(600);
+  await stubGeo(p, 37.8126106, 55.808451);
+  await p.evaluate(() => { const D = (a, b) => { const R=6371000, r=Math.PI/180, dLa=(b[1]-a[1])*r, dLo=(b[0]-a[0])*r; const x=Math.sin(dLa/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(x)); };
+    window.fetch = async (url) => { url = String(url); const ok = j => ({ ok:true, status:200, text: async () => JSON.stringify(j), json: async () => j });
+      if(url.includes('interpreter')) return ok({ elements:[{ type:'way', center:{ lat:55.795, lon:37.82 }, tags:{ name:'Измайловский парк', leisure:'park' } }] });
+      if(url.includes('/route/v1/foot/')){ const pts = url.split('/foot/')[1].split('?')[0].split(';').map(s => s.split(',').map(Number)); let d = 0; for(let i = 1; i < pts.length; i++) d += D(pts[i-1], pts[i]) * 1.3;
+        return ok({ code:'Ok', routes:[{ distance: d, geometry:{ coordinates: pts }, legs: pts.slice(1).map(() => ({ steps:[] })) }] }); }
+      throw new Error('нет сети'); }; });
+  const r = await p.evaluate(async () => { setDemoNow(14*60, 4); REAL_CLOCK = false; walkNearby(); for(let i = 0; i < 80 && (state.locating || LIVE.loopsPending || !LIVE.loops); i++) await new Promise(r => setTimeout(r, 50)); render();
+    const keys = walkKeys(), mins = keys.map(k => Math.round(OPTIONS[k].legs[0].len / 70));
+    return { keys, mins, detail: OPTIONS[keys[2]] && OPTIONS[keys[2]].detail, pois: (OPTIONS[keys[2]] || {}).pois, txt: document.body.innerText.slice(0, 300), from: originName() }; });
+  const okMins = r.mins.length === 3 && r.mins.every((m, i) => Math.abs(m - [20, 40, 60][i]) <= [20, 40, 60][i] * 0.3);
+  return (r.keys.join() === 'stroll20,stroll40,stroll60' && okMins && /Измайловский парк/.test(r.detail + JSON.stringify(r.pois)) && r.from === 'Где я сейчас' && !/Дождь/.test(r.txt)) || JSON.stringify(r); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
