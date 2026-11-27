@@ -640,7 +640,7 @@ test('живые: Милашенкова — метро с двумя перес
     const tr = o ? o.legs.filter(l => l.model === 'transfer').map(l => l.label) : [];
     const rides = o ? o.legs.filter(l => l.type === 'metro').map(l => l.stations[0] + '→' + l.stations[l.stations.length-1]) : [];
     const mid = o ? forecast('live').mid : 0;
-    return (keys.join() === 'live' && tr.length === 2 && rides[0].startsWith('Щёлковская') && mid > 52 && mid < 75 && !/undefined|NaN/.test(document.body.innerText)) || JSON.stringify({ keys, tr, rides, mid }); }, k); });
+    return (keys.join() === 'live,livewalk' && tr.length === 2 && rides[0].startsWith('Щёлковская') && mid > 52 && mid < 75 && !/undefined|NaN/.test(document.body.innerText)) || JSON.stringify({ keys, tr, rides, mid }); }, k); });
 test('живые: поликлиника рядом — без пересадок, около 25–35 мин; демо до Бауманской не задето', async p => {
   await liveSetup(p, 'Измайловская поликлиника');
   return p.evaluate(() => { go('compare'); const o = OPTIONS.live, mid = forecast('live').mid, tr = o.legs.filter(l => l.model === 'transfer').length;
@@ -671,7 +671,7 @@ test('живые: «Где я сейчас» — маршрут от текущ�
 test('живые: «Где я сейчас» из другого города — честно «нет метро», кнопки «от дома» и «указать, откуда»', async p => {
   await liveSetup(p, 'Милашенкова 4А'); await stubGeo(p, 24.94, 60.17);   // Хельсинки
   return p.evaluate(async () => { const k = state.dest; LIVE.here = null; setFrom(null); for(let i = 0; i < 60 && (state.locating || !liveRoute(k)); i++) await new Promise(r => setTimeout(r, 50));
-    const t = document.body.innerText; return (/нет метро/.test(t) && /Посчитать от дома/.test(t) && !OPTIONS.live) || t.slice(0, 300); }); });
+    const t = document.body.innerText; return (/далеко от Москвы/.test(t) && /Посчитать от дома/.test(t) && !OPTIONS.live) || t.slice(0, 300); }); });
 test('живые: ведение по GPS — идём к метро, шаги сменяются сами, видно «успеваешь/впритык»', async p => {
   await liveSetup(p, 'Измайловская поликлиника'); await stubGeo(p, 37.8126106, 55.808451);
   const r = await p.evaluate(async () => { REAL_CLOCK = true; state.timeMode = 'arrive'; state.arrive = Math.floor(realNowMin()) + 60; SYNC_KEY = null;
@@ -753,6 +753,26 @@ test('из места по истории и назад — на главном 
   await p.evaluate(() => { goHome(); openRecent(0); }); await p.waitForTimeout(700);
   await p.click('#body .back-btn'); await p.waitForTimeout(700);
   return p.evaluate(() => (state.view === 'home' && !state.dest && !document.getElementById('topbar').classList.contains('hide') && !!document.querySelector('#topbar .wchip')) || JSON.stringify({ v: state.view, d: state.dest })); });
+
+test('пешком — всегда, даже дальше трёх часов; повороты с ориентирами, без метров', async p => {
+  await stubNet(p);
+  await p.evaluate(() => { const f0 = window.fetch;
+    window.fetch = async (url, opt) => { url = String(url);
+      const ok = j => ({ ok:true, status:200, text: async () => JSON.stringify(j), json: async () => j });
+      if(url.includes('/route/v1/foot/')){ const pts = url.split('/foot/')[1].split('?')[0].split(';').map(s => s.split(',').map(Number));
+        return ok({ code:'Ok', routes:[{ distance: 16000, geometry:{ coordinates: pts }, legs:[{ steps:[
+          { distance: 300, name:'', maneuver:{ type:'depart', location: pts[0] } },
+          { distance: 5000, name:'Сиреневый бульвар', maneuver:{ type:'turn', modifier:'left', location:[37.80, 55.80] } },
+          { distance: 10700, name:'Измайловский проспект', maneuver:{ type:'turn', modifier:'right', location:[37.78, 55.79] } },
+          { distance: 0, name:'', maneuver:{ type:'arrive', location: pts[1] } } ] }] }] }); }
+      if(url.includes('overpass') || url.includes('interpreter')) return ok({ elements:[{ type:'node', lat:55.8001, lon:37.8001, tags:{ name:'Вита Экспресс', amenity:'pharmacy' } }] });
+      return f0(url, opt); }; });
+  await p.evaluate(async () => { LIVE.home = { name:'дом', at:[37.8126, 55.8084] }; addLivePlace('pfar', { name:'Далеко', at:[37.45, 55.86] }); openPlace('pfar', homeFrom());
+    for(let i = 0; i < 80 && !liveRoute('pfar'); i++) await new Promise(r => setTimeout(r, 50)); await new Promise(r => setTimeout(r, 400)); });
+  return p.evaluate(() => { go('compare'); const keys = goKeys(), w = OPTIONS.livewalk, t = w && w.legs[0].turns;
+    pick('livewalk'); go('route'); const txt = document.body.innerText;
+    return (keys.includes('livewalk') && /больше трёх часов/.test(w.detail) && t.length === 2 && /у аптеки «Вита Экспресс»/.test(t[0][2]) && /Направо на Измайловский проспект/.test(txt) && !/\d+\s*м\b/.test(t.map(x => x[2]).join(' ')))
+      || JSON.stringify({ keys, detail: w && w.detail, t, txt: txt.slice(0, 300) }); }); });
 
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });

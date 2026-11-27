@@ -576,11 +576,11 @@ registerModule({ id:'walk', group:'mode', icon:'Пешком', name:'Пешко�
       [1336,'налево','на развилке в лесопарке',[37.8233,55.78889],'развилка'], [1620,'налево','на выходе из лесопарка',[37.82356,55.79136],'выход из парка'], [1890,'направо','у гостиницы «Первомайская»',[37.82001,55.79158],'гостиница'],
       [1965,'налево','за гостиницей «Первомайская»',[37.81939,55.79218],'за гостиницей'], [2480,'направо','к подъезду',[37.81142,55.7924],'к подъезду']] } },
   // На маршруте: коротко — все повороты (если их немного) или сколько их
-  stepHints(l){ if(l.type !== 'walk' || l.where === 'guide') return []; const r = this.turns[l.geom]; if(!r || !r.list.length) return [];   // в пути — по одному повороту (guideHint)
+  stepHints(l){ if(l.type !== 'walk' || l.where === 'guide') return []; const r = l.turns ? { len: l.len, list: l.turns } : this.turns[l.geom]; if(!r || !r.list.length) return [];   // в пути — по одному повороту (guideHint)
     const n = r.list.length, cap = t => t[0].toUpperCase() + t.slice(1);
-    return [{ icon:'Навигатор', text: n <= 3 ? r.list.map(x => cap(x[1]) + ' ' + x[2]).join(' → ') : 'Поворотов: ' + n + '. У каждого — ориентир, подскажу в пути' }]; },
+    return [{ icon:'Навигатор', text: n <= 3 ? r.list.map(x => cap(x[1]) + ' ' + x[2]).join(' → ') : 'Поворотов: ' + n + (l.turns ? '. Подскажу в пути — у каждого улица или ориентир' : '. У каждого — ориентир, подскажу в пути') }]; },
   // В пути: следующий поворот (f — пройденная доля шага)
-  guideHint(l, f){ if(l.type !== 'walk') return []; const r = this.turns[l.geom]; if(!r) return [];
+  guideHint(l, f){ if(l.type !== 'walk') return []; const r = l.turns ? { len: l.len, list: l.turns } : this.turns[l.geom]; if(!r || !r.list.length) return [];
     const done = f * r.len, nx = r.list.find(x => x[0] > done + 5); if(!nx) return [];
     const left = nx[0] - done, soon = left < 80, ico = nx[1] === 'налево' ? 'Налево' : 'Направо';
     // на карте ориентир подписан, когда до него меньше 300 м; рядом — подсвечен
@@ -843,9 +843,33 @@ async function walkTable(from, pts){   // метры пешком от from до
     return { m: j.distances[0].slice(1).map((d, i) => d == null ? dist(from, pts[i]) * 1.3 : d), exact:true }; }
   catch(e){ return { m: pts.map(p => dist(from, p) * 1.3), exact:false }; } }
 async function walkPath(a, b){
-  try{ const j = await osrm('route/v1/foot/' + ll(a) + ';' + ll(b) + '?overview=full&geometries=geojson'); const r = j.routes[0];
-    return { m: r.distance, coords: r.geometry.coordinates.map(c => [+c[0].toFixed(5), +c[1].toFixed(5)]), exact:true }; }
-  catch(e){ return { m: dist(a, b) * 1.3, coords:[a, b], exact:false }; } }
+  try{ const j = await osrm('route/v1/foot/' + ll(a) + ';' + ll(b) + '?overview=full&geometries=geojson&steps=true'); const r = j.routes[0];
+    return { m: r.distance, coords: r.geometry.coordinates.map(c => [+c[0].toFixed(5), +c[1].toFixed(5)]), exact:true, turns: osrmTurns(r) }; }
+  catch(e){ return { m: dist(a, b) * 1.3, coords:[a, b], exact:false, turns:[] }; } }
+// Повороты из шагов OSRM: [метров от начала, «налево»/«направо», что там (улица; позже — ориентир), где на карте, короткая подпись]. Без метров в тексте.
+const clean = t => String(t || '').replace(/[<>"\\]/g, '').slice(0, 60);
+function osrmTurns(r){ const out = [], steps = (r.legs && r.legs[0] && r.legs[0].steps) || []; let acc = 0;
+  steps.forEach((st, i) => {
+    const mv = st.maneuver || {}, md = mv.modifier || '', ty = mv.type || '';
+    // настоящий поворот: не «чуть-чуть», не на старте и не ступенька во дворе (после поворота меньше 30 м — это обход, не поворот)
+    const turn = ['turn', 'end of road', 'fork', 'continue', 'new name'].includes(ty) && /left|right/.test(md) && !/slight/.test(md);
+    if(acc > 20 && turn && ((st.distance || 0) >= 30 || i === steps.length - 2) && mv.location){
+      const dir = /left/.test(md) ? 'налево' : 'направо', name = clean(st.name);
+      out.push([Math.round(acc), dir, name ? 'на ' + name : 'по дорожке', [+mv.location[0].toFixed(5), +mv.location[1].toFixed(5)], name || dir]); }
+    acc += st.distance || 0; });
+  return out.filter((x, i) => !i || x[0] - out[i - 1][0] > 25).slice(0, 60); }
+// Ориентиры у поворотов — из OpenStreetMap (Overpass): вывеска в 35 м от поворота. Не ответил — остаются улицы.
+async function addLandmarks(turns){ const ts = turns.filter(t => !t.lm).slice(0, 30); if(!ts.length) return false;
+  const q = '[out:json][timeout:12];(' + ts.map(t => `node(around:35,${t[3][1]},${t[3][0]})["name"]["shop"];node(around:35,${t[3][1]},${t[3][0]})["name"]["amenity"~"^(cafe|pharmacy|bank|restaurant|fast_food|post_office|clinic)$"];`).join('') + ');out;';
+  let j = null;
+  for(const srv of ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass-api.de/api/interpreter']){
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 9000);
+    try{ const r = await fetch(srv, { method:'POST', body:'data=' + encodeURIComponent(q), signal: ctl.signal }); const t = await r.text(); if(t[0] === '{'){ j = JSON.parse(t); break; } }catch(e){} finally{ clearTimeout(to); } }
+  if(!j) return false;
+  const pois = j.elements.filter(e => e.tags && e.tags.name).map(e => ({ n: clean(e.tags.name), at:[e.lon, e.lat], k: e.tags.amenity === 'pharmacy' ? 'аптеки' : e.tags.amenity === 'cafe' ? 'кафе' : e.tags.amenity === 'bank' ? 'банка' : '' }));
+  for(const t of ts){ let best = null, bd = 36; for(const p of pois){ const d = dist(t[3], p.at); if(d < bd){ bd = d; best = p; } }
+    t.lm = 1; if(best){ t[2] = 'у ' + (best.k ? best.k + ' ' : '') + '«' + best.n + '»' + (t[4] !== t[1] ? ', на ' + t[4] : ''); t[4] = '«' + best.n + '»'; } }
+  return true; }
 
 /* ----- Метро: Дейкстра по станциям (станция = линия + место) ----- */
 const ENT = 2, WAIT_AVG = 1.5, EXIT = 2;   // средние для выбора пути; разброс — в модуле (prepare)
@@ -883,18 +907,20 @@ async function buildLiveRoute(k, A){
   const run = (async () => {
     const B = PLACES[k].at, direct = dist(A, B), R = { v: METRO_VER, from: sigOf(A), at: Date.now(), exact:true };
     const nA = nearStations(A), nB = nearStations(B);
-    if(!nA.length && direct > 4500){ R.none = 'Рядом с этой точкой нет метро, а пешком далеко'; LIVE.routes[pk] = R; LIVE.ver++; SYNC_KEY = null; return R; }
+    if(!nA.length && direct > 50000){ R.none = 'Это далеко от Москвы — маршрут отсюда не построить'; LIVE.routes[pk] = R; LIVE.ver++; SYNC_KEY = null; return R; }
     const [tA, tB] = await Promise.all([walkTable(A, nA.map(x => MET.s[x.i].at)), walkTable(B, nB.map(x => MET.s[x.i].at))]);
     const wFrom = {}, wTo = {}; nA.forEach((x, j) => wFrom[x.i] = tA.m[j] / WALK_MPM); nB.forEach((x, j) => wTo[x.i] = tB.m[j] / WALK_MPM);
     const mp = direct > 900 ? metroPath(wFrom, wTo) : null;
     if(mp && mp.segs.some(s => !s.transfer)){
       const [w1, w2] = await Promise.all([walkPath(A, MET.s[mp.first].at), walkPath(MET.s[mp.last].at, B)]);
       R.metro = { w1, w2, segs: mp.segs }; R.exact = R.exact && w1.exact && w2.exact; }
-    if(direct < 4500){ const w = await walkPath(A, B); R.walk = w; R.exact = R.exact && w.exact; }
-    if(!R.metro && !R.walk && direct < 15000) R.walk = await walkPath(A, B);
-    if(!R.metro && !R.walk) R.none = 'Отсюда маршрута на метро нет';
+    { const w = await walkPath(A, B); R.walk = w; if(!R.metro) R.exact = R.exact && w.exact; }   // пешком — всегда, даже если идти больше трёх часов
     LIVE.routes[pk] = R; saveLive();
-    LIVE.ver++; SYNC_KEY = null; return R; })();
+    LIVE.ver++; SYNC_KEY = null;
+    // ориентиры у поворотов — фоном: пришли — маршрут обновится сам
+    const legsT = [R.walk, R.metro && R.metro.w1, R.metro && R.metro.w2].filter(w => w && w.turns && w.turns.length);
+    if(legsT.length) addLandmarks(legsT.flatMap(w => w.turns)).then(ok => { if(ok){ saveLive(); LIVE.ver++; SYNC_KEY = null; if(state.dest === k && !trip.on && ['compare', 'route'].includes(state.view)) render(); } }).catch(() => {});
+    return R; })();
   LIVE.pending[pk] = run; try{ return await run; } finally{ delete LIVE.pending[pk]; } }
 const liveRoute = (k, o = originPt()) => { if(!o) return null; const r = LIVE.routes[k + '|' + sigOf(o)]; return r && Date.now() - r.at <= ROUTE_TTL ? r : null; };
 const livePending = (k, o = originPt()) => o ? LIVE.pending[k + '|' + sigOf(o)] : null;
@@ -909,7 +935,7 @@ function liveOptions(k){
   const o = {}, approx = R.exact ? '' : ' · время примерное', pl = PLACES[k];
   const wl = (m, extra) => { const t = m / WALK_MPM; return Object.assign({ type:'walk', lo: +(t * 0.92).toFixed(1), hi: +(t * 1.12 + 0.5).toFixed(1) }, extra); };
   if(R.metro){ const M = R.metro, rideSegs = M.segs.filter(s => !s.transfer), first = MET.s[rideSegs[0].st[0]], legs = [];
-    legs.push(wl(M.w1.m, { coords: M.w1.coords, label:'Пешком до м. ' + first.n, lm: R.exact ? '' : 'Путь по улицам не загрузился — время примерное', tip:'м. ' + first.n }));
+    legs.push(wl(M.w1.m, { coords: M.w1.coords, turns: M.w1.turns || [], len: M.w1.m, label:'Пешком до м. ' + first.n, lm: R.exact ? '' : 'Путь по улицам не загрузился — время примерное', tip:'м. ' + first.n }));
     legs.push({ type:'wait', kind:'Подожди', model:'board', station: first.n, at: first.at, lo:1, hi:4, label:'Вход, платформа и поезд', lm:'' });
     let rides = 0;
     M.segs.forEach((s, j) => {
@@ -920,13 +946,13 @@ function liveOptions(k){
         label:'Метро до ' + last.n + ' · ' + stops(st.length - 1), lm: ln[1] }); });
     const last = MET.s[rideSegs[rideSegs.length - 1].st.slice(-1)[0]];
     legs.push({ type:'wait', kind:'Подъём', model:'exit', station: last.n, at: last.at, lo:1, hi:3, label:'Подъём в город', lm:'' });
-    legs.push(wl(M.w2.m, { coords: M.w2.coords, label:'Пешком до места', lm: pl ? String(pl.pin || '') : '', tip:'Ты на месте' }));
+    legs.push(wl(M.w2.m, { coords: M.w2.coords, turns: M.w2.turns || [], len: M.w2.m, label:'Пешком до места', lm: pl ? String(pl.pin || '') : '', tip:'Ты на месте' }));
     const tr = M.segs.filter(s => s.transfer).length;
     o.live = Object.assign({ name:'Метро', ico:'Метро', bg:'#E3EBFD', fg:'#2E6FE6', price:'', purpose:'go', order:1,
       detail: (tr ? 'пересадок: ' + tr : 'без пересадок') + approx, legs }, LIVE_COMMON); }
   if(R.walk){ const t = R.walk.m / WALK_MPM;
-    if(!R.metro || t < 50) o.livewalk = Object.assign({ name:'Пешком', ico:'Пешком', bg:'#EEF8D2', fg:'#4F690B', price:'', purpose:'go', order:2,
-      detail: kmText(R.walk.m) + approx, legs:[wl(R.walk.m, { coords: R.walk.coords, label:'Пешком до места', lm: R.walk.exact ? '' : 'Путь по улицам не загрузился — время примерное', tip:'Ты на месте' })] },
+    o.livewalk = Object.assign({ name:'Пешком', ico:'Пешком', bg:'#EEF8D2', fg:'#4F690B', price:'', purpose:'go', order:2, cta:'Пошли', stopLabel:'Закончить путь', endToast:'Путь закончен',
+      detail: kmText(R.walk.m) + (t >= 180 ? ' · больше трёх часов' : '') + (R.walk.exact ? '' : ' · время примерное'), legs:[wl(R.walk.m, { coords: R.walk.coords, turns: R.walk.turns || [], len: R.walk.m, label:'Пешком до места', lm: R.walk.exact ? '' : 'Путь по улицам не загрузился — время примерное', tip:'Ты на месте' })] },
       LIVE_COMMON, { delayWhy:'если задержишься', tail:[0.01, 1, 4] }); }
   return o; }
 registerModule({ id:'live', group:'mode', live:true, icon:'Пин', name:'Маршруты по Москве', desc:'Метро и пешком до любого места — по карте OpenStreetMap', where:'Способы для мест из поиска', on:true,
