@@ -345,9 +345,9 @@ test('первая поездка «к 9:00» — одна карточка (в�
   return (t.includes('Как ты обычно ходишь?') && !t.includes('Ездишь сюда регулярно?')) || 'карточки: ' + t.slice(0, 200);
 });
 test('шаблоны, недавние и модули переживают перезагрузку; битая запись не ломает запуск', async p => {
-  await p.evaluate(() => { state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro' }); state.recents = ['baum']; setMod('coffee', true); });
+  await p.evaluate(() => { state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro' }); state.recents = [{ to:'baum', from:null }]; setMod('coffee', true); });
   await p.reload(); await p.waitForTimeout(500);
-  const kept = await p.evaluate(() => state.templates.length === 1 && state.templates[0].name === 'Работа' && state.recents[0] === 'baum' && state.modules.coffee && document.body.innerText.includes('Работа'));
+  const kept = await p.evaluate(() => state.templates.length === 1 && state.templates[0].name === 'Работа' && state.recents[0].to === 'baum' && state.modules.coffee && document.body.innerText.includes('Работа'));
   await p.evaluate(() => localStorage.setItem('gis.app', '{"templates":[{"name":"<b>x</b>","dest":"nowhere","mode":5}],"modules":{"ghost":true,"taxi":"да"},"recents":"x"}'));
   await p.reload(); await p.waitForTimeout(500);
   const clean = await p.evaluate(() => !state.templates.length && !('ghost' in state.modules) && state.modules.taxi === true && Array.isArray(state.recents));
@@ -410,7 +410,7 @@ test('место открывается сразу способами; «наз�
   await p.evaluate(() => openPlace('baum')); await p.waitForTimeout(650);
   const noChip = await p.evaluate(() => state.view === 'compare' && !!state.sel && document.getElementById('topbar').classList.contains('hide'));
   await p.click('#body .back-btn'); await p.waitForTimeout(650);
-  const ok = await p.evaluate(() => state.view === 'home' && !!document.querySelector('.wchip') && !!document.querySelector('.search .ph') && state.recents.includes('baum'));
+  const ok = await p.evaluate(() => state.view === 'home' && !!document.querySelector('.wchip') && !!document.querySelector('.search .ph') && state.recents.some(r => r.to === 'baum'));
   return (noChip && ok) || JSON.stringify({ noChip, ok });
 });
 
@@ -538,7 +538,7 @@ test('«Модули»: служебные («Пробки», «Мой темп�
 }));
 
 test('«Недавние»: «Очистить» убирает места, шаблоны остаются, после перезагрузки пусто', async p => {
-  await p.evaluate(() => { state.recents = ['baum']; state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro', days:[] }); restart(); }); await p.waitForTimeout(650);
+  await p.evaluate(() => { state.recents = [{ to:'baum', from:null }]; state.templates.push({ name:'Работа', dest:'baum', arrive:540, mode:'metro', days:[] }); restart(); }); await p.waitForTimeout(650);
   await p.locator('button', { hasText: 'Очистить' }).click(); await p.waitForTimeout(650);
   const now = await p.evaluate(() => !state.recents.length && state.templates.length === 1 && ![...document.querySelectorAll('#body .sec')].some(e => e.textContent.startsWith('Недавние')));
   await p.reload(); await p.waitForTimeout(600); const after = await p.evaluate(() => !state.recents.length); await p.evaluate(() => localStorage.clear());
@@ -626,12 +626,14 @@ const liveSetup = async (p, dest, fail) => { await stubNet(p); if(fail) await p.
   await p.evaluate(async () => { startPickHome(); state.q = '13-я Парковая 40'; await doFind(); pickFound(0); });
   await p.waitForTimeout(700);
   return p.evaluate(async dest => { go('find'); state.q = dest; doFind.last = 0; await doFind(); pickFound(0);
-    const k = state.dest; await LIVE.pending[k]; await new Promise(r => setTimeout(r, 50)); return k; }, dest); };
-test('живые: первый запуск просит «Откуда», адрес сохраняется на телефоне', async p => { await stubNet(p);
-  const before = await p.evaluate(() => document.body.innerText.includes('Откуда ты обычно выходишь?'));
-  await p.evaluate(async () => { startPickHome(); state.q = '13-я Парковая 40'; await doFind(); pickFound(0); });
-  await p.waitForTimeout(700); const after = await p.evaluate(() => ({ home: LIVE.home && LIVE.home.name, txt: document.body.innerText.includes('13-я Парковая улица, 40'), saved: !!JSON.parse(localStorage.getItem('gis.live')).home }));
-  return (before && after.home && after.txt && after.saved) || JSON.stringify({ before, after }); });
+    const k = state.dest; for(let i = 0; i < 80 && (state.locating || !liveRoute(k) || livePending(k)); i++) await new Promise(r => setTimeout(r, 50)); await new Promise(r => setTimeout(r, 50)); return k; }, dest); };
+test('живые: по умолчанию маршрут — от того места, где ты сейчас; без вопроса «Откуда» при первом запуске', async p => {
+  await stubNet(p); await stubGeo(p, 37.8126106, 55.808451);
+  const before = await p.evaluate(() => !document.body.innerText.includes('Откуда ты обычно выходишь'));
+  const r = await p.evaluate(async () => { go('find'); state.q = 'Милашенкова 4А'; await doFind(); pickFound(0); const k = state.dest;
+    for(let i = 0; i < 60 && (state.locating || !liveRoute(k)); i++) await new Promise(r => setTimeout(r, 50));
+    return { from: originName(), first: OPTIONS.live && OPTIONS.live.legs[0].label, view: state.view, home: LIVE.home }; });
+  return (before && r.from === 'Где я сейчас' && /Щёлковская/.test(r.first) && r.view === 'compare' && !r.home) || JSON.stringify(r); });
 test('живые: Милашенкова — метро с двумя пересадками, только «Метро» и «Пешком», время ~1 ч', async p => {
   const k = await liveSetup(p, 'Милашенкова 4А');
   return p.evaluate(k => { go('compare'); const keys = goKeys(), o = OPTIONS.live;
@@ -651,7 +653,7 @@ test('живые: шаблон на работу переживает перез
   const k = await liveSetup(p, 'Милашенкова 4А');
   await p.evaluate(k => { state.templates.push({ name:'Работа', dest:k, arrive:10*60, mode:'live', reverse:false, days:[] }); saveApp(); }, k);
   await p.reload(); await p.waitForTimeout(800);
-  return p.evaluate(() => { const t = document.body.innerText; return (/Работа/.test(t) && /выйди до|сейчас/i.test(t) && !!LIVE.routes[state.templates[0].dest]) || t.slice(0, 300); }); });
+  return p.evaluate(() => { const t = document.body.innerText; return (/Работа/.test(t) && /выйди до|сейчас/i.test(t) && !tplNoRoute(state.templates[0])) || t.slice(0, 300); }); });
 test('живые: на маршруте — шаги «Переход», линии в цвете, ведение стартует', async p => {
   await liveSetup(p, 'Милашенкова 4А');
   return p.evaluate(async () => { go('compare'); pick('live'); go('route'); const t = document.body.innerText;
@@ -663,12 +665,13 @@ const stubGeo = (p, lon, lat) => p.evaluate(([lon, lat]) => { window.__geo = [lo
   Object.defineProperty(navigator, 'geolocation', { configurable:true, value:{ getCurrentPosition(ok){ setTimeout(() => ok(fix()), 10); }, watchPosition(ok){ const id = setInterval(() => ok(fix()), 200); return id; }, clearWatch(id){ clearInterval(id); } } }); }, [lon, lat]);
 test('живые: «Где я сейчас» — маршрут от текущей точки; шаблоны остаются от дома', async p => {
   const k = await liveSetup(p, 'Милашенкова 4А'); await stubGeo(p, 37.7799, 55.7877);   // у Измайловской
-  return p.evaluate(async k => { await useHere(); const R = liveRoute(k), first = OPTIONS.live && OPTIONS.live.legs[0].label;
-    useHome(); const home = OPTIONS.live.legs[0].label;
+  return p.evaluate(async k => { LIVE.here = null; setFrom(null); for(let i = 0; i < 60 && (state.locating || !liveRoute(k)); i++) await new Promise(r => setTimeout(r, 50)); const first = OPTIONS.live && OPTIONS.live.legs[0].label;
+    setFrom(homeFrom()); for(let i = 0; i < 60 && !liveRoute(k); i++) await new Promise(r => setTimeout(r, 50)); const home = OPTIONS.live.legs[0].label;
     return (state.dest === k && /Измайловская/.test(first) && /Щёлковская/.test(home)) || JSON.stringify({ first, home }); }, k); });
-test('живые: «Где я сейчас» из другого города — честно «нет метро», кнопка «от дома»', async p => {
+test('живые: «Где я сейчас» из другого города — честно «нет метро», кнопки «от дома» и «указать, откуда»', async p => {
   await liveSetup(p, 'Милашенкова 4А'); await stubGeo(p, 24.94, 60.17);   // Хельсинки
-  return p.evaluate(async () => { await useHere(); const t = document.body.innerText; return (/нет метро/.test(t) && /Посчитать от дома/.test(t) && !OPTIONS.live) || t.slice(0, 300); }); });
+  return p.evaluate(async () => { const k = state.dest; LIVE.here = null; setFrom(null); for(let i = 0; i < 60 && (state.locating || !liveRoute(k)); i++) await new Promise(r => setTimeout(r, 50));
+    const t = document.body.innerText; return (/нет метро/.test(t) && /Посчитать от дома/.test(t) && !OPTIONS.live) || t.slice(0, 300); }); });
 test('живые: ведение по GPS — идём к метро, шаги сменяются сами, видно «успеваешь/впритык»', async p => {
   await liveSetup(p, 'Измайловская поликлиника'); await stubGeo(p, 37.8126106, 55.808451);
   const r = await p.evaluate(async () => { REAL_CLOCK = true; state.timeMode = 'arrive'; state.arrive = Math.floor(realNowMin()) + 60; SYNC_KEY = null;
@@ -693,26 +696,25 @@ test('живые: поиск «Метро измайловская» — одн�
       ? { ok:true, status:200, json: async () => [1,2,3].map(i => ({ name:'Метро «Измайловская»', type:'bus_stop', category:'highway', display_name:'Метро «Измайловская», Измайлово, Москва', lat: String(55.788 + i*0.0002), lon: String(37.779 + i*0.002), address:{ suburb:'район Измайлово', city:'Москва' } })) } : f0(url);
     go('find'); state.q = 'Метро измайловская'; await doFind(); const rows = [...document.querySelectorAll('#res .lrow')].map(b => b.innerText.replace(/\n/g, ' | '));
     return (rows.length === 1 && /м.\sИзмайловская/.test(rows[0]) && /Арбатско-Покровская/.test(rows[0])) || JSON.stringify(rows); }); });
-test('живые: кнопки «Откуда» — иконка и текст в одну строку', async p => {
+test('живые: на экране способов — поля «Откуда» и «Куда», ⇅ меняет их местами', async p => {
   await liveSetup(p, 'Милашенкова 4А');
-  await p.evaluate(() => { state.fromOpen = true; render(); });
-  return p.evaluate(() => { const bs = [...document.querySelectorAll('.chip.from')]; return (bs.length === 2 && bs.every(b => b.getBoundingClientRect().height <= 46)) || JSON.stringify(bs.map(b => b.getBoundingClientRect().height)); }); });
-
-test('живые: «Откуда» на главном — вся строка кнопка, открывает смену адреса', async p => {
+  return p.evaluate(async () => { const f = [...document.querySelectorAll('.fld')].map(b => b.innerText.replace(/\s+/g, ' '));
+    const to0 = state.dest; swapFromTo(); for(let i = 0; i < 60 && (state.locating || !liveRoute(state.dest)); i++) await new Promise(r => setTimeout(r, 50));
+    const f2 = [...document.querySelectorAll('.fld')].map(b => b.innerText.replace(/\s+/g, ' '));
+    return (f.length === 2 && /Откуда/.test(f[0]) && /Куда.*Милашенкова/.test(f[1]) && state.dest !== to0 && /Милашенкова/.test(f2[0]) && !!OPTIONS.live) || JSON.stringify({ f, f2 }); }); });
+test('живые: история — «откуда → куда», корзина удаляет одну строку; маршрут — свою', async p => {
   await liveSetup(p, 'Милашенкова 4А');
-  await p.evaluate(() => { state.dest = null; restart(); }); await p.waitForTimeout(700);
-  const b = await p.$('button.lrow[aria-label^="Откуда"]'); if(!b) return 'нет кнопки';
-  await b.click(); await p.waitForTimeout(700);
-  return p.evaluate(() => (state.view === 'find' && state.pickHome) || state.view); });
-
-// ---------- блокеры ревью 26.11: маршрут с пересадки, хранилище, цикл, вечер и полночь ----------
-const stubAt = (p, lon, lat) => p.evaluate(([lon, lat]) => { const f0 = window.fetch;
-  window.fetch = async url => String(url).includes('nominatim') ? { ok:true, status:200, json: async () => [{ name:'Точка', display_name:'Точка, Москва', lat:String(lat), lon:String(lon) }] } : f0(url); }, [lon, lat]);
+  return p.evaluate(async () => { go('find'); state.q = 'Измайловская поликлиника'; doFind.last = 0; await doFind(); pickFound(0);
+    for(let i = 0; i < 60 && (state.locating || !liveRoute(state.dest)); i++) await new Promise(r => setTimeout(r, 50));
+    state.templates.push({ name:'Работа', dest: state.recents[1].to, from: null, arrive:600, mode:'live', days:[] }, { name:'Зал', dest: state.recents[0].to, from: null, arrive:null, mode:'live', days:[] });
+    goHome(); const n0 = document.querySelectorAll('.lrw').length, label = document.querySelector('.lrw .lrow .m').innerText;
+    delRecent(0); const rec = state.recents.length; delTemplate(0);
+    return (n0 === 4 && rec === 1 && state.templates.length === 1 && state.templates[0].name === 'Зал' && /→/.test(label)) || JSON.stringify({ n0, rec, t: state.templates.map(t => t.name), label }); }); });
 test('блокер 1: путь не начинается и не кончается пересадкой (Зябликово ⇄ Красногвардейская), экран не пустой', async p => {
   await stubNet(p);
   await p.evaluate(async () => { LIVE.home = { name:'дом', at:[37.77, 55.57] }; saveLive(); });
   const r = await p.evaluate(async () => { addLivePlace('pq1', { name:'Запад', at:[37.35, 55.735] }); openPlace('pq1'); await LIVE.pending['pq1']; await new Promise(r => setTimeout(r, 50));
-    const R = LIVE.routes.pq1, segs = R && R.metro ? R.metro.segs : [];
+    const R = liveRoute('pq1'), segs = R && R.metro ? R.metro.segs : [];
     return { view: state.view, keys: goKeys(), first: segs[0] && !segs[0].transfer, last: segs.length && !segs[segs.length-1].transfer, cards: document.querySelectorAll('.card').length }; });
   return (r.view === 'compare' && r.keys.includes('live') && r.first && r.last && r.cards > 0) || JSON.stringify(r); });
 test('блокер 1: перебор точек по Москве — ни один путь не начинается и не кончается пересадкой', async p => p.evaluate(() => {
@@ -731,11 +733,11 @@ test('блокер 4: битый или старый маршрут в хран�
   return p.evaluate(() => ((!LIVE.routes.pabc || (routeOk(LIVE.routes.pabc) && LIVE.routes.pabc.metro.segs.length)) && !LIVE.routes.pdef && /Работа/.test(document.body.innerText)) || JSON.stringify(Object.keys(LIVE.routes))); });   // битый отброшен; шаблон мог пересчитать маршрут заново
 test('блокер 3: «Где я сейчас» остался включённым — шаблон считает от дома, без бесконечных запросов', async p => {
   const k = await liveSetup(p, 'Милашенкова 4А'); await stubGeo(p, 37.7799, 55.7877);
-  return p.evaluate(async k => { await useHere(); goHome(); delete LIVE.routes[k];
+  return p.evaluate(async k => { LIVE.here = null; setFrom(null); for(let i = 0; i < 60 && state.locating; i++) await new Promise(r => setTimeout(r, 50)); goHome(); for(const key in LIVE.routes) delete LIVE.routes[key];
     state.templates.push({ name:'Работа', dest:k, arrive:600, mode:'live', reverse:false, days:[] });
     const n0 = __net.calls.length; useTemplate(state.templates.length - 1); await new Promise(r => setTimeout(r, 800));
     const calls = __net.calls.length - n0, first = OPTIONS.live && OPTIONS.live.legs[0].label;
-    return (calls < 10 && state.view === 'route' && /Щёлковская/.test(first) && !state.fromHere) || JSON.stringify({ calls, view: state.view, first, fromHere: state.fromHere }); }, k); });
+    return (calls < 10 && state.view === 'route' && /Щёлковская/.test(first) && state.from && state.from.home) || JSON.stringify({ calls, view: state.view, first, from: state.from }); }, k); });
 test('блокер 2: вечером «Прибыть к 9:00» — это завтра, «Выйти в 8:30» не превращается в «сейчас»', async p => p.evaluate(() => {
   setDemoNow(21*60, 2); openPlace('baum'); go('time'); setTimeMode('arrive'); chipTime(540); applyTime();
   const arr = state.arrive, v = verdict(goKeys()[0]).cls; go('time'); setTimeMode('depart'); chipTime(510); applyTime();

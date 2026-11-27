@@ -40,7 +40,7 @@ button{font-family:inherit}
 .wchip{height:40px;border-radius:20px;border:0;background:#fff;box-shadow:var(--s2);padding:0 16px;font:inherit;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:8px;cursor:pointer}
 .attrib.low{top:164px}
 /* путь: поиск → место → способы */
-.q{flex:1;height:48px;border-radius:24px;border:1px solid var(--line);background:#fff;padding:0 16px;font:inherit;font-size:16px;   /* 16 px: меньше — Safari и браузеры на iPhone сами приближают страницу при вводе */
+.q{flex:1;min-width:0;height:48px;border-radius:24px;border:1px solid var(--line);background:#fff;padding:0 16px;font:inherit;font-size:16px;   /* 16 px: меньше — Safari и браузеры на iPhone сами приближают страницу при вводе */
   color:var(--ink);outline:none}
 .q:focus,.q:focus-visible{outline:none;border:2px solid var(--violet-btn);padding:0 15px}   /* поле ввода в фокусе — фиолетовая рамка, без оранжевого кольца */
 .sec{font-size:13px;color:var(--muted);margin:12px 0 8px}
@@ -166,6 +166,12 @@ svg.i{display:block;flex:none}
 .homecard.w{background:#FFE3CF;border-color:#FFE3CF}
 .startcard{background:#EEEDFE;border-color:#EEEDFE;color:var(--ink);font-size:14px;margin:4px 0 16px}.startcard b{font-weight:600}
 .chip.from{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}.chip.from.sel{padding-left:16px}.chip.from.sel::before{display:none}.chip.from .i{flex:none}
+.lrw{display:flex;gap:8px;align-items:stretch;margin-bottom:8px}.lrw .lrow{flex:1;min-width:0;margin-bottom:0}
+.del{flex:none;width:48px;border-radius:16px;border:1px solid var(--line);background:#fff;color:var(--ink-2,#6B6A86);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.fields{display:flex;gap:8px;align-items:center;margin:8px 0 8px}.fcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.fld{height:44px;border-radius:16px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:8px;padding:0 16px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;text-align:left;min-width:0}
+.fld .fl{color:var(--ink-2,#6B6A86);flex:none;width:52px}.fld b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fld .dot{width:10px;height:10px;border-radius:5px;background:var(--violet-btn);flex:none;margin:0 3px}
+.swap{flex:none;width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}.swap:disabled{opacity:.4;cursor:default}
 .chips.days{gap:8px}.chips.days .chip{min-width:42px;padding:0 8px}.chips.days .chip.sel::before{display:none}.chips.days .chip.sel{padding-left:8px}
 .hint>span:nth-child(2){flex:1}
 .mlink{border:0;background:none;color:var(--violet-d);font:inherit;font-weight:600;cursor:pointer;min-height:44px;padding:0 4px}
@@ -275,13 +281,13 @@ const stops = n => n + ' ' + (n%10===1&&n%100!==11?'остановка':(n%10>=2
 
 /* ================= ИКОНКИ =================
    Один набор с Фигмой: 20×20, линия 1.75, скруглённые концы (figma-plugins/icons). Модули указывают иконку по имени. */
-const ICON = {"Маршрут": ["M 5 13 C 6.1046 13 7 13.8954 7 15 C 7 16.1046 6.1046 17 5 17 C 3.8954 17 3 16.1046 3 15 C 3 13.8954 3.8954 13 5 13 Z", "M 15 3 C 16.1046 3 17 3.8954 17 5 C 17 6.1046 16.1046 7 15 7 C 13.8954 7 13 6.1046 13 5 C 13 3.8954 13.8954 3 15 3 Z", "M 5 13 L 5 10 C 5 8.5 6 7.5 7.5 7.5 L 13 7.5"], "Пешком": ["M 11 1.9 C 11.88368 1.9 12.6 2.61632 12.6 3.5 C 12.6 4.38368 11.88368 5.1 11 5.1 C 10.11632 5.1 9.4 4.38368 9.4 3.5 C 9.4 2.61632 10.11632 1.9 11 1.9 Z", "M 9.5 7 L 8 12 L 11 14 L 11 18", "M 8 12 L 6 17", "M 9.5 7 L 12.5 9 L 15 8.5"], "Автобус": ["M 6.5 3 L 13.5 3 C 14.880749999999999 3 16 4.11925 16 5.5 L 16 12.5 C 16 13.880749999999999 14.880749999999999 15 13.5 15 L 6.5 15 C 5.11925 15 4 13.880749999999999 4 12.5 L 4 5.5 C 4 4.11925 5.11925 3 6.5 3 Z", "M 4 10 L 16 10", "M 6.5 15 L 6.5 17.5", "M 13.5 15 L 13.5 17.5", "M 8 6 L 12 6"], "Метро": ["M 4 15 L 4 5 L 10 12 L 16 5 L 16 15"], "Машина": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z"], "Парковка": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 8 14 L 8 6 L 11.5 6 C 13 6 14 7 14 8.5 C 14 10 13 11 11.5 11 L 8 11"], "Дом": ["M 3 9 L 10 3 L 17 9", "M 5 7.5 L 5 17 L 15 17 L 15 7.5", "M 8.5 17 L 8.5 12 L 11.5 12 L 11.5 17"], "Работа": ["M 5 6 L 15 6 C 16.1046 6 17 6.8954 17 8 L 17 15 C 17 16.1046 16.1046 17 15 17 L 5 17 C 3.8954 17 3 16.1046 3 15 L 3 8 C 3 6.8954 3.8954 6 5 6 Z", "M 7.5 6 L 7.5 4.5 C 7.5 4 8 3.5 8.5 3.5 L 11.5 3.5 C 12 3.5 12.5 4 12.5 4.5 L 12.5 6", "M 3 11 L 17 11"], "Зал": ["M 3 8 L 3 12", "M 5.5 6 L 5.5 14", "M 14.5 6 L 14.5 14", "M 17 8 L 17 12", "M 5.5 10 L 14.5 10"], "Семья": ["M 10 16 C 6 13 3 10.5 3 7.5 C 3 5.5 4.5 4 6.5 4 C 8 4 9.3 5 10 6.2 C 10.7 5 12 4 13.5 4 C 15.5 4 17 5.5 17 7.5 C 17 10.5 14 13 10 16 Z"], "Часы": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 10 6 L 10 10 L 13 12"], "Поиск": ["M 9 3.5 C 12.03765 3.5 14.5 5.96235 14.5 9 C 14.5 12.03765 12.03765 14.5 9 14.5 C 5.96235 14.5 3.5 12.03765 3.5 9 C 3.5 5.96235 5.96235 3.5 9 3.5 Z", "M 13 13 L 17 17"], "Закладка": ["M 5 3 L 15 3 L 15 17 L 10 13 L 5 17 Z"], "Вход": ["M 5 17 L 5 3 L 13 3 L 13 17", "M 3 17 L 17 17", "M 10.5 10 L 11 10"], "Профиль": ["M 10 3.5 C 11.93305 3.5 13.5 5.06695 13.5 7 C 13.5 8.93305 11.93305 10.5 10 10.5 C 8.06695 10.5 6.5 8.93305 6.5 7 C 6.5 5.06695 8.06695 3.5 10 3.5 Z", "M 4 17 C 4 13.5 6.5 11.5 10 11.5 C 13.5 11.5 16 13.5 16 17"], "Назад": ["M 16 10 L 4 10", "M 9 5 L 4 10 L 9 15"], "Плюс": ["M 10 4 L 10 16", "M 4 10 L 16 10"], "Дождь": ["M 6 12 C 3.8 12 3 10.5 3 9.3 C 3 7.6 4.4 6.3 6 6.5 C 6.6 4.5 8.3 3 10.5 3 C 13.3 3 15.3 5.2 15.2 7.6 C 16.8 7.8 17.5 9 17.5 10 C 17.5 11.2 16.6 12 15.2 12 Z", "M 7 14.5 L 6 17", "M 10.5 14.5 L 9.5 17", "M 14 14.5 L 13 17"], "Колокол": ["M 5 14 L 5 9 C 5 6 7.2 3.8 10 3.8 C 12.8 3.8 15 6 15 9 L 15 14 L 16.5 15.5 L 3.5 15.5 Z", "M 8.5 17.5 L 11.5 17.5"], "Аптека": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 10 6.5 L 10 13.5", "M 6.5 10 L 13.5 10"], "Кофе": ["M 4 8 L 14 8 L 13 15 C 12.9 16.1 12 17 10.9 17 L 7.1 17 C 6 17 5.1 16.1 5 15 Z", "M 14 9.5 L 15.5 9.5 C 16.6 9.5 17 10.3 17 11 C 17 11.8 16.4 12.5 15.5 12.5 L 13.6 12.5", "M 8 3 L 8 5.5", "M 11 3 L 11 5.5"], "Здание": ["M 5.5 3 L 14.5 3 C 15.32845 3 16 3.67155 16 4.5 L 16 15.5 C 16 16.32845 15.32845 17 14.5 17 L 5.5 17 C 4.67155 17 4 16.32845 4 15.5 L 4 4.5 C 4 3.67155 4.67155 3 5.5 3 Z", "M 7.5 7 L 8.5 7", "M 11.5 7 L 12.5 7", "M 7.5 10.5 L 8.5 10.5", "M 11.5 10.5 L 12.5 10.5", "M 9 17 L 9 14 L 11 14 L 11 17"], "Навигатор": ["M 10 2.5 L 16 17 L 10 13.5 L 4 17 Z"], "Внимание": ["M 10 3 L 17.5 16.5 L 2.5 16.5 Z", "M 10 8 L 10 11.5", "M 10 14 L 10 14.1"], "Галочка": ["M 4 10.5 L 8 14.5 L 16 5.5"], "Шаги": ["M 6.3 6.6 C 7.349 6.6 8.2 7.943 8.2 9.6 C 8.2 11.257 7.349 12.6 6.3 12.6 C 5.251 12.6 4.4 11.257 4.4 9.6 C 4.4 7.943 5.251 6.6 6.3 6.6 Z", "M 6.3 15.2 C 7.018 15.2 7.6 15.648 7.6 16.2 C 7.6 16.752 7.018 17.2 6.3 17.2 C 5.582 17.2 5.0 16.752 5.0 16.2 C 5.0 15.648 5.582 15.2 6.3 15.2 Z", "M 13.7 1.0999999999999996 C 14.749 1.0999999999999996 15.6 2.443 15.6 4.1 C 15.6 5.757 14.749 7.1 13.7 7.1 C 12.651 7.1 11.799999999999999 5.757 11.799999999999999 4.1 C 11.799999999999999 2.443 12.651 1.0999999999999996 13.7 1.0999999999999996 Z", "M 13.7 9.7 C 14.418 9.7 15.0 10.148 15.0 10.7 C 15.0 11.252 14.418 11.7 13.7 11.7 C 12.982 11.7 12.399999999999999 11.252 12.399999999999999 10.7 C 12.399999999999999 10.148 12.982 9.7 13.7 9.7 Z"], "Такси": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z", "M 7.5 5 L 7.5 2.5 L 12.5 2.5 L 12.5 5", "M 10 2.5 L 10 5", "M 7.5 3.75 L 12.5 3.75"], "Каршеринг": ["M 6.5 6.5 C 8.433 6.5 10.0 8.067 10.0 10 C 10.0 11.933 8.433 13.5 6.5 13.5 C 4.567 13.5 3.0 11.933 3.0 10 C 3.0 8.067 4.567 6.5 6.5 6.5 Z", "M 10 10 L 17.5 10", "M 14.5 10 L 14.5 13", "M 17 10 L 17 12.5"], "Лист": ["M 4 16 C 4 8.5 8.5 4 16 4 C 16 11.5 11.5 16 4 16 Z", "M 4 16 L 11.5 8.5"], "Толпа": ["M 7 3.9000000000000004 C 8.27029 3.9000000000000004 9.3 4.92971 9.3 6.2 C 9.3 7.47029 8.27029 8.5 7 8.5 C 5.72971 8.5 4.7 7.47029 4.7 6.2 C 4.7 4.92971 5.72971 3.9000000000000004 7 3.9000000000000004 Z", "M 2.5 16 C 2.5 12.5 4.5 10.8 7 10.8 C 9.5 10.8 11.5 12.5 11.5 16", "M 13.6 4.6 C 14.7046 4.6 15.6 5.4954 15.6 6.6 C 15.6 7.704599999999999 14.7046 8.6 13.6 8.6 C 12.4954 8.6 11.6 7.704599999999999 11.6 6.6 C 11.6 5.4954 12.4954 4.6 13.6 4.6 Z", "M 12.6 11 C 15.4 10.7 17.5 12.3 17.5 15.5"], "Вагон": ["M 7.5 2.5 L 12.5 2.5 C 13.880749999999999 2.5 15 3.61925 15 5 L 15 12 C 15 13.380749999999999 13.880749999999999 14.5 12.5 14.5 L 7.5 14.5 C 6.11925 14.5 5 13.380749999999999 5 12 L 5 5 C 5 3.61925 6.11925 2.5 7.5 2.5 Z", "M 5 9 L 15 9", "M 8 12 L 8.1 12", "M 11.9 12 L 12 12", "M 7.5 14.5 L 5.5 17.5", "M 12.5 14.5 L 14.5 17.5"], "Пин": ["M 10 18 C 10 18 4.5 12.2 4.5 8 C 4.5 5 7 2.5 10 2.5 C 13 2.5 15.5 5 15.5 8 C 15.5 12.2 10 18 10 18 Z", "M 10 6 C 11.1046 6 12 6.8954 12 8 C 12 9.1046 11.1046 10 10 10 C 8.8954 10 8 9.1046 8 8 C 8 6.8954 8.8954 6 10 6 Z"], "Звезда": ["M 10 2.8 L 12.2 7.4 L 17.2 8 L 13.5 11.4 L 14.5 16.4 L 10 13.9 L 5.5 16.4 L 6.5 11.4 L 2.8 8 L 7.8 7.4 Z"], "Шестерёнка": ["M 3 5 L 5.2 5", "M 8.8 5 L 17 5", "M 7 3.2 C 7.994 3.2 8.8 4.006 8.8 5 C 8.8 5.994 7.994 6.8 7 6.8 C 6.006 6.8 5.2 5.994 5.2 5 C 5.2 4.006 6.006 3.2 7 3.2 Z", "M 3 10 L 11.2 10", "M 14.8 10 L 17 10", "M 13 8.2 C 13.994 8.2 14.8 9.006 14.8 10 C 14.8 10.994 13.994 11.8 13 11.8 C 12.006 11.8 11.2 10.994 11.2 10 C 11.2 9.006 12.006 8.2 13 8.2 Z", "M 3 15 L 7.2 15", "M 10.8 15 L 17 15", "M 9 13.2 C 9.994 13.2 10.8 14.006 10.8 15 C 10.8 15.994 9.994 16.8 9 16.8 C 8.006 16.8 7.2 15.994 7.2 15 C 7.2 14.006 8.006 13.2 9 13.2 Z"], "Песочные часы": ["M 5.5 3 L 14.5 3", "M 5.5 17 L 14.5 17", "M 6.5 3 L 6.5 5.5 L 10 10 L 6.5 14.5 L 6.5 17", "M 13.5 3 L 13.5 5.5 L 10 10 L 13.5 14.5 L 13.5 17", "M 8.3 15.6 L 11.7 15.6"], "Эскалатор": ["M 2.5 17 L 6 17 L 6 14 L 9.5 14 L 9.5 11 L 13 11 L 13 8 L 17.5 8", "M 2.5 13 L 11 4.5 L 17.5 4.5"], "Готово": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 6.8 10.2 L 9 12.4 L 13.4 7.8"], "История": ["M 4.2 6.8 C 5.4 4.5 7.6 3 10 3 C 13.9 3 17 6.1 17 10 C 17 13.9 13.9 17 10 17 C 6.6 17 3.8 14.6 3.2 11.4", "M 3.2 3.6 L 4.2 6.8 L 7.4 6", "M 10 6.5 L 10 10 L 12.5 11.5"], "Флаг": ["M 5 18 L 5 3", "M 5 3.5 L 15 3.5 L 12.5 7 L 15 10.5 L 5 10.5"], "Светофор": ["M 8 2 L 12 2 C 13.1 2 14 2.9 14 4 L 14 16 C 14 17.1 13.1 18 12 18 L 8 18 C 6.9 18 6 17.1 6 16 L 6 4 C 6 2.9 6.9 2 8 2 Z", "M 10 4.199999999999999 C 10.773 4.199999999999999 11.4 4.827 11.4 5.6 C 11.4 6.373 10.773 7.0 10 7.0 C 9.227 7.0 8.6 6.373 8.6 5.6 C 8.6 4.827 9.227 4.199999999999999 10 4.199999999999999 Z", "M 10 8.6 C 10.773 8.6 11.4 9.227 11.4 10 C 11.4 10.773 10.773 11.4 10 11.4 C 9.227 11.4 8.6 10.773 8.6 10 C 8.6 9.227 9.227 8.6 10 8.6 Z", "M 10 13.0 C 10.773 13.0 11.4 13.627 11.4 14.4 C 11.4 15.173 10.773 15.8 10 15.8 C 9.227 15.8 8.6 15.173 8.6 14.4 C 8.6 13.627 9.227 13.0 10 13.0 Z"], "Закрыть": ["M 5.5 5.5 L 14.5 14.5", "M 14.5 5.5 L 5.5 14.5"], "Налево": ["M 14 17 L 14 10 C 14 8.3 12.7 7 11 7 L 4.5 7", "M 8 3.5 L 4.5 7 L 8 10.5"], "Направо": ["M 6 17 L 6 10 C 6 8.3 7.3 7 9 7 L 15.5 7", "M 12 3.5 L 15.5 7 L 12 10.5"]};
+const ICON = {"Маршрут": ["M 5 13 C 6.1046 13 7 13.8954 7 15 C 7 16.1046 6.1046 17 5 17 C 3.8954 17 3 16.1046 3 15 C 3 13.8954 3.8954 13 5 13 Z", "M 15 3 C 16.1046 3 17 3.8954 17 5 C 17 6.1046 16.1046 7 15 7 C 13.8954 7 13 6.1046 13 5 C 13 3.8954 13.8954 3 15 3 Z", "M 5 13 L 5 10 C 5 8.5 6 7.5 7.5 7.5 L 13 7.5"], "Пешком": ["M 11 1.9 C 11.88368 1.9 12.6 2.61632 12.6 3.5 C 12.6 4.38368 11.88368 5.1 11 5.1 C 10.11632 5.1 9.4 4.38368 9.4 3.5 C 9.4 2.61632 10.11632 1.9 11 1.9 Z", "M 9.5 7 L 8 12 L 11 14 L 11 18", "M 8 12 L 6 17", "M 9.5 7 L 12.5 9 L 15 8.5"], "Автобус": ["M 6.5 3 L 13.5 3 C 14.880749999999999 3 16 4.11925 16 5.5 L 16 12.5 C 16 13.880749999999999 14.880749999999999 15 13.5 15 L 6.5 15 C 5.11925 15 4 13.880749999999999 4 12.5 L 4 5.5 C 4 4.11925 5.11925 3 6.5 3 Z", "M 4 10 L 16 10", "M 6.5 15 L 6.5 17.5", "M 13.5 15 L 13.5 17.5", "M 8 6 L 12 6"], "Метро": ["M 4 15 L 4 5 L 10 12 L 16 5 L 16 15"], "Машина": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z"], "Парковка": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 8 14 L 8 6 L 11.5 6 C 13 6 14 7 14 8.5 C 14 10 13 11 11.5 11 L 8 11"], "Дом": ["M 3 9 L 10 3 L 17 9", "M 5 7.5 L 5 17 L 15 17 L 15 7.5", "M 8.5 17 L 8.5 12 L 11.5 12 L 11.5 17"], "Работа": ["M 5 6 L 15 6 C 16.1046 6 17 6.8954 17 8 L 17 15 C 17 16.1046 16.1046 17 15 17 L 5 17 C 3.8954 17 3 16.1046 3 15 L 3 8 C 3 6.8954 3.8954 6 5 6 Z", "M 7.5 6 L 7.5 4.5 C 7.5 4 8 3.5 8.5 3.5 L 11.5 3.5 C 12 3.5 12.5 4 12.5 4.5 L 12.5 6", "M 3 11 L 17 11"], "Зал": ["M 3 8 L 3 12", "M 5.5 6 L 5.5 14", "M 14.5 6 L 14.5 14", "M 17 8 L 17 12", "M 5.5 10 L 14.5 10"], "Семья": ["M 10 16 C 6 13 3 10.5 3 7.5 C 3 5.5 4.5 4 6.5 4 C 8 4 9.3 5 10 6.2 C 10.7 5 12 4 13.5 4 C 15.5 4 17 5.5 17 7.5 C 17 10.5 14 13 10 16 Z"], "Часы": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 10 6 L 10 10 L 13 12"], "Поиск": ["M 9 3.5 C 12.03765 3.5 14.5 5.96235 14.5 9 C 14.5 12.03765 12.03765 14.5 9 14.5 C 5.96235 14.5 3.5 12.03765 3.5 9 C 3.5 5.96235 5.96235 3.5 9 3.5 Z", "M 13 13 L 17 17"], "Закладка": ["M 5 3 L 15 3 L 15 17 L 10 13 L 5 17 Z"], "Вход": ["M 5 17 L 5 3 L 13 3 L 13 17", "M 3 17 L 17 17", "M 10.5 10 L 11 10"], "Профиль": ["M 10 3.5 C 11.93305 3.5 13.5 5.06695 13.5 7 C 13.5 8.93305 11.93305 10.5 10 10.5 C 8.06695 10.5 6.5 8.93305 6.5 7 C 6.5 5.06695 8.06695 3.5 10 3.5 Z", "M 4 17 C 4 13.5 6.5 11.5 10 11.5 C 13.5 11.5 16 13.5 16 17"], "Назад": ["M 16 10 L 4 10", "M 9 5 L 4 10 L 9 15"], "Плюс": ["M 10 4 L 10 16", "M 4 10 L 16 10"], "Дождь": ["M 6 12 C 3.8 12 3 10.5 3 9.3 C 3 7.6 4.4 6.3 6 6.5 C 6.6 4.5 8.3 3 10.5 3 C 13.3 3 15.3 5.2 15.2 7.6 C 16.8 7.8 17.5 9 17.5 10 C 17.5 11.2 16.6 12 15.2 12 Z", "M 7 14.5 L 6 17", "M 10.5 14.5 L 9.5 17", "M 14 14.5 L 13 17"], "Колокол": ["M 5 14 L 5 9 C 5 6 7.2 3.8 10 3.8 C 12.8 3.8 15 6 15 9 L 15 14 L 16.5 15.5 L 3.5 15.5 Z", "M 8.5 17.5 L 11.5 17.5"], "Аптека": ["M 6 3 L 14 3 C 15.6569 3 17 4.3431 17 6 L 17 14 C 17 15.6569 15.6569 17 14 17 L 6 17 C 4.3431 17 3 15.6569 3 14 L 3 6 C 3 4.3431 4.3431 3 6 3 Z", "M 10 6.5 L 10 13.5", "M 6.5 10 L 13.5 10"], "Кофе": ["M 4 8 L 14 8 L 13 15 C 12.9 16.1 12 17 10.9 17 L 7.1 17 C 6 17 5.1 16.1 5 15 Z", "M 14 9.5 L 15.5 9.5 C 16.6 9.5 17 10.3 17 11 C 17 11.8 16.4 12.5 15.5 12.5 L 13.6 12.5", "M 8 3 L 8 5.5", "M 11 3 L 11 5.5"], "Здание": ["M 5.5 3 L 14.5 3 C 15.32845 3 16 3.67155 16 4.5 L 16 15.5 C 16 16.32845 15.32845 17 14.5 17 L 5.5 17 C 4.67155 17 4 16.32845 4 15.5 L 4 4.5 C 4 3.67155 4.67155 3 5.5 3 Z", "M 7.5 7 L 8.5 7", "M 11.5 7 L 12.5 7", "M 7.5 10.5 L 8.5 10.5", "M 11.5 10.5 L 12.5 10.5", "M 9 17 L 9 14 L 11 14 L 11 17"], "Навигатор": ["M 10 2.5 L 16 17 L 10 13.5 L 4 17 Z"], "Внимание": ["M 10 3 L 17.5 16.5 L 2.5 16.5 Z", "M 10 8 L 10 11.5", "M 10 14 L 10 14.1"], "Галочка": ["M 4 10.5 L 8 14.5 L 16 5.5"], "Шаги": ["M 6.3 6.6 C 7.349 6.6 8.2 7.943 8.2 9.6 C 8.2 11.257 7.349 12.6 6.3 12.6 C 5.251 12.6 4.4 11.257 4.4 9.6 C 4.4 7.943 5.251 6.6 6.3 6.6 Z", "M 6.3 15.2 C 7.018 15.2 7.6 15.648 7.6 16.2 C 7.6 16.752 7.018 17.2 6.3 17.2 C 5.582 17.2 5.0 16.752 5.0 16.2 C 5.0 15.648 5.582 15.2 6.3 15.2 Z", "M 13.7 1.0999999999999996 C 14.749 1.0999999999999996 15.6 2.443 15.6 4.1 C 15.6 5.757 14.749 7.1 13.7 7.1 C 12.651 7.1 11.799999999999999 5.757 11.799999999999999 4.1 C 11.799999999999999 2.443 12.651 1.0999999999999996 13.7 1.0999999999999996 Z", "M 13.7 9.7 C 14.418 9.7 15.0 10.148 15.0 10.7 C 15.0 11.252 14.418 11.7 13.7 11.7 C 12.982 11.7 12.399999999999999 11.252 12.399999999999999 10.7 C 12.399999999999999 10.148 12.982 9.7 13.7 9.7 Z"], "Такси": ["M 3 13 L 3 10 L 5 6 C 5.3 5.4 5.9 5 6.6 5 L 13.4 5 C 14.1 5 14.7 5.4 15 6 L 17 10 L 17 13 Z", "M 3 10 L 17 10", "M 6.5 13 C 7.32845 13 8 13.67155 8 14.5 C 8 15.32845 7.32845 16 6.5 16 C 5.67155 16 5 15.32845 5 14.5 C 5 13.67155 5.67155 13 6.5 13 Z", "M 13.5 13 C 14.32845 13 15 13.67155 15 14.5 C 15 15.32845 14.32845 16 13.5 16 C 12.67155 16 12 15.32845 12 14.5 C 12 13.67155 12.67155 13 13.5 13 Z", "M 7.5 5 L 7.5 2.5 L 12.5 2.5 L 12.5 5", "M 10 2.5 L 10 5", "M 7.5 3.75 L 12.5 3.75"], "Каршеринг": ["M 6.5 6.5 C 8.433 6.5 10.0 8.067 10.0 10 C 10.0 11.933 8.433 13.5 6.5 13.5 C 4.567 13.5 3.0 11.933 3.0 10 C 3.0 8.067 4.567 6.5 6.5 6.5 Z", "M 10 10 L 17.5 10", "M 14.5 10 L 14.5 13", "M 17 10 L 17 12.5"], "Лист": ["M 4 16 C 4 8.5 8.5 4 16 4 C 16 11.5 11.5 16 4 16 Z", "M 4 16 L 11.5 8.5"], "Толпа": ["M 7 3.9000000000000004 C 8.27029 3.9000000000000004 9.3 4.92971 9.3 6.2 C 9.3 7.47029 8.27029 8.5 7 8.5 C 5.72971 8.5 4.7 7.47029 4.7 6.2 C 4.7 4.92971 5.72971 3.9000000000000004 7 3.9000000000000004 Z", "M 2.5 16 C 2.5 12.5 4.5 10.8 7 10.8 C 9.5 10.8 11.5 12.5 11.5 16", "M 13.6 4.6 C 14.7046 4.6 15.6 5.4954 15.6 6.6 C 15.6 7.704599999999999 14.7046 8.6 13.6 8.6 C 12.4954 8.6 11.6 7.704599999999999 11.6 6.6 C 11.6 5.4954 12.4954 4.6 13.6 4.6 Z", "M 12.6 11 C 15.4 10.7 17.5 12.3 17.5 15.5"], "Вагон": ["M 7.5 2.5 L 12.5 2.5 C 13.880749999999999 2.5 15 3.61925 15 5 L 15 12 C 15 13.380749999999999 13.880749999999999 14.5 12.5 14.5 L 7.5 14.5 C 6.11925 14.5 5 13.380749999999999 5 12 L 5 5 C 5 3.61925 6.11925 2.5 7.5 2.5 Z", "M 5 9 L 15 9", "M 8 12 L 8.1 12", "M 11.9 12 L 12 12", "M 7.5 14.5 L 5.5 17.5", "M 12.5 14.5 L 14.5 17.5"], "Пин": ["M 10 18 C 10 18 4.5 12.2 4.5 8 C 4.5 5 7 2.5 10 2.5 C 13 2.5 15.5 5 15.5 8 C 15.5 12.2 10 18 10 18 Z", "M 10 6 C 11.1046 6 12 6.8954 12 8 C 12 9.1046 11.1046 10 10 10 C 8.8954 10 8 9.1046 8 8 C 8 6.8954 8.8954 6 10 6 Z"], "Звезда": ["M 10 2.8 L 12.2 7.4 L 17.2 8 L 13.5 11.4 L 14.5 16.4 L 10 13.9 L 5.5 16.4 L 6.5 11.4 L 2.8 8 L 7.8 7.4 Z"], "Шестерёнка": ["M 3 5 L 5.2 5", "M 8.8 5 L 17 5", "M 7 3.2 C 7.994 3.2 8.8 4.006 8.8 5 C 8.8 5.994 7.994 6.8 7 6.8 C 6.006 6.8 5.2 5.994 5.2 5 C 5.2 4.006 6.006 3.2 7 3.2 Z", "M 3 10 L 11.2 10", "M 14.8 10 L 17 10", "M 13 8.2 C 13.994 8.2 14.8 9.006 14.8 10 C 14.8 10.994 13.994 11.8 13 11.8 C 12.006 11.8 11.2 10.994 11.2 10 C 11.2 9.006 12.006 8.2 13 8.2 Z", "M 3 15 L 7.2 15", "M 10.8 15 L 17 15", "M 9 13.2 C 9.994 13.2 10.8 14.006 10.8 15 C 10.8 15.994 9.994 16.8 9 16.8 C 8.006 16.8 7.2 15.994 7.2 15 C 7.2 14.006 8.006 13.2 9 13.2 Z"], "Песочные часы": ["M 5.5 3 L 14.5 3", "M 5.5 17 L 14.5 17", "M 6.5 3 L 6.5 5.5 L 10 10 L 6.5 14.5 L 6.5 17", "M 13.5 3 L 13.5 5.5 L 10 10 L 13.5 14.5 L 13.5 17", "M 8.3 15.6 L 11.7 15.6"], "Эскалатор": ["M 2.5 17 L 6 17 L 6 14 L 9.5 14 L 9.5 11 L 13 11 L 13 8 L 17.5 8", "M 2.5 13 L 11 4.5 L 17.5 4.5"], "Готово": ["M 10 3 C 13.8661 3 17 6.1339 17 10 C 17 13.8661 13.8661 17 10 17 C 6.1339 17 3 13.8661 3 10 C 3 6.1339 6.1339 3 10 3 Z", "M 6.8 10.2 L 9 12.4 L 13.4 7.8"], "История": ["M 4.2 6.8 C 5.4 4.5 7.6 3 10 3 C 13.9 3 17 6.1 17 10 C 17 13.9 13.9 17 10 17 C 6.6 17 3.8 14.6 3.2 11.4", "M 3.2 3.6 L 4.2 6.8 L 7.4 6", "M 10 6.5 L 10 10 L 12.5 11.5"], "Флаг": ["M 5 18 L 5 3", "M 5 3.5 L 15 3.5 L 12.5 7 L 15 10.5 L 5 10.5"], "Светофор": ["M 8 2 L 12 2 C 13.1 2 14 2.9 14 4 L 14 16 C 14 17.1 13.1 18 12 18 L 8 18 C 6.9 18 6 17.1 6 16 L 6 4 C 6 2.9 6.9 2 8 2 Z", "M 10 4.199999999999999 C 10.773 4.199999999999999 11.4 4.827 11.4 5.6 C 11.4 6.373 10.773 7.0 10 7.0 C 9.227 7.0 8.6 6.373 8.6 5.6 C 8.6 4.827 9.227 4.199999999999999 10 4.199999999999999 Z", "M 10 8.6 C 10.773 8.6 11.4 9.227 11.4 10 C 11.4 10.773 10.773 11.4 10 11.4 C 9.227 11.4 8.6 10.773 8.6 10 C 8.6 9.227 9.227 8.6 10 8.6 Z", "M 10 13.0 C 10.773 13.0 11.4 13.627 11.4 14.4 C 11.4 15.173 10.773 15.8 10 15.8 C 9.227 15.8 8.6 15.173 8.6 14.4 C 8.6 13.627 9.227 13.0 10 13.0 Z"], "Закрыть": ["M 5.5 5.5 L 14.5 14.5", "M 14.5 5.5 L 5.5 14.5"], "Корзина": ["M 3.5 5.5 L 16.5 5.5", "M 8 5.5 L 8 3.5 L 12 3.5 L 12 5.5", "M 5 5.5 L 6 17 L 14 17 L 15 5.5", "M 8.5 8.5 L 8.5 14", "M 11.5 8.5 L 11.5 14"], "Обмен": ["M 6.5 16 L 6.5 4", "M 3.5 7 L 6.5 4 L 9.5 7", "M 13.5 4 L 13.5 16", "M 10.5 13 L 13.5 16 L 16.5 13"], "Налево": ["M 14 17 L 14 10 C 14 8.3 12.7 7 11 7 L 4.5 7", "M 8 3.5 L 4.5 7 L 8 10.5"], "Направо": ["M 6 17 L 6 10 C 6 8.3 7.3 7 9 7 L 15.5 7", "M 12 3.5 L 15.5 7 L 12 10.5"]};
 const ic = (name, size) => `<svg class="i" viewBox="0 0 20 20" width="${size||20}" height="${size||20}" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name].map(d => `<path d="${d}"/>`).join('')}</svg>`;
 // иконка по имени из набора; иначе — текст (экранированный): модуль не может вставить разметку
 const icn = (v, size) => ICON[v] ? ic(v, size) : esc(v);
 
 const state = { arrive: 9*60, mode:'hurry', sel:null, modules:{}, view:'home', history:[], timeMode:'depart', depart:NOW,
-  dest:null, templates:[], recents:[], visits:{}, declined:{}, modAns:{}, q:'', found:null, finding:false, findErr:null, pickHome:false, fromHere:false, locating:false, fromOpen:false };   // первый запуск: ни шаблонов, ни истории
+  dest:null, templates:[], recents:[], visits:{}, declined:{}, modAns:{}, q:'', found:null, finding:false, findErr:null, pickHome:false, from:null, findFor:null, keepFrom:false, geoFail:null, locating:false, fromOpen:false };   // первый запуск: ни шаблонов, ни истории
 // Места поиска. Маршруты в прототипе есть только до м. Бауманская.
 const PLACES = {
   baum: { name:'м.\u00a0Бауманская', pin:'М Бауманская', sub:'Арбатско-Покровская линия', km:'8 км', ico:'Метро', ok:true, at:DEST },
@@ -311,7 +317,7 @@ function setCtx(T){
 // Контекст для текущего выбора времени. Кэш по ключу выбора — считаем один раз на изменение.
 let SYNC_KEY = null;
 function syncCtx(){
-  const key = [state.dest, LIVE.ver, state.fromHere, NOW, state.mode, state.timeMode, state.arrive, state.depart, JSON.stringify(state.modules), MODULES.map(m=>m.id + (m.__broken?'!':'')).join(',')].join('|');
+  const key = [state.dest, LIVE.ver, JSON.stringify(state.from), (originPt() || []).join(), NOW, state.mode, state.timeMode, state.arrive, state.depart, JSON.stringify(state.modules), MODULES.map(m=>m.id + (m.__broken?'!':'')).join(',')].join('|');
   if(key === SYNC_KEY) return; SYNC_KEY = key;
   rebuildOptions(); CTX.key = null;   // варианты пересобраны (другое место) — подготовить их заново
   if(!arriveMode()){ setCtx(dep() + TRIP_ANCHOR); return; }
@@ -746,30 +752,36 @@ function routeOk(r){ if(!r || typeof r !== 'object' || r.v !== METRO_VER || !Num
     if(M.segs[0].transfer || M.segs[M.segs.length - 1].transfer) return false; }
   return !!(r.metro || r.walk); }
 const LIVE_KEY = 'gis.live', WALK_MPM = 80;   // скорость пешком: 80 м/мин ≈ 4,8 км/ч (сверено с Яндексом на 3 маршрутах); свой темп — модуль «Мой темп»
-const LIVE = { home:null, places:{}, routes:{}, ver:0, pending:{}, here:null, hereRoutes:{} };   // here — «где я сейчас» (только в памяти)
+const LIVE = { home:null, places:{}, routes:{}, ver:0, pending:{}, here:null };   // here — последняя точка «где я сейчас» {at, t} (только в памяти)
+const sigOf = at => at.map(x => x.toFixed(4)).join(',');   // ~10 м: маршрут от той же точки — тот же; ключ маршрута — «место|откуда»
 function loadLive(){ let d; try{ d = JSON.parse(localStorage.getItem(LIVE_KEY) || 'null'); }catch(e){ d = null; }
   if(!d || typeof d !== 'object') return;
   const okAt = a => Array.isArray(a) && a.length === 2 && a.every(Number.isFinite) && a[0] > 36 && a[0] < 39 && a[1] > 55 && a[1] < 57;
   const okP = p => p && typeof p.name === 'string' && p.name && okAt(p.at);
   if(okP(d.home)) LIVE.home = { name: d.home.name.slice(0, 80), at: d.home.at };
   if(d.places && typeof d.places === 'object') for(const [k, p] of Object.entries(d.places)) if(/^p[a-z0-9]{1,24}$/.test(k) && okP(p)) addLivePlace(k, p);
-  if(d.routes && typeof d.routes === 'object') for(const [k, r] of Object.entries(d.routes)) if(PLACES[k] && LIVE.home && r && r.from === homeSig() && routeOk(r)) LIVE.routes[k] = r; }
+  if(d.routes && typeof d.routes === 'object') for(const [key, r] of Object.entries(d.routes)){ const k = key.split('|')[0];
+    if(PLACES[k] && r && typeof r.from === 'string' && key === k + '|' + r.from && routeOk(r)) LIVE.routes[key] = r; } }
 function saveLive(){ try{ const places = {};
   const ks = Object.keys(LIVE.routes).sort((a, b) => LIVE.routes[b].at - LIVE.routes[a].at);   // свежие — первыми; лишние старые — прочь
   for(const k of ks.slice(ROUTES_MAX)) delete LIVE.routes[k]; for(const k in LIVE.places) places[k] = { name: LIVE.places[k].name, sub: LIVE.places[k].sub, at: LIVE.places[k].at, metro: LIVE.places[k].metro };
   localStorage.setItem(LIVE_KEY, JSON.stringify({ v:1, home: LIVE.home, places, routes: LIVE.routes })); }catch(e){} }
-const homeSig = () => LIVE.home ? LIVE.home.at.map(x => x.toFixed(5)).join(',') : '';
 function addLivePlace(k, p){ const sub = typeof p.sub === 'string' ? p.sub.slice(0, 80) : '';
   LIVE.places[k] = { name: p.name.slice(0, 80), sub, at: p.at, metro: !!p.metro };
   PLACES[k] = { name: esc(p.name.slice(0, 80)), pin: p.name.slice(0, 40), sub: esc(sub), km: '', ico: p.metro ? 'Метро' : 'Пин', ok:true, live:true, at: p.at };
-  if(LIVE.home) PLACES[k].km = kmText(dist(LIVE.home.at, p.at)); }
+}
 const kmText = m => m < 1000 ? Math.round(m / 10) * 10 + ' м' : (m / 1000).toFixed(m < 10000 ? 1 : 0).replace('.', ',') + ' км';
 const isLive = k => !!(k && PLACES[k] && PLACES[k].live);
-// Точка «откуда» на карте: живой дом — для живых мест и главного; демо-дом — для демо-маршрутов
-const startPt = () => state.mode !== 'walk' && (!state.dest || isLive(state.dest)) && (state.fromHere && LIVE.here ? LIVE.here.at : LIVE.home && LIVE.home.at) || HOME;
-const startName = () => state.fromHere && LIVE.here ? 'Ты здесь' : LIVE.home ? 'Дом' : 'Ты здесь';
+/* ----- Откуда: state.from = null — «где я сейчас» (по умолчанию в начале планирования); {name, at, home?} — выбранная точка ----- */
+const HERE_FRESH = 3 * 60 * 1000;   // точка «где я сейчас» свежая 3 минуты
+const hereAt = () => LIVE.here && Date.now() - LIVE.here.t < HERE_FRESH ? LIVE.here.at : null;
+const originPt = () => state.from ? state.from.at : hereAt();
+const originName = () => state.from ? (state.from.home ? 'Дом' : state.from.name) : 'Где я сейчас';
+const homeFrom = () => LIVE.home ? { name: LIVE.home.name, at: LIVE.home.at, home:true } : null;
+const startPt = () => state.mode !== 'walk' && (!state.dest || isLive(state.dest)) && (originPt() || (LIVE.home && LIVE.home.at)) || HOME;
+const startName = () => state.from ? (state.from.home ? 'Дом' : 'Отсюда') : hereAt() ? 'Ты здесь' : LIVE.home && isLive(state.dest) ? 'Дом' : 'Ты здесь';
 
-/* ----- Геолокация: только по действию человека (кнопка «Где я сейчас», старт пути) ----- */
+/* ----- Геолокация: при старте планирования, в пути; отказ — честно и с выбором ----- */
 const GEO = { pos:null, acc:null, at:0, watch:null, denied:false };
 const geoFix = p => { GEO.pos = [+p.coords.longitude.toFixed(6), +p.coords.latitude.toFixed(6)]; GEO.acc = p.coords.accuracy; GEO.at = Date.now(); };
 function geoOnce(ms = 10000){ return new Promise((res, rej) => { if(!navigator.geolocation) return rej(new Error('нет геолокации'));
@@ -777,15 +789,21 @@ function geoOnce(ms = 10000){ return new Promise((res, rej) => { if(!navigator.g
 function geoWatch(on){ if(!navigator.geolocation) return;
   if(on && GEO.watch == null) GEO.watch = navigator.geolocation.watchPosition(geoFix, e => { if(e.code === 1) GEO.denied = true; }, { enableHighAccuracy:true, maximumAge:5000 });
   if(!on && GEO.watch != null){ navigator.geolocation.clearWatch(GEO.watch); GEO.watch = null; } }
-// «Откуда»: дом или где я сейчас (маршрут от текущей точки не сохраняется — он на один раз)
-async function useHere(){ const k = state.dest; if(!isLive(k)) return;
-  state.locating = true; state.fromOpen = false; render();
-  try{ const p = await geoOnce(); LIVE.here = { at:p }; LIVE.hereRoutes = {}; state.fromHere = true; LIVE.ver++;
-    state.locating = false; render(); showPlace();
-    await buildLiveRoute(k); if(state.dest === k){ state.sel = goKeys()[0] || null; if(state.view === 'place') placeReady(); else { render(); showSel(); } } }
-  catch(e){ state.locating = false; state.fromHere = false;
-    toast(GEO.denied ? 'Доступ к геолокации запрещён — считаю от дома. Разрешить можно в настройках браузера' : 'Не получилось определить, где ты — считаю от дома'); render(); } }
-function useHome(){ state.fromHere = false; state.fromOpen = false; SYNC_KEY = null; state.sel = goKeys()[0] || null; render(); if(state.view === 'compare') showSel(); else showPlace(); }
+const GEO_FAIL = { denied:'Доступ к геолокации запрещён — разрешить можно в настройках браузера', insecure:'Геолокация работает только по ссылке https', fail:'Не получилось определить, где ты' };
+async function locate(){ if(hereAt()) return true;
+  state.locating = true; render();
+  try{ const p = await geoOnce(); LIVE.here = { at:p, t:Date.now() }; LIVE.ver++; state.geoFail = null; return true; }
+  catch(e){ state.geoFail = window.isSecureContext === false ? 'insecure' : GEO.denied ? 'denied' : 'fail'; return false; }
+  finally{ state.locating = false; } }
+// Построить маршрут до текущего места от выбранного «откуда». «Где я сейчас» неизвестно — сначала найти; не вышло — от дома (если задан) или выбор
+async function planLive(){ const k = state.dest; if(!isLive(k)) return;
+  if(!state.from && !hereAt()){ const ok = await locate(); if(state.dest !== k) return;
+    if(!ok && LIVE.home){ state.from = homeFrom(); toast(GEO_FAIL[state.geoFail] + ' — считаю от дома'); } }
+  const o = originPt(); if(!o){ render(); return; }
+  if(!liveRoute(k)){ render(); try{ await buildLiveRoute(k, o); }catch(e){} }
+  if(state.dest !== k) return;
+  if(state.view === 'place') placeReady(); else { state.sel = goKeys()[0] || null; render(); showSel(); } }
+function setFrom(f){ state.from = f; state.fromOpen = false; SYNC_KEY = null; state.sel = null; render(); planLive(); }
 
 /* ----- Поиск мест (Nominatim) ----- */
 async function geocode(q){
@@ -855,15 +873,14 @@ function nearStations(p){ const xs = MET.s.map(s => ({ i:s.i, d:dist(p, s.at) })
   for(const x of pick.slice()) for(const e of MET.adj[x.i]) if(e.tr && !have.has(e.to)){ have.add(e.to); pick.push({ i:e.to, d:dist(p, MET.s[e.to].at) }); }
   return pick; }
 
-/* ----- Построить маршрут до места k (асинхронно, результат — в LIVE.routes[k]) ----- */
-async function buildLiveRoute(k, from){   // from: 'home' | 'here'; по умолчанию — как выбрано на экране
-  const here = from ? from === 'here' && !!LIVE.here : !!(state.fromHere && LIVE.here), pk = k + (here ? '@' : '');
-  if(!(here || LIVE.home) || !isLive(k)) return null;
+/* ----- Построить маршрут до места k от точки A (асинхронно, результат — в LIVE.routes['k|откуда']) ----- */
+async function buildLiveRoute(k, A){
+  if(!A || !isLive(k)) return null; const pk = k + '|' + sigOf(A);
   if(LIVE.pending[pk]) return LIVE.pending[pk];
   const run = (async () => {
-    const A = here ? LIVE.here.at : LIVE.home.at, B = PLACES[k].at, direct = dist(A, B), R = { v: METRO_VER, from: here ? 'here' : homeSig(), at: Date.now(), exact:true };
+    const B = PLACES[k].at, direct = dist(A, B), R = { v: METRO_VER, from: sigOf(A), at: Date.now(), exact:true };
     const nA = nearStations(A), nB = nearStations(B);
-    if(!nA.length && direct > 4500){ R.none = 'Рядом с тобой нет метро, а пешком далеко — маршрут посчитаю от дома'; (here ? LIVE.hereRoutes : LIVE.routes)[k] = R; LIVE.ver++; SYNC_KEY = null; return R; }
+    if(!nA.length && direct > 4500){ R.none = 'Рядом с этой точкой нет метро, а пешком далеко'; LIVE.routes[pk] = R; LIVE.ver++; SYNC_KEY = null; return R; }
     const [tA, tB] = await Promise.all([walkTable(A, nA.map(x => MET.s[x.i].at)), walkTable(B, nB.map(x => MET.s[x.i].at))]);
     const wFrom = {}, wTo = {}; nA.forEach((x, j) => wFrom[x.i] = tA.m[j] / WALK_MPM); nB.forEach((x, j) => wTo[x.i] = tB.m[j] / WALK_MPM);
     const mp = direct > 900 ? metroPath(wFrom, wTo) : null;
@@ -873,11 +890,11 @@ async function buildLiveRoute(k, from){   // from: 'home' | 'here'; по умо�
     if(direct < 4500){ const w = await walkPath(A, B); R.walk = w; R.exact = R.exact && w.exact; }
     if(!R.metro && !R.walk && direct < 15000) R.walk = await walkPath(A, B);
     if(!R.metro && !R.walk) R.none = 'Отсюда маршрута на метро нет';
-    if(here) LIVE.hereRoutes[k] = R; else { LIVE.routes[k] = R; saveLive(); }
+    LIVE.routes[pk] = R; saveLive();
     LIVE.ver++; SYNC_KEY = null; return R; })();
   LIVE.pending[pk] = run; try{ return await run; } finally{ delete LIVE.pending[pk]; } }
-const liveRoute = k => { const r = state.fromHere && LIVE.here ? LIVE.hereRoutes[k] : LIVE.routes[k]; return r && Date.now() - r.at <= ROUTE_TTL ? r : null; };
-const livePending = k => LIVE.pending[k + (state.fromHere && LIVE.here ? '@' : '')];
+const liveRoute = (k, o = originPt()) => { if(!o) return null; const r = LIVE.routes[k + '|' + sigOf(o)]; return r && Date.now() - r.at <= ROUTE_TTL ? r : null; };
+const livePending = (k, o = originPt()) => o ? LIVE.pending[k + '|' + sigOf(o)] : null;
 
 /* ----- Модуль: варианты для живых мест ----- */
 const inflect = name => name.split(' ').map(w => w.replace(/ая$/, 'ую').replace(/ия$/, 'ию')).join(' ');   // «Большая кольцевая линия» → «Большую кольцевую линию»
@@ -911,7 +928,7 @@ function liveOptions(k){
   return o; }
 registerModule({ id:'live', group:'mode', live:true, icon:'Пин', name:'Маршруты по Москве', desc:'Метро и пешком до любого места — по карте OpenStreetMap', where:'Способы для мест из поиска', on:true,
   _k:null, _ver:-1, _o:{},
-  get options(){ const k = isLive(state.dest) ? state.dest + (state.fromHere && LIVE.here ? '@' : '') : null;
+  get options(){ const o = originPt(), k = isLive(state.dest) ? state.dest + '|' + (o ? sigOf(o) : '') : null;
     if(k !== this._k || LIVE.ver !== this._ver){ this._k = k; this._ver = LIVE.ver; this._o = k ? liveOptions(state.dest) : {}; }
     return this._o; },
   prepare(T){
@@ -1015,17 +1032,22 @@ const isSaved = () => state.templates.some(t => t.dest===state.dest && t.mode===
 
 /* ----- Главный экран: поиск. Под ним — мои маршруты и недавние (если есть) ----- */
 // План шаблона на сегодня: прогноз и итог, как если бы человек выбрал это время; выбор затем возвращается
+// откуда шаблона: сохранённое при создании; у старых шаблонов (до 27.11) — дом
+const tplFrom = t => t.from === undefined ? homeFrom() : t.from;
+const tplNoRoute = t => isLive(t.dest) && !liveRoute(t.dest, tplFrom(t) ? tplFrom(t).at : hereAt());
 function tplPlan(t){
-  const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode, fromHere:state.fromHere };
-  Object.assign(state, { fromHere:false, dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
+  if(tplNoRoute(t)) return null;
+  const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode, from:state.from };
+  Object.assign(state, { from:tplFrom(t), dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
   syncCtx();
   const r = OPTIONS[t.mode] ? { f: forecast(t.mode), v: verdict(t.mode), name: OPTIONS[t.mode].name, verb: goVerb(t.mode), why: collect('banners').map(b => b.title) } : null;
   Object.assign(state, keep); SYNC_KEY = null; syncCtx();
   return r; }
 function tplTime(t){   // «выйди до 8:23» для шаблона; не сегодня — когда понадобится
   if(t.arrive != null && (!tplToday(t) || t.arrive < NOW)) return `<div class="m">к ${fmt(t.arrive)}</div><b>${nextDay(t) || 'завтра'}</b>`;   // сегодня уже прошло — следующий раз
-  const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode, fromHere:state.fromHere };
-  Object.assign(state, { fromHere:false, dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
+  if(tplNoRoute(t)) return `<div class="m">${t.arrive != null ? 'к ' + fmt(t.arrive) : 'маршрут'}</div><b>${tplFrom(t) || hereAt() ? 'посчитать' : 'от тебя'}</b>`;   // маршрут ещё не считан — посчитается по нажатию
+  const keep = { dest:state.dest, timeMode:state.timeMode, arrive:state.arrive, depart:state.depart, mode:state.mode, from:state.from };
+  Object.assign(state, { from:tplFrom(t), dest:t.dest, timeMode:t.arrive!=null?'arrive':'depart', arrive:t.arrive!=null?t.arrive:state.arrive, depart:NOW, mode:'hurry' });
   syncCtx();
   if(!OPTIONS[t.mode]){ Object.assign(state, keep); SYNC_KEY = null; syncCtx(); return `<div class="m">способ</div><b>выключен</b>`; }
   const f = forecast(t.mode), v = verdict(t.mode);
@@ -1033,18 +1055,23 @@ function tplTime(t){   // «выйди до 8:23» для шаблона; не �
   Object.assign(state, keep); SYNC_KEY = null; syncCtx();   // вернуть контекст текущего выбора
   return out;
 }
-const homeStart = () => LIVE.home
-  ? `<div class="sec">Откуда</div><button class="lrow press" aria-label="Откуда: ${esc(LIVE.home.name)}. Изменить" onclick="startPickHome()"><div class="ico" aria-hidden="true">${ic('Дом')}</div><div class="tx"><b>${esc(LIVE.home.name)}</b><div class="m">Отсюда считаются маршруты · изменить</div></div></button>`
-  : `<div class="hint startcard"><span aria-hidden="true">${ic('Дом')}</span> <span style="flex:1"><b>Откуда ты обычно выходишь?</b><br>Укажи адрес — и маршруты будут считаться от него</span><button class="mlink" onclick="startPickHome()">Указать</button></div>`;
+const fromLabel = f => !f ? 'От тебя' : f.home ? 'Из дома' : 'От ' + f.name;
+// строка списка с корзиной: строка — действие, корзина — удалить только её
+const delBtn = (fn, label) => `<button class="del press" aria-label="${esc(label)}" onclick="${fn}">${ic('Корзина', 18)}</button>`;
+function recentRow(r, i){ const p = PLACES[r.to]; if(!p) return '';
+  return `<div class="lrw"><button class="lrow press" onclick="openRecent(${i})"><div class="ico" aria-hidden="true">${ic('История')}</div><div class="tx"><b>${p.name}</b><div class="m">${p.live ? esc(fromLabel(r.from)) + ' → сюда' : p.sub}</div></div></button>${delBtn('delRecent(' + i + ')', 'Удалить из истории: ' + (p.pin || ''))}</div>`; }
 V.home = () => {
-  if(!state.templates.length && !state.recents.length) return `<h1 class="sr" tabindex="-1">Куда едем?</h1>${homeStart()}`;
-  const T = state.templates.map((t,i) => `<button class="lrow press${t.reverse ? ' muted' : ''}" onclick="useTemplate(${i})"><div class="ico" aria-hidden="true">${ic(t.name==='Работа'?'Работа':t.reverse?'Дом':'Звезда')}</div>
-      <div class="tx"><b>${esc(t.name)}</b><div class="m">${t.reverse ? PLACES[t.dest].name + ' → сюда · строится позже' : 'Отсюда → ' + PLACES[t.dest].name}${t.arrive!=null ? ' · к ' + fmtD(t.arrive) : ''}${t.days && t.days.length ? ' · ' + daysText(t.days) : ''}</div></div>
-      <div class="r">${t.reverse ? '' : tplTime(t)}</div></button>`).join('');
-  const R = state.recents.map(k => `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">${ic('История')}</div><div class="tx"><b>${PLACES[k].name}</b><div class="m">${PLACES[k].sub}</div></div></button>`).join('');
+  if(!state.templates.length && !state.recents.length) return `<h1 class="sr" tabindex="-1">Куда едем?</h1>`;
+  const T = state.templates.map((t,i) => `<div class="lrw"><button class="lrow press${t.reverse ? ' muted' : ''}" onclick="useTemplate(${i})"><div class="ico" aria-hidden="true">${ic(t.name==='Работа'?'Работа':t.reverse?'Дом':'Звезда')}</div>
+      <div class="tx"><b>${esc(t.name)}</b><div class="m">${t.reverse ? PLACES[t.dest].name + ' → сюда · строится позже' : (isLive(t.dest) ? esc(fromLabel(tplFrom(t))) : 'Отсюда') + ' → ' + PLACES[t.dest].name}${t.arrive!=null ? ' · к ' + fmtD(t.arrive) : ''}${t.days && t.days.length ? ' · ' + daysText(t.days) : ''}</div></div>
+      <div class="r">${t.reverse ? '' : tplTime(t)}</div></button>${delBtn('delTemplate(' + i + ')', 'Удалить маршрут «' + t.name + '»')}</div>`).join('');
+  const R = state.recents.map(recentRow).join('');
   return `<h1 class="sr" tabindex="-1">Куда едем?</h1>${homeCards()}
-    ${T ? `<div class="sec">Мои маршруты</div>${T}` : ''}${homeStart()}${R ? `<div class="sec row" style="justify-content:space-between;align-items:center"><span>Недавние</span><button class="mlink" aria-label="Очистить недавние места" onclick="clearRecents()">Очистить</button></div>${R}` : ''}`;
+    ${T ? `<div class="sec">Мои маршруты</div>${T}` : ''}${R ? `<div class="sec row" style="justify-content:space-between;align-items:center"><span>Недавние</span><button class="mlink" aria-label="Очистить все недавние" onclick="clearRecents()">Очистить всё</button></div>${R}` : ''}`;
 };
+function delTemplate(i){ const t = state.templates[i]; if(!t) return; state.templates.splice(i, 1); render(); toast('Маршрут «' + t.name + '» удалён'); say('Маршрут удалён'); }
+function delRecent(i){ if(!state.recents[i]) return; state.recents.splice(i, 1); render(); if(state.view === 'home') snapFor('home'); toast('Удалено из истории'); }
+function openRecent(i){ const r = state.recents[i]; if(!r) return; openPlace(r.to, r.from); }
 // Ближайший маршрут на сегодня (по шаблонам со временем прибытия) — для модулей главного экрана (homeCards)
 function nextTrip(){ let best = null;
   state.templates.forEach((t, i) => { if(t.reverse || t.arrive == null || !tplToday(t)) return;
@@ -1059,22 +1086,31 @@ function homeCards(){
   const c = collect('homeCards', view)[0]; if(!c) return '';
   return `<div class="hint homecard${c.warn ? ' w' : ''}" role="status"><span aria-hidden="true">${icn(c.icon)}</span> <span style="flex:1"><b>${esc(c.title)}</b>${c.text ? '<br>' + esc(c.text) : ''}</span>${c.go ? `<button class="mlink" onclick="useTemplate(${n.i})">Маршрут</button>` : ''}</div>`; }
 /* ----- Поиск: ввод ----- */
-V.find = () => { const home = !!state.pickHome;
-  return `<h1 class="sr" tabindex="-1">${home ? 'Откуда ты обычно выходишь' : 'Поиск места'}</h1>
-  <div class="row" style="margin-top:2px"><button class="back-btn" aria-label="Назад" onclick="state.pickHome=false;back()">${ic('Назад')}</button>
-    <input id="q" class="q" type="search" enterkeyhint="search" placeholder="${home ? 'Адрес: улица, дом' : 'Куда? Адрес или место'}" autocomplete="off" aria-label="${home ? 'Откуда ты обычно выходишь' : 'Куда едем'}" value="${esc(state.q)}" oninput="state.q=this.value;state.found=null;findList()" onkeydown="if(event.key==='Enter'){ event.preventDefault(); findEnter(); }">
+// Поиск: куда (по умолчанию), откуда (state.findFor === 'from') или адрес дома (state.pickHome)
+const findMode = () => state.pickHome ? 'home' : state.findFor === 'from' ? 'from' : 'to';
+V.find = () => { const m = findMode();
+  const title = { home:'Адрес дома', from:'Откуда', to:'Поиск места' }[m], ph = { home:'Адрес дома: улица, дом', from:'Откуда? Адрес или место', to:'Куда? Адрес или место' }[m];
+  return `<h1 class="sr" tabindex="-1">${title}</h1>
+  <div class="row" style="margin-top:2px"><button class="back-btn" aria-label="Назад" onclick="findBack()">${ic('Назад')}</button>
+    <input id="q" class="q" type="search" enterkeyhint="search" placeholder="${ph}" autocomplete="off" aria-label="${title}" value="${esc(state.q)}" oninput="state.q=this.value;state.found=null;findList()" onkeydown="if(event.key==='Enter'){ event.preventDefault(); findEnter(); }">
     <button class="chip press" onclick="doFind()">Найти</button></div>
   <div id="res" aria-live="polite" style="margin-top:12px">${findHtml()}</div>`; };
+function findBack(){ state.pickHome = false; state.findFor = null; back(); }
+// готовые точки «откуда»: где я сейчас и дом
+const fromChoices = () => `<button class="lrow press" onclick="setFromBack(null)"><div class="ico" aria-hidden="true">${ic('Навигатор')}</div><div class="tx"><b>Где я сейчас</b><div class="m">${hereAt() ? 'по геолокации' : 'определю по геолокации'}</div></div></button>`
+  + (LIVE.home ? `<div class="lrw"><button class="lrow press" onclick="setFromBack(homeFrom())"><div class="ico" aria-hidden="true">${ic('Дом')}</div><div class="tx"><b>Дом</b><div class="m">${esc(LIVE.home.name)}</div></div></button><button class="del press" aria-label="Изменить адрес дома" onclick="startPickHome()">${ic('Шестерёнка', 18)}</button></div>`
+    : `<button class="lrow press" onclick="startPickHome()"><div class="ico" aria-hidden="true">${ic('Дом')}</div><div class="tx"><b>Задать дом</b><div class="m">чтобы выбирать в одно касание</div></div></button>`);
 function findHtml(){
-  const q = (state.q||'').trim().toLowerCase(), home = !!state.pickHome;
+  const q = (state.q||'').trim().toLowerCase(), m = findMode(), o = originPt() || (LIVE.home && LIVE.home.at);
   const found = state.finding ? `<div class="m" style="margin:12px 4px">Ищу…</div>`
     : state.findErr ? `<div class="m" style="margin:12px 4px">${esc(state.findErr)}</div>`
-    : state.found ? (state.found.length ? state.found.map((f, i) => `<button class="lrow press" onclick="pickFound(${i})"><div class="ico" aria-hidden="true">${ic(home ? 'Дом' : f.metro ? 'Метро' : f.stop ? 'Автобус' : 'Пин')}</div><div class="tx"><b>${esc(f.name)}</b><div class="m">${esc(f.sub)}${!home && LIVE.home ? ' · ' + kmText(dist(LIVE.home.at, f.at)) : ''}</div></div></button>`).join('')
+    : state.found ? (state.found.length ? state.found.map((f, i) => `<button class="lrow press" onclick="pickFound(${i})"><div class="ico" aria-hidden="true">${ic(m === 'home' ? 'Дом' : f.metro ? 'Метро' : f.stop ? 'Автобус' : 'Пин')}</div><div class="tx"><b>${esc(f.name)}</b><div class="m">${esc(f.sub)}${m === 'to' && o ? ' · ' + kmText(dist(o, f.at)) : ''}</div></div></button>`).join('')
         : `<div class="m" style="margin:12px 4px">Ничего не нашлось. Попробуй иначе: «Милашенкова 4А» или «Красная площадь»</div>`) : '';
-  if(home) return (q ? found || `<div class="m" style="margin:12px 4px">Нажми «Найти»</div>` : `<div class="m" style="margin:12px 4px">Например, «13-я Парковая 40». Адрес хранится только на этом телефоне</div>`);
-  if(!q) return state.recents.length ? `<div class="sec">Недавние</div>` + state.recents.map(k=>placeRow(k)).join('') : `<div class="m" style="margin:12px 4px">Адрес или место в Москве — и нажми «Найти»</div>`;
+  if(m === 'home') return q ? found || `<div class="m" style="margin:12px 4px">Нажми «Найти»</div>` : `<div class="m" style="margin:12px 4px">Например, «13-я Парковая 40». Адрес хранится на этом телефоне; для поиска он уходит в OpenStreetMap</div>`;
+  if(m === 'from') return q ? found || `<div class="m" style="margin:12px 4px">Нажми «Найти»</div>` : fromChoices();
+  if(!q) return state.recents.length ? `<div class="sec">Недавние</div>` + state.recents.map(recentRow).join('') : `<div class="m" style="margin:12px 4px">Адрес или место в Москве — и нажми «Найти». Маршрут посчитаю от того места, где ты сейчас</div>`;
   const demo = /ба[уy]|baum|мгт/.test(q) ? `<div class="sec">Демо-маршрут</div>` + ['baum','baumst','mgtu'].map(placeRow).join('') : '';
-  return (found || `<div class="m" style="margin:12px 4px">Нажми «Найти»${LIVE.home ? '' : ' — а сначала укажи на главном, откуда ты обычно выходишь'}</div>`) + demo;
+  return (found || `<div class="m" style="margin:12px 4px">Нажми «Найти»</div>`) + demo;
 }
 function placeRow(k){ const p = PLACES[k];
   return `<button class="lrow press" onclick="openPlace('${k}')"><div class="ico" aria-hidden="true">${icn(p.ico)}</div><div class="tx"><b>${p.name}</b><div class="m">${p.sub}${p.km ? ' · ' + p.km : ''}</div></div></button>`; }
@@ -1093,41 +1129,47 @@ async function doFind(){ const q = (state.q || '').trim(); if(q.length < 3 || st
     state.found = local.concat(g.filter(r => !local.some(l => normName(r.name).includes(l.bare) && (r.stop || /метро|станци/i.test(r.name))))).slice(0, 6); state.foundQ = q; }
   catch(e){ state.found = []; state.foundQ = q; state.findErr = 'Поиск не ответил — проверь интернет и попробуй ещё раз'; }
   state.finding = false; findList(); }
-function pickFound(i){ const f = state.found && state.found[i]; if(!f) return;
-  if(state.pickHome){ LIVE.home = { name: f.name, at: f.at }; LIVE.routes = {}; LIVE.ver++;
-    for(const k in LIVE.places) PLACES[k].km = kmText(dist(f.at, PLACES[k].at));
-    saveLive(); state.pickHome = false; state.q = ''; state.found = null; toast('Откуда: ' + f.name); back(); showHome(); warmTemplates(); return; }
-  const k = 'p' + Math.abs(Math.round(f.at[0] * 1e5) * 7 + Math.round(f.at[1] * 1e5) * 13).toString(36);
-  addLivePlace(k, { name: f.name.replace(/[<>"\\]/g, ''), sub: f.sub, at: f.at, metro: f.metro }); saveLive(); state.found = null; openPlace(k); }
+const placeKey = at => 'p' + Math.abs(Math.round(at[0] * 1e5) * 7 + Math.round(at[1] * 1e5) * 13).toString(36);
+function pickFound(i){ const f = state.found && state.found[i]; if(!f) return; const name = f.name.replace(/[<>"\\]/g, '');
+  state.found = null; state.q = '';
+  if(state.pickHome){ LIVE.home = { name, at: f.at }; LIVE.ver++; saveLive(); state.pickHome = false; toast('Дом: ' + name);
+    back(); if(state.view === 'find' && state.findFor === 'from'){ setFromBack(homeFrom()); return; } if(state.view === 'home') showHome(); warmTemplates(); return; }
+  if(state.findFor === 'from'){ setFromBack({ name, at: f.at }); return; }
+  const k = placeKey(f.at); addLivePlace(k, { name, sub: f.sub, at: f.at, metro: f.metro }); saveLive();
+  openPlace(k, state.keepFrom ? state.from : null); state.keepFrom = false; }
 function startPickHome(){ state.pickHome = true; state.q = ''; state.found = null; state.findErr = null; go('find'); }
-// маршруты для сохранённых живых мест — заранее, чтобы «Мои маршруты» и «Пора выходить» знали время
-function warmTemplates(){ if(!LIVE.home) return;
-  const ks = [...new Set(state.templates.map(t => t.dest).filter(k => isLive(k) && !LIVE.routes[k]))];
-  ks.reduce((p, k) => p.then(() => buildLiveRoute(k, 'home')), Promise.resolve()).then(() => { if(ks.length && !trip.on && state.view === 'home') render(); }); }
+function startPickFrom(){ state.findFor = 'from'; state.q = ''; state.found = null; state.findErr = null; go('find'); }
+function startPickTo(){ state.findFor = null; state.keepFrom = true; state.q = ''; state.found = null; state.findErr = null; go('find'); }
+// выбрал «откуда» в поиске — назад к способам, маршрут от новой точки
+function setFromBack(f){ state.findFor = null; state.q = ''; state.found = null; if(state.view === 'find') state.view = state.history.pop() || 'home'; setFrom(f); snapFor(state.view); }
+// маршруты для сохранённых маршрутов — заранее, от их «откуда», чтобы «Мои маршруты» и «Пора выходить» знали время
+function warmTemplates(){
+  const ts = state.templates.filter(t => isLive(t.dest) && tplFrom(t) && !liveRoute(t.dest, tplFrom(t).at));
+  ts.reduce((p, t) => p.then(() => buildLiveRoute(t.dest, tplFrom(t).at)), Promise.resolve()).then(() => { if(ts.length && !trip.on && state.view === 'home') render(); }); }
+// поменять местами «откуда» и «куда»
+function swapFromTo(){ const k = state.dest, o = originPt(); if(!isLive(k) || !o) return;
+  const back2 = { name: LIVE.places[k].name, at: PLACES[k].at }, nk = placeKey(o);
+  if(!PLACES[nk]) addLivePlace(nk, { name: state.from ? state.from.name : 'Где я был', sub: state.from && state.from.home ? 'дом' : '', at: o });
+  saveLive(); openPlace(nk, back2); }
 function findList(){ const r = document.getElementById('res'); if(r) r.innerHTML = glue(findHtml()); }
-/* ----- Место: шторка с коротким «как добраться» ----- */
+/* ----- Место: короткая шторка, пока ищу, где ты, и считаю маршрут; дальше — сразу способы ----- */
 V.place = () => {
   if(!state.dest){ state.view = 'home'; return V.home(); }
-  const p = PLACES[state.dest];   // только место и решение «едем?» — способы со временем на следующем шаге
-  const R = p.live ? liveRoute(state.dest) : null, busy = p.live && (state.locating || !!livePending(state.dest)), wait = p.live && (!R || busy), none = R && R.none && !busy;
-  const from = p.live && LIVE.home ? `<div class="chips" role="group" aria-label="Откуда" style="margin-bottom:12px"><span class="m" style="align-self:center;margin-right:4px">Откуда:</span>
-     <button class="chip from press ${state.fromHere ? '' : 'sel'}" aria-pressed="${!state.fromHere}" onclick="useHome()">${ic('Дом', 16)}Дом</button>
-     <button class="chip from press ${state.fromHere ? 'sel' : ''}" aria-pressed="${!!state.fromHere}" onclick="useHere()">${ic('Навигатор', 16)}Где я сейчас</button></div>` : '';
-  const status = state.locating ? 'Определяю, где ты…' : busy ? 'Считаю маршрут…' : none ? esc(R.none) : wait ? 'Маршрут не построился — проверь интернет' : '';
-  return `<h1 tabindex="-1">${p.name}</h1><div class="sub" style="margin-bottom:16px">${p.sub}${p.km && !state.fromHere ? ' · ' + p.km + ' от дома' : ''}</div>
-   ${from}${status ? `<div class="m" role="status" style="margin-bottom:12px">${status}</div>` : ''}
-   <div class="btns">${none ? `<button class="btn p press" onclick="useHome()">Посчитать от дома</button>` : `<button class="btn p press" ${wait ? (busy ? 'disabled' : `onclick="retryLive()"`) : `onclick="go('compare')"`}>${wait && !busy ? 'Попробовать ещё раз' : 'Маршрут'}</button>`}</div>`;
+  const p = PLACES[state.dest];
+  return `<h1 tabindex="-1">${p.name}</h1><div class="sub" style="margin-bottom:16px">${p.sub}</div>${liveWait() || `<div class="btns"><button class="btn p press" onclick="go('compare')">Маршрут</button></div>`}`;
 };
-/* ----- Откуда — на экране способов: «Дом ▾» / «Где я сейчас ▾», выбор — под строкой ----- */
-const fromBtn = () => !isLive(state.dest) || !LIVE.home ? `<span class="from"><i aria-hidden="true"></i>Отсюда</span>`
-  : `<button class="from press" aria-expanded="${!!state.fromOpen}" aria-label="Откуда: ${state.fromHere ? 'где я сейчас' : 'дом'}. Изменить" onclick="state.fromOpen=!state.fromOpen;render()">${ic(state.fromHere ? 'Навигатор' : 'Дом', 16)}<span style="flex:1;text-align:left">${state.fromHere ? 'Где я сейчас' : 'Дом'}</span><span aria-hidden="true">▾</span></button>`;
-const fromChips = () => isLive(state.dest) && LIVE.home && state.fromOpen ? `<div class="chips" role="group" aria-label="Откуда" style="margin-top:-8px">
-     <button class="chip from press ${state.fromHere ? '' : 'sel'}" aria-pressed="${!state.fromHere}" onclick="useHome()">${ic('Дом', 16)}Дом</button>
-     <button class="chip from press ${state.fromHere ? 'sel' : ''}" aria-pressed="${!!state.fromHere}" onclick="useHere()">${ic('Навигатор', 16)}Где я сейчас</button></div>` : '';
+/* ----- Откуда и куда — два поля на экране способов; ⇅ — поменять местами ----- */
+const routeFields = () => !isLive(state.dest) ? `<span class="from"><i aria-hidden="true"></i>Отсюда</span>` : '';
+const fieldsBlock = () => !isLive(state.dest) ? '' : `<div class="fields">
+    <div class="fcol"><button class="fld press" aria-label="Откуда: ${esc(originName())}. Изменить" onclick="startPickFrom()"><i class="dot" aria-hidden="true"></i><span class="fl">Откуда</span><b>${esc(originName())}</b></button>
+    <button class="fld press" aria-label="Куда: ${esc(LIVE.places[state.dest].name)}. Изменить" onclick="startPickTo()">${ic('Пин', 16)}<span class="fl">Куда</span><b>${PLACES[state.dest].name}</b></button></div>
+    <button class="swap press" aria-label="Поменять откуда и куда местами" ${originPt() ? '' : 'disabled'} onclick="swapFromTo()">${ic('Обмен', 20)}</button></div>`;
 function liveWait(){ if(!isLive(state.dest)) return '';
   const R = liveRoute(state.dest), busy = state.locating || !!livePending(state.dest);
+  const pick = (main) => `<div class="btns" style="margin-top:12px">${LIVE.home && !(state.from && state.from.home) ? `<button class="btn p press" onclick="setFrom(homeFrom())">${main || 'Посчитать от дома'}</button>` : ''}<button class="btn press" onclick="startPickFrom()">Указать, откуда</button></div>`;
   if(busy) return `<div class="m" role="status" style="margin:0 4px 12px">${state.locating ? 'Определяю, где ты…' : 'Считаю маршрут…'}</div>`;
-  if(R && R.none) return `<div class="offer"><div class="t">${esc(R.none)}</div><div class="btns" style="margin-top:12px"><button class="btn p press" onclick="useHome()">Посчитать от дома</button></div></div>`;
+  if(!originPt()) return `<div class="offer"><div class="t">${esc(GEO_FAIL[state.geoFail] || 'Не знаю, где ты')}</div><div class="m" style="margin-top:4px">Откуда считать маршрут?</div>${pick()}</div>`;
+  if(R && R.none) return `<div class="offer"><div class="t">${esc(R.none)}</div>${pick()}</div>`;
   if(!R) return `<div class="offer"><div class="t">Маршрут не построился</div><div class="m" style="margin:4px 0 12px">Проверь интернет и попробуй ещё раз</div><button class="btn p press" onclick="retryLive()">Попробовать ещё раз</button></div>`;
   return ''; }
 /* ----- Способы: та же шторка раскрыта ----- */
@@ -1148,7 +1190,7 @@ V.compare = () => {
   const wait = waiting.length && need.length && keys.length ? `<div class="hint"><span aria-hidden="true">${icn(MODULES.find(m => m.id === need[0]).icon)}</span> <span><b>${esc(waiting.map(m => m.name).join(' и '))}</b> — не работа${waiting.length > 1 ? 'ют' : 'ет'} без ${esc(namesList(need))}</span><button class="mlink" data-ids="${esc(need.join(','))}" onclick="enableMods(this.dataset.ids.split(','))">Включить</button></div>` : '';
   const w = wait + collect('banners').map((b,i) => `<div class="hint"><span aria-hidden="true">${icn(b.icon)}</span> <span><b>${esc(b.title)}</b>${b.text ? ' — ' + esc(b.text) : ''}</span>${i===0 ? modsLink() : ''}</div>`).join('');
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">${destName()}</h1></div>
-  <div class="tripbar">${fromBtn()}${timeBtn()}</div>${fromChips()}${liveWait()}
+  ${fieldsBlock()}<div class="tripbar">${routeFields()}${timeBtn()}</div>${liveWait()}
   ${late}
   ${keys.length ? keys.map(k=>card(k, k===best && !allLate)).join('') : isLive(state.dest) ? '' : `<div class="offer"><div class="t">Нет включённых способов</div><div class="m" style="margin:4px 0 12px">${walkMode ? 'Для прогулок нужен способ передвижения' : 'Включи хотя бы один способ передвижения'}</div>${offerModes(walkMode ? 'walk' : 'go')}</div>`}
   ${w}
@@ -1391,33 +1433,40 @@ const saveDays = () => state.saveDays || (['Работа','Учёба'].includes
 function toggleDay(i){ const d = saveDays().slice(); state.saveDays = d.includes(i) ? d.filter(x => x !== i) : d.concat(i).sort((a,b) => a-b); render(); }
 function saveTemplate(){
   const name = state.saveName; if(!name) return;
-  state.templates.push({ name, dest:state.dest, arrive: arriveMode() ? state.arrive : null, mode: state.sel, days: saveDays().slice() });
+  state.templates.push({ name, dest:state.dest, from: isLive(state.dest) && state.from ? { name: state.from.name, at: state.from.at, home: !!state.from.home } : null, arrive: arriveMode() ? state.arrive % DAY : null, mode: state.sel, days: saveDays().slice() });
   state.saveDays = null;
   state.justSaved = name; render('in'); say('Маршрут сохранён: ' + name);
 }
 function saveReverse(yes){
-  if(yes){ const last = state.templates[state.templates.length - 1]; state.templates.push({ name:'Обратно', dest:state.dest, arrive:null, mode:state.sel, reverse:true, days: (last && last.days || []).slice() }); }
+  const last = state.templates[state.templates.length - 1];
+  if(yes && isLive(state.dest)){ const o = (last && last.from && last.from.at) || hereAt() || (LIVE.home && LIVE.home.at);   // живой — настоящий обратный маршрут
+    if(o){ const nk = placeKey(o); if(!PLACES[nk]) addLivePlace(nk, { name: last && last.from ? last.from.name : 'Где я был', sub:'', at:o }); saveLive();
+      state.templates.push({ name:'Обратно', dest:nk, from:{ name: LIVE.places[state.dest].name, at: PLACES[state.dest].at }, arrive:null, mode:'live', days: (last && last.days || []).slice() }); }
+    else yes = false; }
+  else if(yes){ state.templates.push({ name:'Обратно', dest:state.dest, arrive:null, mode:state.sel, reverse:true, days: (last && last.days || []).slice() }); }
   toast(yes ? 'Обратный путь добавлен' : 'Сохранено');
   state.justSaved = null; state.saveName = null; back();
 }
-function useTemplate(i, retried){ const t = state.templates[i];
-  if(t && isLive(t.dest) && !LIVE.routes[t.dest]){ if(!LIVE.home){ startPickHome(); return; }
+function useTemplate(i, retried){ const t = state.templates[i]; if(!t) return;
+  if(isLive(t.dest) && tplNoRoute(t)){
     if(retried){ toast('Маршрут не построился — проверь интернет'); return; }   // один повтор, не больше
-    toast('Считаю маршрут…'); buildLiveRoute(t.dest, 'home').then(() => useTemplate(i, true)).catch(() => toast('Маршрут не построился — проверь интернет')); return; }
+    const f = tplFrom(t); toast(f ? 'Считаю маршрут…' : 'Определяю, где ты…');
+    (async () => { if(!f && !(await locate())){ toast(GEO_FAIL[state.geoFail] + ' — открой маршрут и выбери, откуда'); render(); return; }
+      await buildLiveRoute(t.dest, f ? f.at : hereAt()); useTemplate(i, true); })().catch(() => toast('Маршрут не построился — проверь интернет')); return; }
   if(t.reverse){ toast('В прототипе обратный путь пока не строится'); return; }
-  Object.assign(state, { fromHere:false, dest:t.dest, mode:'hurry', timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? normDay(t.arrive) : state.arrive, depart:NOW });
+  Object.assign(state, { from:tplFrom(t), dest:t.dest, mode:'hurry', timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? normDay(t.arrive) : state.arrive, depart:NOW });
   syncCtx(); state.sel = OPTIONS[t.mode] && !verdict(t.mode).closed ? t.mode : null;
   if(!state.sel){ toast('Сохранённый способ сейчас недоступен — выбери другой'); go('compare'); return; }
   // в одно касание: сразу маршрут сохранённым способом; «назад» — к остальным способам
   state.history.push('home'); state.view = 'compare'; showRoute(state.sel); go('route'); fitAll(); }
-function retryLive(){ const k = state.dest; if(!isLive(k)) return; buildLiveRoute(k).then(() => { if(state.dest !== k) return; if(state.view === 'place') placeReady(); else { state.sel = goKeys()[0] || null; render(); showSel(); } }).catch(() => render()); render(); }
-function openPlace(k){
-  if(isLive(k) && !LIVE.home){ toast('Сначала укажи, откуда ты обычно выходишь'); state.view = state.history.pop() || 'home'; startPickHome(); return; }
-  if(state.dest !== k) state.fromHere = false;
-  if(isLive(k) && !liveRoute(k)) buildLiveRoute(k).then(() => { if(state.dest === k && state.view === 'place') placeReady(); }).catch(() => { if(state.dest === k && state.view === 'place') render(); });
+function retryLive(){ if(!isLive(state.dest)) return; planLive(); }
+function openPlace(k, from){
+  state.from = from === undefined ? null : from;   // начало планирования — от того места, где ты сейчас (если не выбрано иное)
+  if(isLive(k) && !liveRoute(k)){ state.dest = k; planLive(); }
   if(!PLACES[k].ok){ toast('В прототипе маршруты есть только до м. Бауманская'); return; }
   state.dest = k; state.mode = 'hurry'; syncCtx(); state.sel = goKeys()[0] || null; state.timeMode = 'depart'; state.depart = NOW; state.q = '';
-  state.recents = [k].concat(state.recents.filter(x=>x!==k)).slice(0,3);
+  { const fs = f => f ? sigOf(f.at) : 'here', e = { to:k, from: isLive(k) && state.from ? { name: state.from.name, at: state.from.at, home: !!state.from.home } : null };
+    state.recents = [e].concat(state.recents.filter(r => !(r.to === k && fs(r.from) === fs(e.from)))).slice(0, 6); }
   // «назад» со способов — туда, откуда открыли поиск: ни поиск, ни прошлое место в истории не оставляем
   if(state.view==='find') state.view = state.history.pop() || 'home';
   while(['place', 'compare'].includes(state.view)) state.view = state.history.pop() || 'home';
@@ -1553,9 +1602,9 @@ function addHomeBtn(){
   const row = body.querySelector('.view > .row'); if(!row || !row.querySelector('.back-btn')) return;
   const b = document.createElement('button'); b.className = 'back-btn home-btn press'; b.setAttribute('aria-label', 'На главный'); b.innerHTML = ic('Дом'); b.onclick = goHome;
   row.appendChild(b); }
-function goHome(){ Object.assign(state, { fromHere:false, fromOpen:false, dest:null, sel:null, saveName:null, saveDays:null, justSaved:null, modOff:null, modMore:false }); restart(); say('Главный экран'); }
+function goHome(){ Object.assign(state, { from:null, findFor:null, fromOpen:false, dest:null, sel:null, saveName:null, saveDays:null, justSaved:null, modOff:null, modMore:false }); restart(); say('Главный экран'); }
 // Закрыть место: на главный (с «Погулять рядом» и шаблонами); место остаётся в недавних
-function closePlace(){ state.dest = null; state.sel = null; state.fromHere = false; state.fromOpen = false; restart(); say('Место закрыто'); }
+function closePlace(){ state.dest = null; state.sel = null; state.from = null; state.fromOpen = false; restart(); say('Место закрыто'); }
 function restart(){ document.getElementById('clock').textContent = fmt(NOW); state.view='home'; state.history=[]; state.mode='hurry'; state.timeMode='depart'; state.depart=NOW; render('back'); snapFor('home'); showHome(); }
 function say(t){ document.getElementById('live').textContent = t; }
 
@@ -1666,7 +1715,7 @@ function showRoute(k){
 // Главный: только «ты здесь». Место: ты и точка назначения, без линии маршрута.
 function clearRoute(){ showRoute.t = (showRoute.t||0)+1; routeKey = null; if(!mapOk) return;
   const e = {type:'FeatureCollection',features:[]}; ['r-walk','r-metro','r-car'].forEach(id=>map.getSource(id).setData(e)); clearMarkers(); }
-function showHome(){ clearRoute(); if(!mapOk) return; addMarker(pinEl(LIVE.home ? 'Дом' : 'Ты здесь','dark'), startPt()); map.flyTo({center:startPt(), zoom:13.6, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
+function showHome(){ clearRoute(); if(!mapOk) return; addMarker(pinEl(startName(),'dark'), startPt()); map.flyTo({center:startPt(), zoom:13.6, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
 function showPlace(){ clearRoute(); const pl = PLACES[state.dest]; if(!mapOk || !pl) return; addMarker(pinEl(pl.live ? startName() : 'Ты здесь','dark'), startPt()); addMarker(pinEl(pl.pin || pl.name,'m3'), pl.at);
   map.fitBounds(new maplibregl.LngLatBounds(startPt(), startPt()).extend(pl.at), {padding:{top:120,left:50,right:50,bottom:300}, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1915,8 +1964,9 @@ function saveApp(){ try{ localStorage.setItem(APP_KEY, JSON.stringify({ v:1, tem
 function loadApp(){ let d; try{ d = JSON.parse(localStorage.getItem(APP_KEY) || 'null'); }catch(e){ d = null; }
   if(!d || typeof d !== 'object') return;
   const okT = t => t && typeof t.name === 'string' && t.name && PLACES[t.dest] && typeof t.mode === 'string' && (t.arrive == null || Number.isFinite(t.arrive));
-  if(Array.isArray(d.templates)) state.templates = d.templates.filter(okT).slice(0, 20).map(t => ({ name: t.name.slice(0, 40), dest: t.dest, arrive: t.arrive == null ? null : t.arrive, mode: t.mode, reverse: !!t.reverse, days: Array.isArray(t.days) ? [...new Set(t.days.filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a,b) => a-b) : [] }));
-  if(Array.isArray(d.recents)) state.recents = d.recents.filter(k => PLACES[k]).slice(0, 3);
+  const okFrom = f => f && typeof f.name === 'string' && Array.isArray(f.at) && f.at.length === 2 && f.at.every(Number.isFinite) ? { name: f.name.slice(0, 80), at: f.at, home: !!f.home } : null;
+  if(Array.isArray(d.templates)) state.templates = d.templates.filter(okT).slice(0, 20).map(t => ({ name: t.name.slice(0, 40), dest: t.dest, from: t.from === undefined ? undefined : okFrom(t.from), arrive: t.arrive == null ? null : t.arrive, mode: t.mode, reverse: !!t.reverse, days: Array.isArray(t.days) ? [...new Set(t.days.filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a,b) => a-b) : [] }));
+  if(Array.isArray(d.recents)) state.recents = d.recents.map(r => typeof r === 'string' ? { to:r, from:null } : r && typeof r.to === 'string' ? { to:r.to, from: okFrom(r.from) } : null).filter(r => r && PLACES[r.to]).slice(0, 6);
   for(const f of ['visits', 'declined']) if(d[f] && typeof d[f] === 'object') for(const [k, v] of Object.entries(d[f])) if(PLACES[k] && Number.isFinite(v)) state[f][k] = v;
   if(d.modules && typeof d.modules === 'object') for(const [k, v] of Object.entries(d.modules)) if(k in state.modules && typeof v === 'boolean') state.modules[k] = v; }
 loadLive(); loadApp();
