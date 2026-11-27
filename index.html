@@ -265,7 +265,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.6.1', APP_DATE = '27.11.2026';
+const APP_VERSION = '0.6.2', APP_DATE = '27.11.2026';
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -868,15 +868,68 @@ function osrmTurns(r){ const out = [], steps = (r.legs || []).flatMap(l => l.ste
       out.push([Math.round(acc), dir, name ? 'на ' + name : 'по дорожке', [+mv.location[0].toFixed(5), +mv.location[1].toFixed(5)], name || dir]); }
     acc += st.distance || 0; });
   return out.filter((x, i) => !i || x[0] - out[i - 1][0] > 25).slice(0, 60); }
-// Ориентиры у поворотов — из OpenStreetMap (Overpass): вывеска в 35 м от поворота. Не ответил — остаются улицы.
-async function addLandmarks(turns){ const ts = turns.filter(t => !t.lm).slice(0, 30); if(!ts.length) return false;
+// Ориентиры у поворотов: вывеска в 35 м от поворота. Сначала — из своей карты (map/tiles, слой точек), её нет — Overpass. Ничего — остаются улицы.
+// Мини-разборщик Mapbox Vector Tile: только нужный слой, точки — первая координата
+function mvtLayer(buf, want){
+  const b = new Uint8Array(buf); let p = 0;
+  const vi = () => { let r = 0, s = 0, c; do{ c = b[p++]; r += (c & 127) * 2 ** s; s += 7; }while(c & 128); return r; };
+  const skip = w => { if(w === 0) vi(); else if(w === 1) p += 8; else if(w === 2){ const l = vi(); p += l; } else if(w === 5) p += 4; };
+  const str = (e) => new TextDecoder().decode(b.subarray(p, e));
+  const out = [];
+  while(p < b.length){ const k = vi(), f = k >> 3, w = k & 7;
+    if(f !== 3 || w !== 2){ skip(w); continue; }
+    const end = vi() + p; let name = '', ext = 4096; const keys = [], vals = [], feats = [];
+    while(p < end){ const k2 = vi(), f2 = k2 >> 3, w2 = k2 & 7;
+      if(f2 === 1){ const l = vi(); name = str(p + l); p += l; }
+      else if(f2 === 3){ const l = vi(); keys.push(str(p + l)); p += l; }
+      else if(f2 === 4){ const e2 = vi() + p; let v = null;
+        while(p < e2){ const k3 = vi(), f3 = k3 >> 3, w3 = k3 & 7;
+          if(f3 === 1){ const l = vi(); v = str(p + l); p += l; } else if(f3 >= 4 && f3 <= 6 && w3 === 0){ v = vi(); } else if(f3 === 7){ v = !!vi(); } else skip(w3); }
+        vals.push(v); }
+      else if(f2 === 2){ const l = vi(); feats.push([p, p + l]); p += l; }
+      else if(f2 === 5){ ext = vi(); }
+      else skip(w2); }
+    if(name !== want) { p = end; continue; }
+    for(const [s, e] of feats){ p = s; let tags = [], geom = null, type = 0;
+      while(p < e){ const k4 = vi(), f4 = k4 >> 3, w4 = k4 & 7;
+        if(f4 === 2){ const l = vi() + p; while(p < l) tags.push(vi()); }
+        else if(f4 === 3){ type = vi(); }
+        else if(f4 === 4){ const l = vi() + p; const g = []; while(p < l) g.push(vi()); geom = g; }
+        else skip(w4); }
+      if(!geom || geom.length < 3) continue;
+      const zz = n => (n >> 1) ^ -(n & 1), props = {};
+      for(let i = 0; i + 1 < tags.length; i += 2) props[keys[tags[i]]] = vals[tags[i + 1]];
+      out.push({ props, x: zz(geom[1]) / ext, y: zz(geom[2]) / ext, type }); }
+    p = end; }
+  return out; }
+const POI_OK = new Set(['shop','grocery','clothing_store','fast_food','cafe','restaurant','bar','bakery','pharmacy','bank','post','alcohol_shop','hairdresser','cinema','theatre','museum','library','place_of_worship','hospital','doctors','dentist','beer']);
+const POI_KIND = { pharmacy:'аптеки', cafe:'кафе', bank:'банка', post:'почты', bakery:'пекарни' };
+const POI_TILES = {};   // z14 x/y → обещание списка точек (один раз на кусочек)
+function tilePois(x, y){ const key = x + '/' + y;
+  return POI_TILES[key] || (POI_TILES[key] = (async () => { const r = await fetch('map/tiles/14/' + key + '.pbf'); if(r.status === 404) return [];   // за краем нашей Москвы — вывесок нет
+    if(!r.ok) throw new Error('кусочек не открылся');
+    const n = 2 ** 14; return mvtLayer(await r.arrayBuffer(), 'poi').filter(f => POI_OK.has(f.props.class) && (f.props['name:ru'] || f.props.name)).map(f => {
+      const lon = (x + f.x) / n * 360 - 180, lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + f.y) / n))) * 180 / Math.PI;
+      return { n: clean(f.props['name:ru'] || f.props.name), at:[+lon.toFixed(5), +lat.toFixed(5)], k: POI_KIND[f.props.class] || '' }; }).filter(p => p.n.length <= 40); })()
+    .catch(e => { delete POI_TILES[key]; throw e; })); }
+let OWN_MAP = null;   // есть ли своя карта рядом с приложением (проверяем один раз)
+const hasOwnMap = () => OWN_MAP || (OWN_MAP = fetch('map/style.json', { method:'HEAD' }).then(r => r.ok).catch(() => false));
+async function localPois(pts){   // null — своей карты нет
+  if(!(await hasOwnMap())){ OWN_MAP = null; return null; }
+  const n = 2 ** 14, keys = new Set();
+  for(const [lo, la] of pts) for(const [dx, dy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ const lon = lo + dx * 0.0006, lat = la + dy * 0.0004, r = lat * Math.PI / 180;
+    keys.add(Math.floor((lon + 180) / 360 * n) + '/' + Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n)); }
+  try{ return (await Promise.all([...keys].map(k => tilePois(...k.split('/').map(Number))))).flat(); }catch(e){ return null; } }
+async function overpassPois(ts){
   const q = '[out:json][timeout:12];(' + ts.map(t => `node(around:35,${t[3][1]},${t[3][0]})["name"]["shop"];node(around:35,${t[3][1]},${t[3][0]})["name"]["amenity"~"^(cafe|pharmacy|bank|restaurant|fast_food|post_office|clinic)$"];`).join('') + ');out;';
-  let j = null;
   for(const srv of ['https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass-api.de/api/interpreter']){
     const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 9000);
-    try{ const r = await fetch(srv, { method:'POST', body:'data=' + encodeURIComponent(q), signal: ctl.signal }); const t = await r.text(); if(t[0] === '{'){ j = JSON.parse(t); break; } }catch(e){} finally{ clearTimeout(to); } }
-  if(!j) return false;
-  const pois = j.elements.filter(e => e.tags && e.tags.name).map(e => ({ n: clean(e.tags.name), at:[e.lon, e.lat], k: e.tags.amenity === 'pharmacy' ? 'аптеки' : e.tags.amenity === 'cafe' ? 'кафе' : e.tags.amenity === 'bank' ? 'банка' : '' }));
+    try{ const r = await fetch(srv, { method:'POST', body:'data=' + encodeURIComponent(q), signal: ctl.signal }); const t = await r.text();
+      if(t[0] === '{') return JSON.parse(t).elements.filter(e => e.tags && e.tags.name).map(e => ({ n: clean(e.tags.name), at:[e.lon, e.lat], k: e.tags.amenity === 'pharmacy' ? 'аптеки' : e.tags.amenity === 'cafe' ? 'кафе' : e.tags.amenity === 'bank' ? 'банка' : '' })); }
+    catch(e){} finally{ clearTimeout(to); } }
+  return null; }
+async function addLandmarks(turns){ const ts = turns.filter(t => !t.lm).slice(0, 30); if(!ts.length) return false;
+  const pois = (await localPois(ts.map(t => t[3]))) || (await overpassPois(ts)); if(!pois) return false;
   for(const t of ts){ let best = null, bd = 36; for(const p of pois){ const d = dist(t[3], p.at); if(d < bd){ bd = d; best = p; } }
     t.lm = 1; if(best){ t[2] = 'у ' + (best.k ? best.k + ' ' : '') + '«' + best.n + '»' + (t[4] !== t[1] ? ', на ' + t[4] : ''); t[4] = '«' + best.n + '»'; } }
   return true; }

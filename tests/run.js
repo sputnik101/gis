@@ -807,6 +807,19 @@ test('Версия приложения видна внизу «Модулей»
   const r = await p.evaluate(() => { go('modules'); return document.body.innerText; });
   return (/Версия \d+\.\d+/.test(r) && r.includes('Версия ' + (await p.evaluate(() => APP_VERSION)))) || r.slice(-300); });
 
+test('ориентиры у поворотов — из своей карты (map/tiles), Overpass не нужен', async p => {
+  const fs = require('fs'), pt = [37.65892, 55.75862], n = 2 ** 14, tiles = {};
+  for(const [dx, dy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ const lon = pt[0] + dx * 0.0006, lat = pt[1] + dy * 0.0004, r = lat * Math.PI / 180;
+    const k = Math.floor((lon + 180) / 360 * n) + '/' + Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n);
+    const f = '/tmp/site/map/tiles/14/' + k + '.pbf'; if(fs.existsSync(f)) tiles[k] = fs.readFileSync(f).toString('base64'); }
+  const r = await p.evaluate(async ([tiles, pt]) => { let ovp = 0; const f0 = window.fetch;
+    window.fetch = async (url, o) => { url = String(url); if(url.endsWith('map/style.json')) return { ok:true, status:200 }; const m = url.match(/map\/tiles\/14\/(\d+\/\d+)\.pbf/);
+      if(m){ const b = tiles[m[1]]; if(!b) return { ok:false, status:404 }; const bin = Uint8Array.from(atob(b), c => c.charCodeAt(0)); return { ok:true, status:200, arrayBuffer: async () => bin.buffer }; }
+      if(url.includes('interpreter')){ ovp++; throw new Error('502'); } return f0(url, o); };
+    const turns = [[120, 'направо', 'на Покровку', pt, 'Покровка'], [300, 'налево', 'по дорожке', [37.70, 55.70], 'налево']];
+    OWN_MAP = null; const ok = await addLandmarks(turns); window.fetch = f0; OWN_MAP = null; return { ok, t0: turns[0][2], t1: turns[1][2], ovp }; }, [tiles, pt]);
+  return (r.ok && /^у .*«.+», на Покровка$/.test(r.t0) && r.t1 === 'по дорожке' && r.ovp === 0) || JSON.stringify(r); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
