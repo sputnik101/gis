@@ -233,7 +233,7 @@ h1{text-wrap:balance}
   <div id="map" aria-label="Карта Москвы"></div>
   <div class="fallback" id="fallback"><span>Карта не загрузилась — маршруты и прогулки работают<br><a class="fbcheck" href="check.html" target="_blank" rel="noopener">Проверить связь</a></span></div>
   <div class="status" aria-hidden="true"><span id="clock">8:20</span><span>● ● ▮</span></div>
-  <div class="attrib" id="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · маршруты OSRM</div>
+  <div class="attrib" id="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://openmaptiles.org" target="_blank" rel="noopener">OpenMapTiles</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · маршруты OSRM</div>
 
   <div class="topbar" id="topbar"></div>
 
@@ -265,7 +265,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.5.1', APP_DATE = '27.11.2026';
+const APP_VERSION = '0.6', APP_DATE = '27.11.2026';
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -1875,10 +1875,18 @@ function addRouteLayers(){
   map.addLayer({id:'passed',type:'line',source:'r-me',layout:lay,paint:{'line-color':'#D7F26B','line-width':6}});
 }
 function showFallback(){ document.getElementById('fallback').style.display='flex'; }
-function initMap(){
+// Своя карта Москвы лежит рядом с приложением (map/): кусочки, шрифты, значки — открывается там же, где само приложение.
+// В стиле вместо адреса — {BASE}; не нашлась (открыли без папки map/) — карта OpenFreeMap, как раньше
+const OFM_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+async function mapStyle(){
+  try{ const r = await fetch('map/style.json', { cache:'no-cache' }); if(!r.ok) throw 0;
+    const base = new URL('map/', location.href).href; return JSON.parse((await r.text()).split('{BASE}').join(base)); }
+  catch(e){ return OFM_STYLE; } }
+async function initMap(){
   if(!window.maplibregl){ showFallback(); return; }
+  const style = await mapStyle();
   try{
-    map = new maplibregl.Map({ container:'map', style:'https://tiles.openfreemap.org/styles/liberty', center:[37.74,55.785], zoom:12.3, attributionControl:false });
+    map = new maplibregl.Map({ container:'map', style, center:[37.74,55.785], zoom:12.3, attributionControl:false });
   }catch(e){ showFallback(); return; }                 // нет WebGL
   const loadTimer = setTimeout(()=>{ if(!mapOk) showFallback(); }, 10000);
   map.on('error', () => { if(!mapOk) showFallback(); });   // стиль или подложка не открылись (сервер недоступен из сети человека) — говорим сразу, не ждём
