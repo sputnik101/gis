@@ -789,6 +789,24 @@ test('«Погулять рядом» — от того места, где ты 
   const okMins = r.mins.length === 3 && r.mins.every((m, i) => Math.abs(m - [20, 40, 60][i]) <= [20, 40, 60][i] * 0.3);
   return (r.keys.join() === 'stroll20,stroll40,stroll60' && okMins && /Измайловский парк/.test(r.detail + JSON.stringify(r.pois)) && r.from === 'Где я сейчас' && !/Дождь/.test(r.txt)) || JSON.stringify(r); });
 
+test('Прогулка без Overpass: парки из встроенного списка, у большого парка цель — край, а не центр', async p => {
+  await p.goto(p.url().replace('?demo', '')); await p.waitForTimeout(600);
+  await stubGeo(p, 37.7416, 55.7904);   // Семёновская: рядом Измайловский парк и Семёновский
+  await p.evaluate(() => { let hits = 0; window._ovp = () => hits;
+    window.fetch = async (url) => { url = String(url); const ok = j => ({ ok:true, status:200, text: async () => JSON.stringify(j), json: async () => j });
+      if(url.includes('interpreter')){ hits++; throw new Error('502'); }
+      if(url.includes('/route/v1/foot/')){ const pts = url.split('/foot/')[1].split('?')[0].split(';').map(s => s.split(',').map(Number)); let d = 0; for(let i = 1; i < pts.length; i++) d += dist(pts[i-1], pts[i]) * 1.3;
+        return ok({ code:'Ok', routes:[{ distance: d, geometry:{ coordinates: pts }, legs: pts.slice(1).map(() => ({ steps:[] })) }] }); }
+      throw new Error('нет сети'); }; });
+  const r = await p.evaluate(async () => { setDemoNow(14*60, 4); REAL_CLOCK = false; walkNearby(); for(let i = 0; i < 80 && (state.locating || LIVE.loopsPending || !LIVE.loops); i++) await new Promise(r => setTimeout(r, 50));
+    const o = [37.7416, 55.7904], iz = greenLocal(o, 2500).find(g => g.n === 'Измайловский парк');
+    const k = walkKeys(); return { n: GREEN.length, k, det: k.map(x => OPTIONS[x].detail), ovp: _ovp(), edge: iz && Math.round(dist(o, iz.at)), centre: iz && Math.round(dist(o, iz.c)) }; });
+  return (r.n > 500 && r.k.length === 3 && r.det.some(d => /через .*(парк|сквер|пруд|роща|лес)/i.test(d)) && r.ovp === 0 && r.edge < r.centre) || JSON.stringify(r); });
+
+test('Версия приложения видна внизу «Модулей»', async p => {
+  const r = await p.evaluate(() => { go('modules'); return document.body.innerText; });
+  return (/Версия \d+\.\d+/.test(r) && r.includes('Версия ' + (await p.evaluate(() => APP_VERSION)))) || r.slice(-300); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
