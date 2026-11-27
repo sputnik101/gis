@@ -60,6 +60,9 @@ button{font-family:inherit}
 .savebtn{border:0;background:none;color:var(--violet-d);font:inherit;font-size:14px;font-weight:600;cursor:pointer;min-height:44px;padding:0}
 .gobar{position:sticky;bottom:0;padding:16px 0 8px;margin-top:4px;background:linear-gradient(rgba(243,242,238,0),var(--bg) 24%);z-index:2}   /* «Поехали» всегда видна */
 .sheet.nomask .body{-webkit-mask-image:none;mask-image:none;padding-bottom:16px}
+/* содержимое уехало под край шторки — сверху мягкое затухание, а не обрез */
+.body.scrolled{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 28px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(180deg,transparent 0,#000 28px,#000 calc(100% - 36px),transparent)}
+.sheet.tight .body.scrolled,.sheet.nomask .body.scrolled{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 28px);mask-image:linear-gradient(180deg,transparent 0,#000 28px)}
 .offer{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
 .search{flex:1;height:48px;border-radius:24px;background:#fff;display:flex;align-items:center;gap:12px;padding:0 16px;box-shadow:var(--s2);font-size:14px;color:var(--ink2);border:0;text-align:left;cursor:pointer}
 .search b{color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1322,9 +1325,9 @@ V.route = () => {
   const pois = vp.length ? `<div class="m" style="margin:4px 0 4px">По пути</div><div class="pois">${vp.map((p,i)=>`<button class="poi press" onclick="flyPoi(${i})"><div class="e" aria-hidden="true">${icn(p.e, 22)}</div><b>${esc(p.n)}</b><span>${esc(p.d)}${p.extra ? ' · ' + esc(p.extra) : ''}</span></button>`).join('')}</div>` : '';
   let head;
   if(v.closed){ const c = o.closedInfo || {}; head = `<h1 tabindex="-1">${esc(c.head || o.name + ' сейчас не работает')}</h1><div class="sub">${esc(c.sub || '')}</div>`; }
-  else if(o.noTarget) head = `<h1 tabindex="-1">${esc(o.name)}</h1><div class="sub">~${f.mid} мин · ${esc(o.price)} · можно сократить в любой момент</div>`;
+  else if(o.noTarget) head = `<h1 tabindex="-1">${esc(o.name)}</h1><div class="sub">~${f.mid} мин${o.price ? ' · ' + esc(o.price) : ''} · можно сократить в любой момент</div>`;
   else if(!arr){ const d = dep();
-    head = `<h1 tabindex="-1">Выйдешь ${d===NOW?'сейчас':'в '+fmt(d)} — будешь в ${fmtD(d+f.mid)}</h1><div class="sub">${esc(o.name)} · ${esc(o.price)} · самое позднее ${fmt(d+f.p95)}</div><div class="row" style="flex-wrap:wrap;gap:8px"><span class="pill ${v.cls}">${v.word}</span></div>`; }
+    head = `<h1 tabindex="-1">Выйдешь ${d===NOW?'сейчас':'в '+fmt(d)} — будешь в ${fmtD(d+f.mid)}</h1><div class="sub">${esc(o.name)}${o.price ? ' · ' + esc(o.price) : ''} · самое позднее ${fmt(d+f.p95)}</div><div class="row" style="flex-wrap:wrap;gap:8px"><span class="pill ${v.cls}">${v.word}</span></div>`; }
   else if(v.plan==='until' && v.spare >= 120) head = `<h1 tabindex="-1">${goVerb(k)} в ${fmtD(v.L)}</h1><div class="sub">В пути ~${dur(f.mid)} — будешь около ${fmt(v.L+f.mid)}, самое позднее ${fmtD(state.arrive)}</div><span class="pill g">${v.word}</span>`;
   else if(v.plan==='until') head = `<h1 tabindex="-1">${goVerb(k)} до ${fmtD(v.L)}</h1><div class="sub">Ещё ${dur(v.spare)} на сборы. В пути ~${dur(f.mid)} — будешь около ${fmt(v.L+f.mid)}, самое позднее ${fmtD(state.arrive)}</div><span class="pill g">${v.word}</span>`;
   else if(!v.cls.startsWith('r') ) head = `<h1 tabindex="-1">${goVerb(k)} сейчас</h1><div class="sub">Обычно будешь в ${fmt(NOW+f.mid)}${v.badLate ? ', но ' + delayWhy(k) + ' — опоздаешь на ' + v.badLate + ' мин' : ', самое позднее ' + fmt(NOW+f.p95)}</div><span class="pill ${v.cls}">${v.word}</span>`;   // заголовок — действие, итог — в пилюле
@@ -1387,7 +1390,7 @@ V.modules = () => `<div class="row"><button class="back-btn" aria-label="Наз�
 V.done = () => {
   const o = trip.o || OPTIONS[state.sel], at = trip.endAt;
   const diff = state.arrive - at, hurry = arriveMode() && !o.noTarget;
-  const sub = o.noTarget ? `${trip.total} мин · ${esc(o.price)}` : hurry ? (diff>0 ? `на ${dur(diff)} раньше, чем нужно` : diff===0 ? 'ровно вовремя' : `опоздание ${dur(-diff)}`) : `${trip.total} мин в пути`;
+  const sub = o.noTarget ? `${trip.total} мин${o.price ? ' · ' + esc(o.price) : ''}` : hurry ? (diff>0 ? `на ${dur(diff)} раньше, чем нужно` : diff===0 ? 'ровно вовремя' : `опоздание ${dur(-diff)}`) : `${trip.total} мин в пути`;
   const chips = o.noTarget ? ['Было приятно','Слишком долго','Хочу другой маршрут'] : ['Всё по плану','Была задержка','Сложно найти'];
   // Предложить сохранить: путь похож на рутинный (задано «к …» или второй раз сюда), ещё не сохранён и не отказывались
   // Одна карточка за раз: предложение сохранить — со второй поездки сюда; тогда вопрос модулей не показываем
@@ -1508,6 +1511,7 @@ function render(anim){
   const keyOf = el => (el.getAttribute('onclick') || '') + '|' + (el.dataset.mod || '') + '|' + el.textContent.trim().slice(0, 40);
   const fk = ae ? keyOf(ae) : null;
   body.innerHTML = `<div class="view ${anim==='back'?'back':anim==='in'?'in':''}">${glue(V[state.view]())}</div>`;
+  body.classList.toggle('scrolled', body.scrollTop > 2);
   if(anim) { body.scrollTop = 0; lockNav(); const h = body.querySelector('h1'); if(h) h.focus({preventScroll:true}); }
   if(state.view==='time') setupWheel();
   addHomeBtn();
@@ -1527,6 +1531,7 @@ function snapFor(v){
   else snap('full'); }
 function back(){ const from = state.view; state.view = state.history.pop() || 'home';
   if(from==='compare' && state.view!=='compare' && state.mode==='walk'){ state.mode = 'hurry'; }
+  if(state.view==='home'){ state.dest = null; state.sel = null; state.from = null; }   // на главном места нет: иначе пропадает «Погулять рядом» и метка «Дом» встаёт у места
   render('back'); snapFor(state.view);
   if(state.view==='home') showHome(); else if(state.view==='place') showPlace();
   else if(state.view==='compare' && from!=='time' && from!=='modules'){ showRoute(state.sel); fitAll(); } }
@@ -1972,6 +1977,7 @@ function loadApp(){ let d; try{ d = JSON.parse(localStorage.getItem(APP_KEY) || 
 loadLive(); loadApp();
 for(const id in state.modules) if(!MODULES.some(m => m.id === id)) delete state.modules[id];   // следы удалённых модулей
 APP_READY = true; warmTemplates();
+body.addEventListener('scroll', () => body.classList.toggle('scrolled', body.scrollTop > 2), { passive:true });
 document.getElementById('clock').textContent = fmt(NOW);
 // настоящие часы: раз в минуту — новое «сейчас» (выход «сейчас» сдвигается вместе с ним)
 function clockTick(m){ if(m === NOW) return;

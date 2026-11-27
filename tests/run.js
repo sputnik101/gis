@@ -748,6 +748,12 @@ test('блокер 2: полночь — «завтра 0:30» становит�
   const card = document.body.innerText;
   return (before === 1470 && after === 30 && /к 9:00\s*завтра/.test(card)) || JSON.stringify({ before, after, card: card.slice(0, 200) }); }));
 
+test('из места по истории и назад — на главном снова «Погулять рядом», места нет', async p => {
+  await liveSetup(p, 'Милашенкова 4А');
+  await p.evaluate(() => { goHome(); openRecent(0); }); await p.waitForTimeout(700);
+  await p.click('#body .back-btn'); await p.waitForTimeout(700);
+  return p.evaluate(() => (state.view === 'home' && !state.dest && !document.getElementById('topbar').classList.contains('hide') && !!document.querySelector('#topbar .wchip')) || JSON.stringify({ v: state.view, d: state.dest })); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
