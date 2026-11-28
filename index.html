@@ -202,6 +202,9 @@ svg.i{display:block;flex:none}
 .stations i.f{background:var(--lime)}
 .gbot{position:absolute;left:12px;right:12px;bottom:18px;background:#fff;border-radius:22px;padding:16px;box-shadow:var(--s3);pointer-events:auto}
 .gbot .row{justify-content:space-between}
+/* «Вернуться к маршруту» — появляется, когда человек сам двигает карту во время ведения */
+.recenter{position:absolute;left:50%;top:-104px;transform:translateX(-50%);display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border:0;border-radius:22px;background:var(--ink);color:#fff;font:inherit;font-size:14px;font-weight:600;box-shadow:var(--s2);cursor:pointer;white-space:nowrap}
+.recenter[hidden]{display:none}
 .eta{font-size:22px;font-weight:600}
 .speed{border:1px solid var(--line);background:#fff;border-radius:20px;height:40px;padding:0 16px;font-size:13px;cursor:pointer;color:var(--ink)}
 .me{width:22px;height:22px;border-radius:11px;background:#fff;border:5px solid var(--ink);box-shadow:0 0 0 8px rgba(215,242,107,.45),0 4px 10px rgba(0,0,0,.35)}
@@ -245,6 +248,7 @@ h1{text-wrap:balance}
   <div class="guide" id="guide">
     <div class="gtop" id="gtop" tabindex="-1" aria-live="off"></div>
     <div class="gbot">
+      <button class="recenter press" id="recenter" hidden onclick="recenter()"><span aria-hidden="true" id="recIco"></span>Вернуться к маршруту</button>
       <div class="row">
         <div><div class="eta" id="geta">8:46</div><div class="m" id="gleft">ещё 26 мин</div></div>
         <button class="speed press" id="speedBtn" onclick="toggleSpeed()" aria-label="Ускорить демонстрацию">Демо: ×1</button>
@@ -265,7 +269,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.6.3', APP_DATE = '27.11.2026';
+const APP_VERSION = '0.6.4', APP_DATE = '27.11.2026';
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -1950,7 +1954,7 @@ async function initMap(){
   map.on('error', () => { if(!mapOk) showFallback(); });   // стиль или подложка не открылись (сервер недоступен из сети человека) — говорим сразу, не ждём
   map.on('load', () => {
     clearTimeout(loadTimer); mapOk = true; document.getElementById('fallback').style.display='none';
-    brand(); ruLabels(); addRouteLayers();
+    brand(); ruLabels(); addRouteLayers(); camWatch(); document.getElementById('recIco').innerHTML = ic('Навигатор', 18);
     if(trip.on) trip.lastLeg = -1;
     if(state.view==='home' || state.view==='find') showHome(); else if(state.view==='place') showPlace();
     else showRoute(state.sel).then(()=>{ if(!trip.on) fitAll(); });
@@ -1994,7 +1998,8 @@ async function startTrip(demo){
   document.getElementById('topbar').classList.add('hide'); document.getElementById('topbar').inert = true;
   sheet.inert = true; snap('hidden'); document.getElementById('guide').classList.add('on');
   document.getElementById('attrib').classList.add('guiding');
-  Object.assign(trip, { t:0, buzzed:false, lastLeg:-1, smoothBrg: mapOk ? map.getBearing() : 0, lastSet:0, lastHtml:'', li:0, legT0:0, t0:Date.now(), late:null });
+  document.getElementById('recenter').hidden = true;
+  Object.assign(trip, { free:false, touching:false, hold:false, easing:false, touchAt:0, cam:null, t:0, buzzed:false, lastLeg:-1, smoothBrg: mapOk ? map.getBearing() : 0, lastSet:0, lastHtml:'', li:0, legT0:0, t0:Date.now(), late:null });
   document.getElementById('speedBtn').hidden = trip.real;
   trip.legs = o.legs.map((l,i)=>legMin(k,i));
   { let t0 = tripStart(k); trip.hints = o.legs.map((l,i) => { const h = collect('stepHints', legView(k, l, 'guide'), t0); t0 += trip.legs[i]; return h; }); }   // подсказки модулей на каждый шаг
@@ -2102,11 +2107,29 @@ function update(dt){
     const passedCoords = routeLegs.slice(0,li).flatMap(x=>x.c).concat(a.passed);
     map.getSource('r-me').setData({type:'Feature',geometry:{type:'LineString',coordinates:passedCoords.length>1?passedCoords:[a.p,a.p]},properties:{}}); }
   if(a.brg!==null){ const db = ((a.brg - trip.smoothBrg + 540) % 360) - 180; trip.smoothBrg += db*(1-Math.exp(-dt*3)); }
-  map.jumpTo({ center:a.p, bearing:trip.smoothBrg, pitch: reduced?0:(l.type==='metro'?40:62), zoom: l.type==='metro'?13.6:l.type==='car'?15.4:17 });
+  trip.cam = { center:a.p, bearing:trip.smoothBrg, pitch: reduced?0:(l.type==='metro'?40:62), zoom: l.type==='metro'?13.6:l.type==='car'?15.4:17 };
+  if(!trip.free){ if(!trip.easing && !trip.hold) map.jumpTo(trip.cam); }   // палец на карте — не дёргаем камеру, иначе жест сорвётся
+  else if(!trip.hold && performance.now() - trip.touchAt > FREE_MS) recenter();   // 10 секунд не трогали — камера возвращается сама
 }
+/* Во время ведения карту можно двигать, приближать и крутить: камера перестаёт следовать, появляется «Вернуться к маршруту» */
+const FREE_MS = 10000;
+function freeCam(){ if(!trip.on) return; trip.touchAt = performance.now(); trip.touching = trip.hold;
+  if(!trip.free){ trip.free = true; trip.easing = false; document.getElementById('recenter').hidden = false; } }
+function recenter(){ trip.free = false; trip.touching = false; trip.hold = false; document.getElementById('recenter').hidden = true;
+  if(!mapOk || !trip.cam) return; trip.easing = true;
+  map.easeTo(Object.assign({}, trip.cam, { duration: reduced ? 0 : 700 })); map.once('moveend', () => { trip.easing = false; }); }
+function camWatch(){   // один раз после загрузки карты. Ловим касание на самом экране: наш jumpTo каждый кадр сбивает жесты библиотеки раньше, чем она их заметит
+  const el = map.getCanvasContainer(), pts = new Map();
+  el.addEventListener('pointerdown', e => { if(!trip.on) return; pts.set(e.pointerId, [e.clientX, e.clientY]); trip.hold = true; if(pts.size > 1) freeCam(); });
+  el.addEventListener('pointermove', e => { const s = pts.get(e.pointerId); if(!trip.on || !s) return;
+    if(trip.free) trip.touchAt = performance.now(); else if(Math.hypot(e.clientX - s[0], e.clientY - s[1]) > 6) freeCam(); });
+  const up = e => { pts.delete(e.pointerId); if(pts.size) return; trip.hold = false; trip.touching = false; if(trip.free) trip.touchAt = performance.now(); };
+  for(const ev of ['pointerup', 'pointercancel']) el.addEventListener(ev, up);
+  el.addEventListener('wheel', () => { if(trip.on) freeCam(); }, { passive:true });
+  map.on('move', e => { if(e.originalEvent && trip.free) trip.touchAt = performance.now(); }); }
 function toggleSpeed(){ trip.speed = trip.speed===1 ? 5 : 1; document.getElementById('speedBtn').textContent = 'Демо: ×' + trip.speed; }
 function stopTrip(){
-  trip.on=false; cancelAnimationFrame(trip.raf); geoWatch(false); trip.real = false; document.getElementById('speedBtn').hidden = false;
+  trip.on=false; trip.free=false; trip.easing=false; document.getElementById('recenter').hidden = true; cancelAnimationFrame(trip.raf); geoWatch(false); trip.real = false; document.getElementById('speedBtn').hidden = false;
   if(trip.me){ trip.me.remove(); trip.me=null; } if(trip.tip){ trip.tip.remove(); trip.tip=null; } if(trip.mark){ trip.mark.remove(); trip.mark=null; } trip.markId=''; trip.gkey='';
   trip.speed = 1; trip.smoothBrg = 0; document.getElementById('speedBtn').textContent = 'Демо: ×1';
   document.getElementById('guide').classList.remove('on'); document.getElementById('attrib').classList.remove('guiding');

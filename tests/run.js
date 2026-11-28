@@ -210,7 +210,7 @@ test('после «Завершить» «назад» ведёт туда, от
   return p.evaluate(() => { endTrip(); endTrip(); back(); return state.view==='compare' || 'view ' + state.view; });
 });
 test('сохранение маршрута и шаблон под поиском', async p => p.evaluate(() => {
-  resetDemo(); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render(); pick('metro');
+  resetDemo(); setDemoNow(500, 0); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render(); pick('metro');   // будний день: шаблон «пн–пт»
   go('save'); state.saveName='Работа'; saveTemplate(); saveReverse(false); restart();
   return (state.templates.length===1 && document.body.innerText.includes('выйди до')) || 'шаблонов ' + state.templates.length;
 }));
