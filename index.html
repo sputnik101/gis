@@ -270,7 +270,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.7.1', APP_DATE = '28.11.2026';   // дату меняем вместе с номером
+const APP_VERSION = '0.7.2', APP_DATE = '28.11.2026';   // дату меняем вместе с номером
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -2010,13 +2010,20 @@ async function startTrip(demo){
   await routeReady;
   if(routeKey !== k) await showRoute(k);
   if(state.sel !== k || state.view !== view0){ trip.on = false; render(); return; }   // ушёл с экрана — поездку не начинаем (и такси без подтверждения не вызываем)
-  const o = JSON.parse(JSON.stringify(OPTIONS[k]));      // поездка идёт на своей копии: выключение модуля её не ломает
+  let o = JSON.parse(JSON.stringify(OPTIONS[k]));      // поездка идёт на своей копии: выключение модуля её не ломает
   trip.k = k; trip.o = o; state.modAns = {};
   // Живой маршрут и человек у его начала — ведём по настоящей точке и часам; иначе — демонстрация, как раньше
   trip.real = false;
   if((isLive(state.dest) || liveWalk()) && !demo && REAL_CLOCK && navigator.geolocation){   // живые места и живые прогулки — по GPS
     if(btn) btn.textContent = 'Ищу, где ты…';
-    try{ const p = await geoOnce(8000), c0 = o.legs[0] && o.legs[0].coords, s0 = (routeLegs[0] && routeLegs[0].c[0]) || (c0 && c0[0]);   // начало — с карты или из самого маршрута (карта могла не загрузиться)
+    try{ const p = await geoOnce(8000), c0 = o.legs[0] && o.legs[0].coords; let s0 = (routeLegs[0] && routeLegs[0].c[0]) || (c0 && c0[0]);   // начало — с карты или из самого маршрута (карта могла не загрузиться)
+      // прогулка начинается там, где человек стоит сейчас: отошёл от начала кольца — кольцо той же длины строим заново от него
+      if(liveWalk() && o.noTarget && /^stroll\d+$/.test(k) && (!s0 || dist(p, s0) > 30)){
+        if(btn) btn.textContent = 'Строю кольцо от тебя…';
+        const min = +k.slice(6), lp = await makeLoop(p, min, await greenNear(p, 2500)).catch(() => null);
+        if(lp && state.sel === k){ LIVE.here = { at:p, t:Date.now() }; const L = LIVE.loops;
+          L.list = L.list.filter(x => x.min !== min).concat(lp); L.key = sigOf(p); L.at = Date.now(); LIVE.ver++; SYNC_KEY = null;
+          render(); await showRoute(k); o = JSON.parse(JSON.stringify(OPTIONS[k])); trip.o = o; s0 = p; } }
       if(s0 && dist(p, s0) < 1500){ trip.real = true; geoWatch(true); }
       else toast('Ты не у начала маршрута — покажу, как будет, в ускоренном виде'); }
     catch(e){ toast(GEO.denied ? 'Без геолокации — покажу путь по времени' : 'Не нашёл, где ты — покажу путь по времени'); }

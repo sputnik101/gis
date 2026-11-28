@@ -857,6 +857,18 @@ test('живая прогулка ведётся по GPS (не демо-про�
     return { real: trip.real, on: trip.on, speed: document.getElementById('speedBtn').hidden, view: state.view }; });
   return (r.real && r.on && r.speed && r.view === 'route') || JSON.stringify(r); });
 
+test('прогулка начинается там, где ты сейчас: отошёл после «Погулять рядом» — кольцо перестраивается от тебя', async p => {
+  await p.goto(p.url().replace('?demo', '')); await p.waitForTimeout(600);
+  await stubGeo(p, 37.6384, 55.7652);
+  await p.evaluate(() => { window.fetch = async () => { throw new Error('нет сети'); }; });
+  const r = await p.evaluate(async () => { walkNearby(); for(let i = 0; i < 100 && (state.locating || LIVE.loopsPending || !LIVE.loops); i++) await new Promise(r => setTimeout(r, 50));
+    const k = walkKeys()[1], start0 = OPTIONS[k].legs[0].coords[0]; pick(k);
+    window.__geo = [37.6420, 55.7660];   // отошёл ~250 м
+    await startTrip(); await new Promise(r => setTimeout(r, 1200));
+    const s1 = trip.o.legs[0].coords[0];
+    return { real: trip.real, moved: Math.round(dist(start0, [37.6420, 55.7660])), startNow: Math.round(dist(s1, [37.6420, 55.7660])), min: trip.o.name }; });
+  return (r.real && r.moved > 200 && r.startNow < 15 && /40/.test(r.min)) || JSON.stringify(r); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
