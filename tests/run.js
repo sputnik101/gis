@@ -869,6 +869,12 @@ test('прогулка начинается там, где ты сейчас: о
     return { real: trip.real, moved: Math.round(dist(start0, [37.6420, 55.7660])), startNow: Math.round(dist(s1, [37.6420, 55.7660])), min: trip.o.name }; });
   return (r.real && r.moved > 200 && r.startNow < 15 && /40/.test(r.min)) || JSON.stringify(r); });
 
+test('пересадки: поправки времени применены в обе стороны (кросс-платформенные ~1 мин, Комсомольская 6)', async p => p.evaluate(() => {
+  const t = (n1, l1, n2, l2) => { const a = MET.s.find(x => x.n === n1 && x.line === l1), b = MET.s.find(x => x.n === n2 && x.line === l2); const e = MET.adj[a.i].find(e => e.to === b.i && e.tr); return e && e.t; };
+  const r = [t('Китай-город','6','Китай-город','7'), t('Китай-город','7','Китай-город','6'), t('Парк Победы','8А','Парк Победы','3'), t('Комсомольская','5','Комсомольская','1'), t('Курская','3','Курская','5')];
+  return (r[0] === 1 && r[1] === 1 && r[2] === 1 && r[3] === 6 && r[4] === 4.18 && TRANSFERS.length === 8) || JSON.stringify(r);
+}));
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
