@@ -834,6 +834,20 @@ test('обычный режим (без ?demo): ни демо-мест в пои
       && act.every(id => ['metro','walk','live','pace','leave'].includes(id)) && /Версия \d/.test(mods);
     return ok || JSON.stringify({ act, mods: mods.slice(-500) }); }); });
 
+test('журнал поездок: настоящая поездка записывается, «Мои поездки» на главном, темп пешком подстраивается с трёх поездок', async p => {
+  const one = () => p.evaluate(async () => { restart(); openPlace('baum'); go('compare'); pick('walk'); await startTrip(true);
+    const o = trip.o, L = trip.legs; trip.real = true; let t = 0; trip.legAt = L.map(m => { const s = t; t += m * (o.legs[trip.legAt.length] && o.legs[0].type === 'walk' ? 1.2 : 1.2); return s; });
+    trip.t0 = Date.now() - t * 60000; finish(); return { done: document.body.innerText, n: TRIPS.length }; });
+  await p.evaluate(() => { resetDemo(); TRIPS = []; saveTrips(); });
+  const a = await one();
+  const home1 = await p.evaluate(() => { restart(); return document.body.innerText; });
+  await one(); await one();
+  const r = await p.evaluate(() => { restart(); const home = document.body.innerText; go('trips'); const list = document.body.innerText;
+    return { home, list, wk: paceMod().data().walkK, n: TRIPS.length, saved: JSON.parse(localStorage.getItem('gis.trips')).length }; });
+  const ok = /Прогноз — \d+\sмин, вышло \d+\sмин/.test(a.done) && /Мои поездки/.test(home1) && /с трёх прогноз/.test(home1)
+    && r.n === 3 && r.saved === 3 && /на 20% дольше/.test(r.home) && /прогноз \d+, вышло \d+\sмин/.test(r.list) && r.wk >= 1.15 && r.wk <= 1.25;
+  return ok || JSON.stringify({ done: a.done.slice(0, 300), home1: home1.slice(0, 300), r: Object.assign(r, { home: r.home.slice(0, 400), list: r.list.slice(0, 500) }) }); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
