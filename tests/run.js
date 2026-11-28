@@ -848,6 +848,15 @@ test('журнал поездок: настоящая поездка запис�
     && r.n === 3 && r.saved === 3 && /на 20% дольше/.test(r.home) && /прогноз \d+, вышло \d+\sмин/.test(r.list) && r.wk >= 1.15 && r.wk <= 1.25;
   return ok || JSON.stringify({ done: a.done.slice(0, 300), home1: home1.slice(0, 300), r: Object.assign(r, { home: r.home.slice(0, 400), list: r.list.slice(0, 500) }) }); });
 
+test('живая прогулка ведётся по GPS (не демо-проигрыш) и не «кончается» у старта кольца', async p => {
+  await p.goto(p.url().replace('?demo', '')); await p.waitForTimeout(600);
+  await stubGeo(p, 37.6384, 55.7652);
+  await p.evaluate(() => { window.fetch = async () => { throw new Error('нет сети'); }; });
+  const r = await p.evaluate(async () => { walkNearby(); for(let i = 0; i < 100 && (state.locating || LIVE.loopsPending || !LIVE.loops); i++) await new Promise(r => setTimeout(r, 50));
+    pick(walkKeys()[0]); await startTrip(); await new Promise(r => setTimeout(r, 1500));
+    return { real: trip.real, on: trip.on, speed: document.getElementById('speedBtn').hidden, view: state.view }; });
+  return (r.real && r.on && r.speed && r.view === 'route') || JSON.stringify(r); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;

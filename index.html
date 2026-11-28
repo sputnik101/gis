@@ -270,7 +270,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.7', APP_DATE = '28.11.2026';   // дату меняем вместе с номером
+const APP_VERSION = '0.7.1', APP_DATE = '28.11.2026';   // дату меняем вместе с номером
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -2014,9 +2014,9 @@ async function startTrip(demo){
   trip.k = k; trip.o = o; state.modAns = {};
   // Живой маршрут и человек у его начала — ведём по настоящей точке и часам; иначе — демонстрация, как раньше
   trip.real = false;
-  if(isLive(state.dest) && !demo && REAL_CLOCK && navigator.geolocation){
+  if((isLive(state.dest) || liveWalk()) && !demo && REAL_CLOCK && navigator.geolocation){   // живые места и живые прогулки — по GPS
     if(btn) btn.textContent = 'Ищу, где ты…';
-    try{ const p = await geoOnce(8000); const s0 = routeLegs[0] && routeLegs[0].c[0];
+    try{ const p = await geoOnce(8000), c0 = o.legs[0] && o.legs[0].coords, s0 = (routeLegs[0] && routeLegs[0].c[0]) || (c0 && c0[0]);   // начало — с карты или из самого маршрута (карта могла не загрузиться)
       if(s0 && dist(p, s0) < 1500){ trip.real = true; geoWatch(true); }
       else toast('Ты не у начала маршрута — покажу, как будет, в ускоренном виде'); }
     catch(e){ toast(GEO.denied ? 'Без геолокации — покажу путь по времени' : 'Не нашёл, где ты — покажу путь по времени'); }
@@ -2026,7 +2026,7 @@ async function startTrip(demo){
   sheet.inert = true; snap('hidden'); document.getElementById('guide').classList.add('on');
   document.getElementById('attrib').classList.add('guiding');
   document.getElementById('recenter').hidden = true;
-  Object.assign(trip, { legAt:[0], logged:null, free:false, touching:false, hold:false, easing:false, touchAt:0, cam:null, t:0, buzzed:false, lastLeg:-1, smoothBrg: mapOk ? map.getBearing() : 0, lastSet:0, lastHtml:'', li:0, legT0:0, t0:Date.now(), late:null });
+  Object.assign(trip, { maxF:0, legAt:[0], logged:null, free:false, touching:false, hold:false, easing:false, touchAt:0, cam:null, t:0, buzzed:false, lastLeg:-1, smoothBrg: mapOk ? map.getBearing() : 0, lastSet:0, lastHtml:'', li:0, legT0:0, t0:Date.now(), late:null });
   document.getElementById('speedBtn').hidden = trip.real;
   trip.legs = o.legs.map((l,i)=>legMin(k,i));
   { let t0 = tripStart(k); trip.hints = o.legs.map((l,i) => { const h = collect('stepHints', legView(k, l, 'guide'), t0); t0 += trip.legs[i]; return h; }); }   // подсказки модулей на каждый шаг
@@ -2062,12 +2062,15 @@ function realStep(){
   const o = trip.o, now = (Date.now() - trip.t0) / 60000, fresh = GEO.pos && Date.now() - GEO.at < 20000 && (GEO.acc == null || GEO.acc < 120);
   if(fresh) for(let j = o.legs.length - 1; j > trip.li; j--){   // уже у следующего пешего участка — шаги до него пройдены
     if(o.legs[j].type !== 'walk' || !routeLegs[j]) continue; const pr = project(routeLegs[j], GEO.pos);
-    if(pr.d < 50 && (pr.f > 0.05 || j === trip.li + 1)){ trip.li = j; trip.legT0 = now; trip.legAt[j] = now; break; } }   // пропущенные шаги — без своего времени
+    if(pr.d < 50 && (pr.f > 0.05 || j === trip.li + 1)){ trip.li = j; trip.legT0 = now; trip.legAt[j] = now; trip.maxF = 0; break; } }   // пропущенные шаги — без своего времени
   for(;;){ const li = trip.li, l = o.legs[li], lm = trip.legs[li], el = now - trip.legT0, lastLeg = li === o.legs.length - 1;
     let f;
-    if(l.type === 'walk' && fresh && routeLegs[li]){ const pr = project(routeLegs[li], GEO.pos); f = pr.d < 80 ? pr.f : Math.min(0.99, el / lm); if(pr.d < 80 && pr.f > 0.97) f = 1; }
+    if(l.type === 'walk' && fresh && routeLegs[li]){ const pr = project(routeLegs[li], GEO.pos), mf = trip.maxF || 0;
+      // продвижение растёт постепенно: кольцо начинается и кончается в одной точке — «у начала» не должно стать «в конце»
+      const c = routeLegs[li].c, loop = c.length > 2 && dist(c[0], c[c.length - 1]) < 80, ok = pr.d < 80 && (!loop || pr.f <= mf + 0.3);
+      f = ok ? Math.max(pr.f, mf) : Math.min(0.99, Math.max(mf, el / lm));   /* назад по маршруту не откатываемся */ if(ok && pr.f > 0.97) f = 1; trip.maxF = Math.max(mf, Math.min(f, 1)); }
     else f = l.type === 'walk' ? Math.min(1, el / lm) : (el > lm * 1.6 ? 1 : Math.min(0.99, el / lm));
-    if(f >= 1 && !lastLeg){ trip.li++; trip.legT0 = now; trip.legAt[trip.li] = now; continue; }
+    if(f >= 1 && !lastLeg){ trip.li++; trip.legT0 = now; trip.legAt[trip.li] = now; trip.maxF = 0; continue; }
     trip.t = trip.legs.slice(0, li).reduce((a, b) => a + b, 0) + Math.min(1, f) * lm;
     if(f >= 1 && lastLeg) trip.t = trip.total;
     return; } }
