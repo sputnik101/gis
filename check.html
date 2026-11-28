@@ -19,6 +19,9 @@ h1{font-size:24px;margin:0 0 6px}
 .m{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
 .st{margin-left:auto;flex:none;font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
 .ok .st{color:var(--ok)} .bad .st{color:var(--bad)}
+.opt .dot{background:var(--bg);color:var(--muted)} .opt .st{color:var(--muted)}
+.grp{font-size:13px;font-weight:600;color:var(--muted);margin:16px 4px 8px}
+.grp:first-child{margin-top:0}
 .sum{border-radius:16px;padding:14px;margin:16px 0;background:#fff;border:1px solid var(--line)}
 button{font:inherit;font-weight:600;border:0;border-radius:14px;padding:13px 18px;cursor:pointer}
 .main{background:var(--violet-btn);color:#fff;width:100%}
@@ -37,19 +40,20 @@ button{font:inherit;font-weight:600;border:0;border-radius:14px;padding:13px 18p
   <p class="foot">Проверка ничего не отправляет: страница только пробует открыть каждый адрес и смотрит, ответил ли он.</p>
 </main>
 <script>
-const VER = '0.5.1';
-// что проверяем: [название для человека, зачем это приложению, как проверять, адрес]
+let VER = '…';   // версия берётся из самого приложения (index.html), чтобы страница не отставала
+// что проверяем: [название, зачем это приложению, как проверять, адрес, обязательно ли]
 const CHECKS = [
-  ['Само приложение', 'страница и встроенные данные', 'fetch', 'index.html'],
-  ['Библиотека карты — своя копия', 'рисует карту, лежит рядом с приложением', 'fetch', 'vendor/maplibre-gl.js'],
-  ['Библиотека карты — unpkg.com', 'запасной источник той же библиотеки', 'fetch', 'https://unpkg.com/maplibre-gl@4.7.1/package.json'],
-  ['Карта — OpenFreeMap, стиль', 'как выглядит карта', 'fetch', 'https://tiles.openfreemap.org/styles/liberty'],
-  ['Карта — OpenFreeMap, кусочки карты', 'сами улицы и дома', 'fetch', 'https://tiles.openfreemap.org/planet'],
-  ['Карта — OpenStreetMap, картинки', 'возможная запасная карта', 'img', 'https://tile.openstreetmap.org/10/619/320.png'],
-  ['Маршруты пешком', 'routing.openstreetmap.de', 'fetch', 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/37.6176,55.7558;37.6200,55.7570?overview=false'],
-  ['Поиск адресов', 'nominatim.openstreetmap.org', 'fetch', 'https://nominatim.openstreetmap.org/search?q=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&format=json&limit=1'],
-  ['Ориентиры и парки — основной', 'overpass-api.de', 'fetch', 'https://overpass-api.de/api/status'],
-  ['Ориентиры и парки — запасной', 'maps.mail.ru', 'fetch', 'https://maps.mail.ru/osm/tools/overpass/api/status'],
+  ['Само приложение', 'страница и встроенные данные', 'fetch', 'index.html', true],
+  ['Библиотека карты', 'рисует карту, лежит рядом с приложением', 'fetch', 'vendor/maplibre-gl.js', true],
+  ['Наша карта — стиль', 'цвета и подписи, папка map/', 'fetch', 'map/style.json', true],
+  ['Наша карта — кусочек центра', 'дома и улицы у Чистых прудов', 'fetch', 'map/tiles/14/9905/5121.pbf', true],
+  ['Наша карта — шрифт', 'русские подписи', 'fetch', 'map/fonts/Noto%20Sans%20Regular/1024-1279.pbf', true],
+  ['Маршруты пешком', 'routing.openstreetmap.de', 'fetch', 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/37.6176,55.7558;37.6200,55.7570?overview=false', true],
+  ['Поиск адресов', 'nominatim.openstreetmap.org', 'fetch', 'https://nominatim.openstreetmap.org/search?q=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0&format=json&limit=1', true],
+  ['Карта за пределами Москвы', 'OpenFreeMap', 'fetch', 'https://tiles.openfreemap.org/styles/liberty', false],
+  ['Запасная библиотека карты', 'unpkg.com', 'fetch', 'https://unpkg.com/maplibre-gl@4.7.1/package.json', false],
+  ['Ориентиры — запасной источник', 'overpass-api.de', 'fetch', 'https://overpass-api.de/api/status', false],
+  ['Ориентиры — ещё один запасной', 'maps.mail.ru', 'fetch', 'https://maps.mail.ru/osm/tools/overpass/api/status', false],
 ];
 const TIMEOUT = 8000;
 let results = [];
@@ -74,24 +78,23 @@ async function probe(kind, url){
 }
 
 function row(c, r){
-  const cls = !r ? '' : r.ok ? 'ok' : 'bad', mark = !r ? '…' : r.ok ? '✓' : '✕';
+  const cls = !r ? '' : r.ok ? 'ok' : c[4] ? 'bad' : 'opt', mark = !r ? '…' : r.ok ? '✓' : c[4] ? '✕' : '–';
   const st = !r ? 'проверяем' : r.ok ? 'открылось · ' + r.ms + ' мс' : r.why;
   return `<div class="row ${cls}"><div class="dot">${mark}</div><div><div class="t">${c[0]}</div><div class="m">${c[1]}</div></div><div class="st">${st}</div></div>`;
 }
-function draw(){ document.getElementById('list').innerHTML = CHECKS.map((c, i) => row(c, results[i])).join(''); }
+function draw(){ const h = t => `<div class="grp">${t}</div>`;
+  document.getElementById('list').innerHTML = h('Нужно приложению') + CHECKS.map((c, i) => c[4] ? row(c, results[i]) : '').join('')
+    + h('Не обязательно — запасные источники') + CHECKS.map((c, i) => c[4] ? '' : row(c, results[i])).join(''); }
 
 function summary(){
-  const bad = i => results[i] && !results[i].ok;
-  const lines = [];
+  const bad = i => results[i] && !results[i].ok, lines = [];
   if(bad(0)) lines.push('Не открывается даже само приложение — похоже, проблема с сетью целиком.');
   else{
-    const lib = !bad(1) || !bad(2), map = !bad(3) && !bad(4);
-    if(!lib) lines.push('Библиотека карты не загрузилась ни из одного места — карта не появится.');
-    if(!map) lines.push('Сервер карты OpenFreeMap недоступен — карта не появится.' + (bad(5) ? '' : ' Картинки OpenStreetMap открываются — их можно сделать запасной картой.'));
-    if(bad(6)) lines.push('Маршруты пешком не строятся — время будет примерным.');
-    if(bad(7)) lines.push('Поиск адресов недоступен — останутся только станции метро и сохранённые места.');
-    if(bad(8) && bad(9)) lines.push('Ориентиры недоступны — парки для прогулок всё равно есть, они встроены.');
-    if(!lines.length) lines.push('Всё открывается. Если карты всё равно нет — пришли скриншот экрана приложения.');
+    if(bad(1)) lines.push('Библиотека карты не загрузилась — карта не появится' + (bad(8) ? '.' : ', но запасная с unpkg.com открывается — карта должна появиться.'));
+    if(bad(2) || bad(3) || bad(4)) lines.push('Наша карта открывается не полностью — карта Москвы может быть пустой или без подписей.');
+    if(bad(5)) lines.push('Маршруты пешком не строятся — время будет примерным.');
+    if(bad(6)) lines.push('Поиск адресов недоступен — останутся станции метро и сохранённые места.');
+    if(!lines.length) lines.push('Всё нужное открывается: карта, маршруты и поиск должны работать.' + (bad(7) ? ' За пределами Москвы карты не будет — это нормально.' : ''));
   }
   document.getElementById('sum').innerHTML = lines.join('<br>');
 }
@@ -101,9 +104,10 @@ function report(){
   return ['Своя ГИС ' + VER + ' · проверка связи · ' + new Date().toLocaleString('ru-RU'),
     'Сеть: ' + (c.type || '—') + ' / ' + (c.effectiveType || '—') + (navigator.onLine ? '' : ' · браузер считает, что офлайн'),
     'Браузер: ' + navigator.userAgent, '',
-    ...CHECKS.map((ch, i) => { const r = results[i]; return (r && r.ok ? '✓ ' : '✕ ') + ch[0] + ' — ' + (r ? (r.ok ? r.ms + ' мс' + (r.blind ? ' (вслепую)' : '') : r.why) : '—'); })].join('\n');
+    ...CHECKS.map((ch, i) => { const r = results[i]; return (r && r.ok ? '✓ ' : ch[4] ? '✕ ' : '– ') + ch[0] + (ch[4] ? '' : ' (не обязательно)') + ' — ' + (r ? (r.ok ? r.ms + ' мс' + (r.blind ? ' (вслепую)' : '') : r.why) : '—'); })].join('\n');
 }
 
+fetch('index.html', { cache:'no-store' }).then(r => r.text()).then(t => { const m = t.match(/APP_VERSION = '([^']+)'/); if(m) VER = m[1]; }).catch(() => {});
 async function run(){
   results = []; draw(); document.getElementById('sum').textContent = 'Проверяем…'; document.getElementById('copy').disabled = true;
   await Promise.all(CHECKS.map(async (c, i) => { results[i] = await probe(c[2], c[3]); draw(); }));
