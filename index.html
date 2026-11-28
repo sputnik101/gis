@@ -38,6 +38,7 @@ button{font-family:inherit}
 .topbar.hide{opacity:0;transform:translateY(-12px);pointer-events:none}
 .topbar{flex-wrap:wrap}
 .topbar .brk{flex-basis:100%;height:0}
+.topbar .where{margin-left:auto}
 .search .ph{color:var(--muted)}
 .wchip{height:40px;border-radius:20px;border:0;background:#fff;box-shadow:var(--s2);padding:0 16px;font:inherit;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:8px;cursor:pointer}
 .attrib.low{top:164px}
@@ -269,7 +270,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.6.4', APP_DATE = '27.11.2026';
+const APP_VERSION = '0.6.5', APP_DATE = '27.11.2026';
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -1655,7 +1656,7 @@ function renderTop(){
   // на экране места — крестик в поле: закрыть место и вернуться на главный
   tb.innerHTML = `<div class="sw"><button class="search press" onclick="go('find')" aria-label="${v==='place' && state.dest ? 'Изменить место' : 'Поиск: куда едем'}">${ic('Поиск')}${label}</button>${v==='place' && state.dest ? `<button class="sx press" aria-label="Закрыть место" onclick="closePlace()">${ic('Закрыть')}</button>` : ''}</div>
     <button class="round press" aria-label="Модули" onclick="go('modules')">${ic('Шестерёнка', 22)}</button>
-    ${v==='home' && walkKeys().length ? `<div class="brk"></div><button class="wchip press" onclick="walkNearby()">${ic('Пешком', 18)}Погулять рядом</button>` : ''}`;
+    ${v==='home' ? `<div class="brk"></div>${walkKeys().length ? `<button class="wchip press" onclick="walkNearby()">${ic('Пешком', 18)}Погулять рядом</button>` : ''}${DEMO_CLOCK ? '' : `<button class="wchip where press" onclick="whereAmI()" aria-label="Показать, где я">${ic('Навигатор', 18)}${state.locating ? 'Ищу…' : 'Где я?'}</button>`}` : ''}`;
 }
 const glue = h => h.replace(/(\d) (мин|ч|₽|км|м)(?=[\s<.,·)]|$)/g, '$1&nbsp;$2').replace(/≈ /g, '≈&nbsp;');
 // Короткая блокировка кликов после смены экрана: второй тап двойного клика не попадает в новую кнопку
@@ -1876,9 +1877,30 @@ function showRoute(k){
 // Главный: только «ты здесь». Место: ты и точка назначения, без линии маршрута.
 function clearRoute(){ showRoute.t = (showRoute.t||0)+1; routeKey = null; if(!mapOk) return;
   const e = {type:'FeatureCollection',features:[]}; ['r-walk','r-metro','r-car'].forEach(id=>map.getSource(id).setData(e)); clearMarkers(); }
-function showHome(){ clearRoute(); if(!mapOk) return; addMarker(pinEl(startName(),'dark'), startPt()); map.flyTo({center:startPt(), zoom:13.6, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
-function showPlace(){ clearRoute(); const pl = PLACES[state.dest]; if(!mapOk || !pl) return; addMarker(pinEl(pl.live ? startName() : 'Ты здесь','dark'), startPt()); addMarker(pinEl(pl.pin || pl.name,'m3'), pl.at);
-  map.fitBounds(new maplibregl.LngLatBounds(startPt(), startPt()).extend(pl.at), {padding:{top:120,left:50,right:50,bottom:300}, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
+// Главный экран. Демо (?demo) — как раньше, от демо-точки. Живое: «Ты здесь» — только если геопозиция известна; иначе «Дом» или вся Москва без метки
+const MOSCOW = [37.6176, 55.7558];
+function showHome(){ clearRoute(); if(!mapOk) return;
+  const fly = (c, z) => map.flyTo({ center:c, zoom:z, pitch:0, bearing:0, duration:reduced?0:1200, essential:false });
+  if(DEMO_CLOCK){ addMarker(pinEl(startName(),'dark'), startPt()); fly(startPt(), 13.6); return; }
+  const h = hereAt();
+  if(h){ addMarker(pinEl('Ты здесь','dark'), h); fly(h, 14.5); }
+  else if(LIVE.home){ addMarker(pinEl('Дом','dark'), LIVE.home.at); fly(LIVE.home.at, 13.6); }
+  else fly(MOSCOW, 10.3); }
+// «Где я?» на главном: спросить геопозицию (системное окно — только по нажатию) и показать человека на карте
+async function whereAmI(){ const ok = await locate();
+  if(!ok){ toast(GEO_FAIL[state.geoFail] || 'Не получилось определить, где ты'); render(); return; }
+  render(); if(state.view === 'home') showHome(); }
+// При запуске и при возвращении в приложение: если геопозиция уже разрешена — узнаём тихо. Не разрешена — не спрашиваем с порога
+async function autoLocate(){ if(DEMO_CLOCK || hereAt() || !navigator.permissions || !navigator.geolocation) return;
+  try{ const r = await navigator.permissions.query({ name:'geolocation' }); if(r.state !== 'granted') return; }catch(e){ return; }
+  if(await locate()){ render(); if(state.view === 'home') showHome(); } }
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && state.view === 'home' && !trip.on) autoLocate(); });
+function showPlace(){ clearRoute(); const pl = PLACES[state.dest]; if(!mapOk || !pl) return;
+  // живое место: «откуда» — только известная точка (геопозиция, выбранное «откуда» или дом); пока ищем — без метки, только место
+  const o = DEMO_CLOCK || !pl.live ? startPt() : (originPt() || (LIVE.home && LIVE.home.at));
+  if(o) addMarker(pinEl(pl.live ? startName() : 'Ты здесь','dark'), o); addMarker(pinEl(pl.pin || pl.name,'m3'), pl.at);
+  if(!o){ map.flyTo({ center:pl.at, zoom:15, pitch:0, bearing:0, duration:reduced?0:1200, essential:false }); return; }
+  map.fitBounds(new maplibregl.LngLatBounds(o, o).extend(pl.at), {padding:{top:120,left:50,right:50,bottom:300}, pitch:0, bearing:0, duration:reduced?0:1200, essential:false}); }
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fitAll(){
   if(!mapOk || !OPTIONS[state.sel]) return; const o = OPTIONS[state.sel];
@@ -2181,7 +2203,7 @@ document.addEventListener('keydown', e => { if(e.key !== 'Escape' || e.defaultPr
   if(state.history.length && state.view !== 'home') back(); });
 render(); requestAnimationFrame(()=>snapFor(state.view));
 let rsT; window.addEventListener('resize', ()=>{ clearTimeout(rsT); rsT = setTimeout(()=>{ if(!trip.on){ if(sheet.dataset.snap==='place'){ fitSheet(); return; } sheet.classList.remove('anim'); snapY = snaps()[sheet.dataset.snap||'half']; sheet.style.height = snapY+'px'; } }, 150); });
-initMap();
+initMap(); autoLocate();
 </script>
 </body>
 </html>
