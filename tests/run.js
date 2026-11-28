@@ -875,6 +875,24 @@ test('пересадки: поправки времени применены в 
   return (r[0] === 1 && r[1] === 1 && r[2] === 1 && r[3] === 6 && r[4] === 4.18 && TRANSFERS.length === 8) || JSON.stringify(r);
 }));
 
+test('шаблон постоянный, «От меня» — пересчитать этот раз от себя; «Где я сейчас» при сохранении — конкретная точка', async p => {
+  const k = await liveSetup(p, 'Милашенкова 4А'); await stubGeo(p, 37.7799, 55.7877);   // у Измайловской — далеко от дома
+  return p.evaluate(async k => { const wait = async f => { for(let i = 0; i < 80 && !f(); i++) await new Promise(r => setTimeout(r, 50)); };
+    setFrom(homeFrom()); await wait(() => liveRoute(k)); state.sel = 'live'; go('route'); go('save'); state.saveName = 'Работа'; saveTemplate(); saveReverse(false); restart();
+    LIVE.here = { at:[37.7799, 55.7877], t:Date.now() };
+    useTemplate(0); await wait(() => state.view === 'route'); await new Promise(r => setTimeout(r, 100));
+    const t1 = document.body.innerText, row1 = (document.querySelector('.tplfrom') || {}).className;
+    await tplFromMe(); await wait(() => !state.from && liveRoute(k)); await new Promise(r => setTimeout(r, 200));
+    const t2 = document.body.innerText, fromNow = state.from, sel2 = state.sel, tplFromSaved = state.templates[0].from;
+    tplBaseFrom(); await wait(() => state.from && state.from.home); await new Promise(r => setTimeout(r, 200));
+    const t3 = document.body.innerText, c = /От меня/.test(t3) && !!(state.from && state.from.home);
+    // сохранение с «Где я сейчас»: не дома — точка у ближайшего метро
+    state.from = null; const spot = hereSpot();
+    return { a: /Из дома/.test(t1) && /От меня/.test(t1) && /far/.test(row1) && /Ты не там/.test(t1),
+      b: fromNow === null && /От тебя/.test(t2) && sel2 === 'live' && tplFromSaved && tplFromSaved.home,
+      c,
+      d: spot && /^Точка у м\. /.test(spot.name) && fromLabel(spot).startsWith('От точки у м. '), x:0 }; }, k).then(r => (r.a && r.b && r.c && r.d) || JSON.stringify(r)); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;

@@ -39,6 +39,10 @@ button{font-family:inherit}
 .topbar{flex-wrap:wrap}
 .topbar .brk{flex-basis:100%;height:0}
 .topbar .where{margin-left:auto}
+.tplfrom{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 4px;padding:8px 8px 8px 14px;border-radius:16px;background:#fff;border:1px solid var(--line)}
+.tplfrom .m{font-size:14px;color:var(--ink2)}
+.tplfrom.far{border-color:var(--violet)}
+.tplfrom .chip{display:inline-flex;align-items:center;gap:6px}
 .search .ph{color:var(--muted)}
 .wchip{height:40px;border-radius:20px;border:0;background:#fff;box-shadow:var(--s2);padding:0 16px;font:inherit;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:8px;cursor:pointer}
 .attrib.low{top:164px}
@@ -270,7 +274,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.7.3', APP_DATE = '28.11.2026';   // дату меняем вместе с номером
+const APP_VERSION = '0.7.4', APP_DATE = '28.11.2026';   // дату меняем вместе с номером
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -1220,7 +1224,7 @@ function tplTime(t){   // «выйди до 8:23» для шаблона; не �
   Object.assign(state, keep); SYNC_KEY = null; syncCtx();   // вернуть контекст текущего выбора
   return out;
 }
-const fromLabel = f => !f ? 'От тебя' : f.home ? 'Из дома' : 'От ' + f.name;
+const fromLabel = f => !f ? 'От тебя' : f.home ? 'Из дома' : f.near ? 'От точки у ' + f.near : 'От ' + f.name;
 // строка списка с корзиной: строка — действие, корзина — удалить только её
 const delBtn = (fn, label) => `<button class="del press" aria-label="${esc(label)}" onclick="${fn}">${ic('Корзина', 18)}</button>`;
 function recentRow(r, i){ const p = PLACES[r.to]; if(!p) return '';
@@ -1514,7 +1518,7 @@ V.route = () => {
                     : `<button class="btn w press" id="goBtn" onclick="${o.confirm ? "go('confirm')" : 'startTrip()'}">Всё равно выйти сейчас</button>`)
     : `<button class="btn ${arr && v.never ? 'w' : 'p'} press" id="goBtn" onclick="${o.confirm ? "go('confirm')" : 'startTrip()'}">${esc(cta)}</button>`;
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><div class="m">Маршрут с ориентирами</div></div>
-    ${head}${!o.noTarget && state.dest && !isSaved() && !v.closed ? `<div><button class="savebtn" onclick="go('save')">${ic('Звезда', 18)} Сохранить маршрут</button></div>` : ''}${v.closed ? closedAlt(k) : `<div class="steps">${steps}</div>${pois}`}
+    ${tplFromRow()}${head}${!o.noTarget && state.dest && !isSaved() && !v.closed ? `<div><button class="savebtn" onclick="go('save')">${ic('Звезда', 18)} Сохранить маршрут</button></div>` : ''}${v.closed ? closedAlt(k) : `<div class="steps">${steps}</div>${pois}`}
     ${v.closed ? '' : `<div class="gobar">${goBtn}</div>`}`;
 };
 // Способ сейчас не работает — сразу предложить работающие
@@ -1609,9 +1613,15 @@ function askName(){ const v = prompt('Название маршрута', state.
 // Дни маршрута: пока человек сам не выбрал — по названию («Работа», «Учёба» — будни)
 const saveDays = () => state.saveDays || (['Работа','Учёба'].includes(state.saveName) ? [0,1,2,3,4] : []);
 function toggleDay(i){ const d = saveDays().slice(); state.saveDays = d.includes(i) ? d.filter(x => x !== i) : d.concat(i).sort((a,b) => a-b); render(); }
+// «Где я сейчас» в шаблон не сохраняем: шаблон постоянный. Дома — «Дом»; иначе — точка, где стоишь, с подписью по ближайшему метро
+function hereSpot(){ const h = hereAt(); if(!h) return LIVE.home ? homeFrom() : null;
+  if(LIVE.home && dist(h, LIVE.home.at) < 150) return homeFrom();
+  let st = null, bd = 1500; for(const x of MET.s){ const d = dist(h, x.at); if(d < bd){ bd = d; st = x; } }
+  const near = st ? 'м. ' + st.n : 'сохранённой точки';
+  return { name: 'Точка у ' + near, at: h, near }; }
 function saveTemplate(){
   const name = state.saveName; if(!name) return;
-  state.templates.push({ name, dest:state.dest, from: isLive(state.dest) && state.from ? { name: state.from.name, at: state.from.at, home: !!state.from.home } : null, arrive: arriveMode() ? state.arrive % DAY : null, mode: state.sel, days: saveDays().slice() });
+  state.templates.push({ name, dest:state.dest, from: isLive(state.dest) ? (state.from ? { name: state.from.name, at: state.from.at, home: !!state.from.home, near: state.from.near } : hereSpot()) : null, arrive: arriveMode() ? state.arrive % DAY : null, mode: state.sel, days: saveDays().slice() });
   state.saveDays = null;
   state.justSaved = name; render('in'); say('Маршрут сохранён: ' + name);
 }
@@ -1632,11 +1642,28 @@ function useTemplate(i, retried){ const t = state.templates[i]; if(!t) return;
     (async () => { if(!f && !(await locate())){ toast(GEO_FAIL[state.geoFail] + ' — открой маршрут и выбери, откуда'); render(); return; }
       await buildLiveRoute(t.dest, f ? f.at : hereAt()); useTemplate(i, true); })().catch(() => toast('Маршрут не построился — проверь интернет')); return; }
   if(t.reverse){ toast('В прототипе обратный путь пока не строится'); return; }
-  Object.assign(state, { from:tplFrom(t), dest:t.dest, mode:'hurry', timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? normDay(t.arrive) : state.arrive, depart:NOW });
+  Object.assign(state, { tplOpen: isLive(t.dest) && tplFrom(t) ? { i, base: tplFrom(t) } : null, from:tplFrom(t), dest:t.dest, mode:'hurry', timeMode: t.arrive!=null ? 'arrive' : 'depart', arrive: t.arrive!=null ? normDay(t.arrive) : state.arrive, depart:NOW });
   syncCtx(); state.sel = OPTIONS[t.mode] && !verdict(t.mode).closed ? t.mode : null;
   if(!state.sel){ toast('Сохранённый способ сейчас недоступен — выбери другой'); go('compare'); return; }
   // в одно касание: сразу маршрут сохранённым способом; «назад» — к остальным способам
   state.history.push('home'); state.view = 'compare'; showRoute(state.sel); go('route'); fitAll(); }
+/* Шаблон постоянный: «откуда» в нём фиксировано. «От меня» — посчитать этот раз от того места, где ты сейчас; шаблон не меняется */
+function tplFromRow(){ const T = state.tplOpen; if(!T || !isLive(state.dest)) return '';
+  const mine = !state.from, h = hereAt(), far = !mine && h && T.base.at && dist(h, T.base.at) > 1000;
+  const label = mine ? 'От тебя' : fromLabel(T.base);
+  return `<div class="tplfrom${far ? ' far' : ''}"><span class="m">${esc(label)}</span>`
+    + (mine ? `<button class="chip press" onclick="tplBaseFrom()">${esc(fromLabel(T.base))}</button>`
+            : `<button class="chip ${far ? 'on ' : ''}press" onclick="tplFromMe()" ${state.tplBusy || state.locating ? 'disabled' : ''}>${ic('Навигатор', 16)} ${state.tplBusy || state.locating ? 'Считаю…' : 'От меня'}</button>`)
+    + (far ? `<div class="m" style="flex-basis:100%;margin-top:4px">Ты не там — посчитать от тебя?</div>` : '') + `</div>`; }
+async function tplReroute(from){ const k = state.dest, mode = state.sel, o = from ? from.at : hereAt(); if(!o || state.tplBusy) return;
+  // сначала считаем от нового места, потом переключаем: экран маршрута не остаётся без маршрута
+  if(!liveRoute(k, o)){ state.tplBusy = true; render(); try{ await buildLiveRoute(k, o); }catch(e){} state.tplBusy = false; }
+  if(state.dest !== k || state.view !== 'route'){ render(); return; }
+  if(!liveRoute(k, o)){ render(); toast('Маршрут не построился — проверь интернет'); return; }
+  state.from = from; SYNC_KEY = null; syncCtx(); state.sel = OPTIONS[mode] && !verdict(mode).closed ? mode : (goKeys()[0] || null);
+  render(); if(state.sel){ await showRoute(state.sel); fitAll(); } }
+async function tplFromMe(){ if(!(await locate())){ toast(GEO_FAIL[state.geoFail] || 'Не получилось определить, где ты'); render(); return; } tplReroute(null); }
+function tplBaseFrom(){ if(state.tplOpen) tplReroute(state.tplOpen.base); }
 function retryLive(){ if(!isLive(state.dest)) return; planLive(); }
 function openPlace(k, from){
   state.from = from === undefined ? null : from;   // начало планирования — от того места, где ты сейчас (если не выбрано иное)
@@ -1707,7 +1734,7 @@ function snapFor(v){
   else snap('full'); }
 function back(){ const from = state.view; state.view = state.history.pop() || 'home';
   if(from==='compare' && state.view!=='compare' && state.mode==='walk'){ state.mode = 'hurry'; }
-  if(state.view==='home'){ state.dest = null; state.sel = null; state.from = null; }   // на главном места нет: иначе пропадает «Погулять рядом» и метка «Дом» встаёт у места
+  if(state.view==='home'){ state.dest = null; state.sel = null; state.from = null; state.tplOpen = null; }   // на главном места нет: иначе пропадает «Погулять рядом» и метка «Дом» встаёт у места
   render('back'); snapFor(state.view);
   if(state.view==='home') showHome(); else if(state.view==='place') showPlace();
   else if(state.view==='compare' && from!=='time' && from!=='modules'){ showRoute(state.sel); fitAll(); } }
@@ -2252,7 +2279,7 @@ function saveApp(){ try{ localStorage.setItem(APP_KEY, JSON.stringify({ v:1, tem
 function loadApp(){ let d; try{ d = JSON.parse(localStorage.getItem(APP_KEY) || 'null'); }catch(e){ d = null; }
   if(!d || typeof d !== 'object') return;
   const okT = t => t && typeof t.name === 'string' && t.name && PLACES[t.dest] && typeof t.mode === 'string' && (t.arrive == null || Number.isFinite(t.arrive));
-  const okFrom = f => f && typeof f.name === 'string' && Array.isArray(f.at) && f.at.length === 2 && f.at.every(Number.isFinite) ? { name: f.name.slice(0, 80), at: f.at, home: !!f.home } : null;
+  const okFrom = f => f && typeof f.name === 'string' && Array.isArray(f.at) && f.at.length === 2 && f.at.every(Number.isFinite) ? Object.assign({ name: f.name.slice(0, 80), at: f.at, home: !!f.home }, typeof f.near === 'string' ? { near: f.near.slice(0, 60) } : {}) : null;
   if(Array.isArray(d.templates)) state.templates = d.templates.filter(okT).slice(0, 20).map(t => ({ name: t.name.slice(0, 40), dest: t.dest, from: t.from === undefined ? undefined : okFrom(t.from), arrive: t.arrive == null ? null : t.arrive, mode: t.mode, reverse: !!t.reverse, days: Array.isArray(t.days) ? [...new Set(t.days.filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a,b) => a-b) : [] }));
   if(Array.isArray(d.recents)) state.recents = d.recents.map(r => typeof r === 'string' ? { to:r, from:null } : r && typeof r.to === 'string' ? { to:r.to, from: okFrom(r.from) } : null).filter(r => r && PLACES[r.to]).slice(0, 6);
   for(const f of ['visits', 'declined']) if(d[f] && typeof d[f] === 'object') for(const [k, v] of Object.entries(d[f])) if(PLACES[k] && Number.isFinite(v)) state[f][k] = v;
