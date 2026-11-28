@@ -270,7 +270,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.6.5', APP_DATE = '27.11.2026';
+const APP_VERSION = '0.6.6', APP_DATE = '27.11.2026';
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -719,10 +719,10 @@ registerModule({
            loop:[{e:'Кофе', n:'Кофейня', d:'на обратном пути', at:[37.81417,55.79215], extra:'+2 мин'}] },
   pois(k){ return this.places[k] || []; }
 });
-// ---- Пора выходить: напоминание по сохранённому маршруту. На телефоне — уведомление; в прототипе — плашка на главном.
+// ---- Пора выходить: карточка на главном по сохранённому маршруту (уведомлений пока нет — позже через Зарубку).
 // Ядро передаёт ближайший маршрут на сегодня (next: name, modeName, verb, L — «выйди до», late, why — что сейчас влияет на путь).
 registerModule({
-  id:'leave', icon:'Колокол', name:'Пора выходить', desc:'Напомнит, когда выходить по сохранённому маршруту', where:'В дни маршрута — на главном; на телефоне — уведомлением', on:true,
+  id:'leave', icon:'Колокол', name:'Пора выходить', desc:'Подскажет на главном, когда пора выходить по сохранённому маршруту', where:'В дни маршрута — карточкой на главном, пока приложение открыто', on:true,
   schema:{ lead:[10, 30, 10] },          // за сколько минут напоминать: 10–30, шаг 5
   lead(){ const v = this.store.get().lead; return Math.round(v / 5) * 5; },
   homeCards(n){ const left = n.L - NOW, lead = this.lead();
@@ -1492,11 +1492,12 @@ V.route = () => {
   if(!v.closed && !v.never){ const cp = collect('cardPills', k).map(t => `<span class="pill">${esc(t)}</span>`).join('');
     if(cp) head = head.endsWith('</span></div>') ? head.slice(0, -6) + cp + '</div>' : head.replace(/(<span class="pill [^"]*">[^<]*<\/span>)$/, `<div class="row" style="flex-wrap:wrap;gap:8px">$1${cp}</div>`); }
   const cta = arr && v.never ? (o.ctaLate || o.cta || 'Всё равно поехать') : (o.cta || 'Поехали');
-  // До выхода больше часа: ничего не вызываем сейчас — напоминание за 10 мин; поездку можно проиграть в демо
+  // До выхода больше часа: напоминать пока нечем (позже — через Зарубку), поэтому честно говорим, когда выходить; выйти можно и сейчас
   const far = arr && v.plan==='until' && v.spare >= 60;
-  const remindAt = far ? v.L - 10 : 0;
   const goBtn = far
-    ? `<button class="btn p press" id="remindBtn" onclick="remind(${remindAt})">Напомнить в ${fmtD(remindAt)}</button><button class="btn w press" id="goBtn" style="margin-top:8px" onclick="startTrip(true)">Демо: проиграть поездку</button>`
+    ? `<div class="m" style="margin-bottom:10px">Выходить в ${fmtD(v.L)} — открой маршрут ближе к выходу</div>`
+      + (DEMO_CLOCK ? `<button class="btn p press" id="goBtn" onclick="startTrip(true)">Демо: проиграть поездку</button>`
+                    : `<button class="btn w press" id="goBtn" onclick="${o.confirm ? "go('confirm')" : 'startTrip()'}">Всё равно выйти сейчас</button>`)
     : `<button class="btn ${arr && v.never ? 'w' : 'p'} press" id="goBtn" onclick="${o.confirm ? "go('confirm')" : 'startTrip()'}">${esc(cta)}</button>`;
   return `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><div class="m">Маршрут с ориентирами</div></div>
     ${head}${!o.noTarget && state.dest && !isSaved() && !v.closed ? `<div><button class="savebtn" onclick="go('save')">${ic('Звезда', 18)} Сохранить маршрут</button></div>` : ''}${v.closed ? closedAlt(k) : `<div class="steps">${steps}</div>${pois}`}
@@ -1505,7 +1506,6 @@ V.route = () => {
 // Способ сейчас не работает — сразу предложить работающие
 function closedAlt(k){ const alt = (state.mode==='walk' ? walkKeys() : goKeys()).filter(x => x !== k && !verdict(x).closed);
   return alt.length ? `<div class="sec">Сейчас можно так</div>` + alt.map(x => card(x, false)).join('') : `<div class="m" style="margin:12px 0">Других способов сейчас нет — включи их в <button class="mlink" onclick="go('modules')">Модулях</button></div>`; }
-function remind(m){ toast('Напомню в ' + fmtD(m) + ' — за 10 мин до выхода'); say('Напоминание на ' + fmtD(m)); }
 // Когда начинается поездка: тот же расчёт, что показывает маршрут
 function tripStart(k){ const o = OPTIONS[k], v = verdict(k);
   return arriveMode() && !o.noTarget ? (v.plan==='until' ? v.L : NOW) : dep(); }

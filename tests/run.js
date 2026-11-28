@@ -820,6 +820,12 @@ test('ориентиры у поворотов — из своей карты (m
     OWN_MAP = null; const ok = await addLandmarks(turns); window.fetch = f0; OWN_MAP = null; return { ok, t0: turns[0][2], t1: turns[1][2], ovp }; }, [tiles, pt]);
   return (r.ok && /^у .*«.+», на Покровка$/.test(r.t0) && r.t1 === 'по дорожке' && r.ovp === 0) || JSON.stringify(r); });
 
+test('до выхода больше часа — без фальшивого «Напомнить»: «Выходить в …» и демо-проигрыш', async p => p.evaluate(() => {
+  resetDemo(); setDemoNow(6*60, 0); openPlace('baum'); go('compare'); state.timeMode='arrive'; state.arrive=540; render(); pick('metro'); go('route');
+  const txt = document.body.innerText, btn = document.getElementById('goBtn');
+  return (!/Напомн/.test(txt) && /Выходить в \d/.test(txt) && btn && /Демо: проиграть/.test(btn.textContent) && typeof window.remind === 'undefined') || txt.slice(0, 400);
+}));
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
