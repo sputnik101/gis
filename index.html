@@ -270,7 +270,7 @@ h1{text-wrap:balance}
    Минуты и цены — примерные, для теста. Помеченное «проверить» — уточнить на месте. */
 // Часы: настоящее время; демо-время (8:20) — со ссылкой «?demo» (автопроверки) или после «Демо → время» в «Модулях»
 // Версия приложения — видна внизу «Модулей». Меняется с каждым выпуском (см. docs/changelog.md)
-const APP_VERSION = '0.6.6', APP_DATE = '27.11.2026';
+const APP_VERSION = '0.6.7', APP_DATE = '28.11.2026';   // дату меняем вместе с номером
 const DEMO_CLOCK = /[?&]demo\b/.test(location.search);
 // время и день — московские: маршруты по Москве, а телефон может жить в другом поясе
 const MSK = (() => { try{ return new Intl.DateTimeFormat('en-GB', { timeZone:'Europe/Moscow', hour12:false, weekday:'short', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }catch(e){ return null; } })();
@@ -459,7 +459,7 @@ var APP_READY = false;   // до первого экрана модули тол
 function refreshModules(){ SYNC_KEY = null; CTX.key = null; if(FC) for(const x in FC) delete FC[x]; if(APP_READY) render(); }
 const usable = m => m && state.modules[m.id] && !m.__broken;
 // включён, не сломан и включены модули, без которых он не нужен (requires)
-const activeModules = () => MODULES.filter(m => usable(m) && !(m.demo && liveCtx()) && (m.requires || []).every(id => usable(MODULES.find(x => x.id === id))));
+const activeModules = () => MODULES.filter(m => usable(m) && modReady(m) && !(m.demo && liveCtx()) && (m.requires || []).every(id => usable(MODULES.find(x => x.id === id))));
 const facts = m => (CTX.mods && CTX.mods[m.id]) || {};
 // Модуль может опереться на другой включённый модуль (через requires): use('roads').at(T)
 // Модуль опирается на другой только через this.use(id) и только если объявил его в requires
@@ -1260,7 +1260,7 @@ function findHtml(){
   if(m === 'home') return q ? found || `<div class="m" style="margin:12px 4px">Нажми «Найти»</div>` : `<div class="m" style="margin:12px 4px">Например, «13-я Парковая 40». Адрес хранится на этом телефоне; для поиска он уходит в OpenStreetMap</div>`;
   if(m === 'from') return q ? found || `<div class="m" style="margin:12px 4px">Нажми «Найти»</div>` : fromChoices();
   if(!q) return state.recents.length ? `<div class="sec">Недавние</div>` + state.recents.map(recentRow).join('') : `<div class="m" style="margin:12px 4px">Адрес или место в Москве — и нажми «Найти». Маршрут посчитаю от того места, где ты сейчас</div>`;
-  const demo = /ба[уy]|baum|мгт/.test(q) ? `<div class="sec">Демо-маршрут</div>` + ['baum','baumst','mgtu'].map(placeRow).join('') : '';
+  const demo = DEMO_CLOCK && /ба[уy]|baum|мгт/.test(q) ? `<div class="sec">Демо-маршрут</div>` + ['baum','baumst','mgtu'].map(placeRow).join('') : '';
   return (found || `<div class="m" style="margin:12px 4px">Нажми «Найти»</div>`) + demo;
 }
 function placeRow(k){ const p = PLACES[k];
@@ -1530,18 +1530,22 @@ function modCard(m){ const on = !!state.modules[m.id];
       <div class="m" style="font-size:12px">${on && need.length ? 'Не работает без: ' + need.map(esc).join(', ') : esc(m.where)}</div></div>
       <div class="toggle ${on?'on':''}" aria-hidden="true"></div></button>${state.modOff === m.id ? `<div class="offer" role="alert" style="margin:-4px 0 12px"><div class="t">Без «${esc(m.name)}» не будут работать ${esc(namesList(dependentsOf(m.id)))}</div>
       <div class="row" style="margin-top:12px"><button class="chip on press" data-mod="${esc(m.id)}" onclick="toggleMod(this.dataset.mod)">Выключить</button><button class="chip press" onclick="state.modOff=null;render()">Отмена</button></div></div>` : ''}${typeof m.settings === 'function' && on ? `<button class="mlink" style="margin:-4px 0 8px 0" data-mod="${esc(m.id)}" onclick="openModSet(this.dataset.mod)">Подробнее: ${esc(m.name)} ›</button>` : ''}`; }
+// Без ?demo в «Модулях» — только то, что работает на живых маршрутах; остальное — строкой «Скоро»
+function modReady(m){ return DEMO_CLOCK || ['metro', 'walk', 'live', 'pace', 'leave'].includes(m.id); }
+const modSoon = () => DEMO_CLOCK ? '' : MODULES.filter(m => !modReady(m) && m.group !== 'data').map(m => m.name.toLowerCase()).join(', ');
 V.modules = () => `<div class="row"><button class="back-btn" aria-label="Назад" onclick="back()">${ic('Назад')}</button><h1 tabindex="-1" style="margin:0">Модули</h1></div>
    <div class="sub" style="margin-top:8px">Включай только то, что нужно тебе. Выключенное не мешает.</div>
-   <div class="sec">Способы передвижения</div>${MODULES.filter(m=>m.group==='mode').map(modCard).join('')}
-   <div class="sec">Подсказки</div>${MODULES.filter(m=>!m.group && !m.service).map(modCard).join('')}
-   ${state.modMore ? `<div class="sec">Служебные</div><div class="m" style="margin:-4px 0 8px">Работают незаметно; выключать обычно не нужно</div>${MODULES.filter(m=>m.service || m.group==='data').map(modCard).join('')}`
-     : `<button class="mlink" style="margin:4px 0 12px" onclick="state.modMore=true;render()">Служебные модули (${MODULES.filter(m=>m.service || m.group==='data').length}) ›</button>`}
-   <div class="sec">Демо</div>
+   <div class="sec">Способы передвижения</div>${MODULES.filter(m=>m.group==='mode' && modReady(m)).map(modCard).join('')}
+   <div class="sec">Подсказки</div>${MODULES.filter(m=>!m.group && !m.service && modReady(m)).map(modCard).join('')}
+   ${modSoon() ? `<div class="note" style="margin:4px 0 12px">Скоро: ${modSoon()}</div>` : ''}
+   ${state.modMore ? `<div class="sec">Служебные</div><div class="m" style="margin:-4px 0 8px">Работают незаметно; выключать обычно не нужно</div>${MODULES.filter(m=>(m.service || m.group==='data') && modReady(m)).map(modCard).join('')}`
+     : `<button class="mlink" style="margin:4px 0 12px" onclick="state.modMore=true;render()">Служебные модули (${MODULES.filter(m=>(m.service || m.group==='data') && modReady(m)).length}) ›</button>`}
+   ${DEMO_CLOCK ? `<div class="sec">Демо</div>
    <div class="m" style="margin:-4px 0 8px">Сейчас</div>
    <div class="chips" style="flex-wrap:wrap">${[8*60, 8*60+10, 8*60+13, 8*60+20, 8*60+23].map(t => `<button class="chip press ${NOW===t?'sel':''}" aria-pressed="${NOW===t}" onclick="setDemoNow(${t}, TODAY)">${fmt(t)}</button>`).join('')}</div>
    <div class="m" style="margin:0 0 8px">День</div>
    <div class="chips" style="flex-wrap:wrap">${DAYS.map((d, i) => `<button class="chip press ${TODAY===i?'sel':''}" aria-pressed="${TODAY===i}" onclick="setDemoNow(NOW, ${i})">${d}</button>`).join('')}</div>
-   <button class="btn w press" style="margin-top:8px" onclick="resetDemo()">Демо: начать с первого запуска</button>
+   <button class="btn w press" style="margin-top:8px" onclick="resetDemo()">Демо: начать с первого запуска</button>` : ''}
    <div class="note" style="margin-top:16px">Версия ${APP_VERSION} · ${APP_DATE}<br>Схема метро: ${METRO_VER}</div>`;
 V.done = () => {
   const o = trip.o || OPTIONS[state.sel], at = trip.endAt;

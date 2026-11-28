@@ -826,6 +826,14 @@ test('до выхода больше часа — без фальшивого «
   return (!/Напомн/.test(txt) && /Выходить в \d/.test(txt) && btn && /Демо: проиграть/.test(btn.textContent) && typeof window.remind === 'undefined') || txt.slice(0, 400);
 }));
 
+test('обычный режим (без ?demo): ни демо-мест в поиске, ни неготовых модулей — они строкой «Скоро»', async p => {
+  await p.goto(p.url().replace('?demo', '')); await p.waitForTimeout(600);
+  return p.evaluate(() => { go('find'); state.q = 'бау'; render(); const find = document.body.innerText;
+    go('modules'); const mods = document.body.innerText, act = activeModules().map(m => m.id);
+    const ok = !/Демо-маршрут|МГТУ/.test(find) && /Скоро: такси, каршеринг/.test(mods) && !/\nДемо\n|Демо: начать/.test(mods) && !/\nТакси\n/.test(mods)
+      && act.every(id => ['metro','walk','live','pace','leave'].includes(id)) && /Версия \d/.test(mods);
+    return ok || JSON.stringify({ act, mods: mods.slice(-500) }); }); });
+
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
   let fail = 0;
